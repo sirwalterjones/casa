@@ -1,0 +1,6 @@
+# WordPress Backend - Docker Ignore
+.git/
+.gitignore
+*.md
+*.sql
+.DS_Store

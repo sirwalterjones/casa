@@ -3,8 +3,16 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
 
+  // Enable standalone output for Docker/Cloud Run deployment
+  output: 'standalone',
+
   images: {
-    domains: ['localhost', 'your-wordpress-domain.com'],
+    domains: [
+      'localhost',
+      'your-wordpress-domain.com',
+      'storage.googleapis.com',
+      '*.run.app'
+    ],
     unoptimized: process.env.NODE_ENV === 'development',
   },
   env: {

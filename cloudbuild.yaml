@@ -1,0 +1,151 @@
+# CASA - Cloud Build Configuration for GCP
+# This file defines the CI/CD pipeline for building and deploying to Cloud Run
+
+substitutions:
+  _REGION: us-east4
+  _PROJECT_ID: gov-webhosting-east-1766330024
+  _FRONTEND_SERVICE: casa-frontend
+  _BACKEND_SERVICE: casa-backend
+  _ARTIFACT_REGISTRY: us-east4-docker.pkg.dev/${_PROJECT_ID}/casa-repo
+
+steps:
+  # Step 1: Build Next.js Frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:$COMMIT_SHA'
+      - '-t'
+      - '${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:latest'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-frontend'
+
+  # Step 2: Build WordPress Backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:$COMMIT_SHA'
+      - '-t'
+      - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:latest'
+      - '-f'
+      - 'wordpress-backend/Dockerfile'
+      - 'wordpress-backend'
+    id: 'build-backend'
+
+  # Step 3: Push Frontend Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:$COMMIT_SHA'
+    waitFor:
+      - 'build-frontend'
+    id: 'push-frontend'
+
+  # Step 4: Push Frontend Latest Tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:latest'
+    waitFor:
+      - 'build-frontend'
+    id: 'push-frontend-latest'
+
+  # Step 5: Push Backend Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:$COMMIT_SHA'
+    waitFor:
+      - 'build-backend'
+    id: 'push-backend'
+
+  # Step 6: Push Backend Latest Tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:latest'
+    waitFor:
+      - 'build-backend'
+    id: 'push-backend-latest'
+
+  # Step 7: Deploy WordPress Backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_BACKEND_SERVICE}'
+      - '--image'
+      - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--add-cloudsql-instances'
+      - '${_PROJECT_ID}:${_REGION}:wordpress-db'
+      - '--set-env-vars'
+      - 'WORDPRESS_DB_HOST=/cloudsql/${_PROJECT_ID}:${_REGION}:wordpress-db'
+      - '--set-env-vars'
+      - 'WORDPRESS_DB_NAME=wordpress'
+      - '--set-env-vars'
+      - 'WORDPRESS_DB_USER=wordpress'
+      - '--set-secrets'
+      - 'WORDPRESS_DB_PASSWORD=wordpress-db-password:latest'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+    waitFor:
+      - 'push-backend'
+    id: 'deploy-backend'
+
+  # Step 8: Get Backend URL and Deploy Frontend
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Get the backend URL
+        BACKEND_URL=$(gcloud run services describe ${_BACKEND_SERVICE} --region=${_REGION} --format='value(status.url)')
+        echo "Backend URL: $BACKEND_URL"
+
+        # Deploy frontend with backend URL
+        gcloud run deploy ${_FRONTEND_SERVICE} \
+          --image ${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:$COMMIT_SHA \
+          --region ${_REGION} \
+          --platform managed \
+          --allow-unauthenticated \
+          --set-env-vars "NEXT_PUBLIC_WORDPRESS_URL=$BACKEND_URL" \
+          --set-env-vars "WORDPRESS_API_URL=$BACKEND_URL" \
+          --set-env-vars "NODE_ENV=production" \
+          --memory 512Mi \
+          --cpu 1 \
+          --min-instances 0 \
+          --max-instances 10
+    waitFor:
+      - 'deploy-backend'
+      - 'push-frontend'
+    id: 'deploy-frontend'
+
+# Store images in Artifact Registry
+images:
+  - '${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:$COMMIT_SHA'
+  - '${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:latest'
+  - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:$COMMIT_SHA'
+  - '${_ARTIFACT_REGISTRY}/${_BACKEND_SERVICE}:latest'
+
+# Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+# Timeout for the entire build
+timeout: '1800s'

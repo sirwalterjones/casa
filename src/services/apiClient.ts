@@ -7,8 +7,9 @@ class ApiClient {
   private baseURL: string;
 
   constructor() {
-    // Use Local by Flywheel WordPress URL
-    this.baseURL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'http://casa-backend.local';
+    // Use environment variable for WordPress URL (supports GCP Cloud Run)
+    this.baseURL = process.env.NEXT_PUBLIC_WORDPRESS_URL ||
+                   (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000');
     
     this.client = axios.create({
       baseURL: this.baseURL,
