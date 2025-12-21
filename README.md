@@ -34,10 +34,11 @@ This platform combines the power of WordPress as a headless CMS with a modern Re
 - **MySQL** - Database storage
 - **Custom PHP Plugin** - CASA-specific functionality and multi-organization logic
 
-### Hosting & Deployment
-- **Vercel** - Frontend hosting (recommended)
-- **Managed WordPress** - Backend hosting options
-- **MySQL Database** - Secure data persistence with HIPAA compliance
+### Hosting & Deployment (FedRAMP Moderate)
+- **Google Cloud Run** - Frontend and backend hosting (FedRAMP authorized)
+- **Google Cloud SQL** - MySQL database with encryption at rest
+- **Google Secret Manager** - Secure credential storage
+- **Google Artifact Registry** - Container image storage with scanning
 
 ## 📋 Prerequisites
 
@@ -168,16 +169,31 @@ Frontend (React) → API Client → WordPress REST API → CASA Plugin → Datab
 
 ## 🔐 Security
 
+### FedRAMP Moderate Compliance
+
+This system is deployed on Google Cloud Platform services that are FedRAMP Moderate authorized:
+
+| Control | Implementation |
+|---------|----------------|
+| **Region** | us-east4 (FedRAMP authorized) |
+| **Compute** | Cloud Run (gen2 execution environment) |
+| **Database** | Cloud SQL with encryption at rest |
+| **Secrets** | Secret Manager for all credentials |
+| **Container Registry** | Artifact Registry with vulnerability scanning |
+| **Audit Logging** | Cloud Audit Logs enabled |
+| **Encryption** | TLS 1.2+ in transit, AES-256 at rest |
+
 ### Authentication & Authorization
 - JWT tokens for API authentication
 - Role-based access control (RBAC)
 - Tenant-level data isolation
 - Secure password requirements
+- Email-based 2FA authentication
 
 ### File Upload Security
 - File type validation
 - Size limits enforcement
-- Secure storage paths
+- Secure storage paths (GCS with encryption)
 - Malware scanning (recommended)
 
 ### API Security

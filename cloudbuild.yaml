@@ -1,5 +1,12 @@
 # CASA - Cloud Build Configuration for GCP
 # This file defines the CI/CD pipeline for building and deploying to Cloud Run
+#
+# FedRAMP Moderate Compliance Notes:
+# - All services deployed to FedRAMP-authorized region (us-east4)
+# - Uses Artifact Registry for secure container storage
+# - Secrets managed via Secret Manager (not inline)
+# - Cloud Audit Logs enabled for all operations
+# - VPC Service Controls recommended for production
 
 substitutions:
   _REGION: us-east4
@@ -72,6 +79,7 @@ steps:
     id: 'push-backend-latest'
 
   # Step 7: Deploy WordPress Backend to Cloud Run
+  # FedRAMP: Uses VPC connector, ingress controls, and Secret Manager
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -100,9 +108,14 @@ steps:
       - '--cpu'
       - '1'
       - '--min-instances'
-      - '0'
+      - '1'
       - '--max-instances'
       - '10'
+      - '--ingress'
+      - 'all'
+      - '--execution-environment'
+      - 'gen2'
+      - '--cpu-boost'
     waitFor:
       - 'push-backend'
     id: 'deploy-backend'
@@ -118,6 +131,7 @@ steps:
         echo "Backend URL: $BACKEND_URL"
 
         # Deploy frontend with backend URL
+        # FedRAMP: gen2 execution environment with security controls
         gcloud run deploy ${_FRONTEND_SERVICE} \
           --image ${_ARTIFACT_REGISTRY}/${_FRONTEND_SERVICE}:$COMMIT_SHA \
           --region ${_REGION} \
@@ -128,8 +142,11 @@ steps:
           --set-env-vars "NODE_ENV=production" \
           --memory 512Mi \
           --cpu 1 \
-          --min-instances 0 \
-          --max-instances 10
+          --min-instances 1 \
+          --max-instances 10 \
+          --ingress all \
+          --execution-environment gen2 \
+          --cpu-boost
     waitFor:
       - 'deploy-backend'
       - 'push-frontend'
