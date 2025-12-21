@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- generator="WordPress/6.8.2" created="2025-08-07 18:07" -->
+
+<channel>
+	<title>casa-backend</title>
+	<pubDate>Thu, 07 Aug 2025 18:07:41 +0000</pubDate>
+
+	<form>
+		<id>9</id>
+		<form_key><![CDATA[home_visit_report]]></form_key>
+		<name><![CDATA[CASA Home Visit Report Form]]></name>
+		<description><![CDATA[Comprehensive home visit report for CASA cases]]></description>
+		<created_at>2025-08-07 18:07:18</created_at>
+		<logged_in>0</logged_in>
+		<is_template>0</is_template>
+		<editable>0</editable>
+		<options><![CDATA[{"antispam":1,"on_submit_migrated":1,"submit_conditions":{"show_hide":"show","any_all":"all","hide_field":[],"hide_field_cond":["=="],"hide_opt":[]}}]]></options>
+		<status><![CDATA[published]]></status>
+		<parent_form_id>0</parent_form_id>
+		<field>
+			<id>1</id>
+			<field_key><![CDATA[case_number]]></field_key>
+			<name><![CDATA[Case Number]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>1</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Case number is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>2</id>
+			<field_key><![CDATA[visit_date]]></field_key>
+			<name><![CDATA[Visit Date and Time]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[datetime]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>2</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Visit date and time is required","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>3</id>
+			<field_key><![CDATA[visit_location]]></field_key>
+			<name><![CDATA[Visit Location]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>3</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Visit location is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>4</id>
+			<field_key><![CDATA[visit_type]]></field_key>
+			<name><![CDATA[Visit Type]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>4</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select visit type","value":"","image":"Select visit type","src":false},{"label":"Initial Visit","value":"initial","image":"Initial Visit","src":false},{"label":"Follow-up Visit","value":"follow_up","image":"Follow-up Visit","src":false},{"label":"Emergency Visit","value":"emergency","image":"Emergency Visit","src":false},{"label":"Scheduled Visit","value":"scheduled","image":"Scheduled Visit","src":false},{"label":"Unannounced Visit","value":"unannounced","image":"Unannounced Visit","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"Visit type is required","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>5</id>
+			<field_key><![CDATA[visit_duration]]></field_key>
+			<name><![CDATA[Visit Duration (minutes)]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[number]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>5</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>6</id>
+			<field_key><![CDATA[who_present]]></field_key>
+			<name><![CDATA[Who Was Present]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>6</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Who was present is required","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>7</id>
+			<field_key><![CDATA[home_condition]]></field_key>
+			<name><![CDATA[Home Condition]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>7</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select home condition","value":"","image":"Select home condition","src":false},{"label":"Excellent","value":"excellent","image":"Excellent","src":false},{"label":"Good","value":"good","image":"Good","src":false},{"label":"Fair","value":"fair","image":"Fair","src":false},{"label":"Poor","value":"poor","image":"Poor","src":false},{"label":"Unsafe","value":"unsafe","image":"Unsafe","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"Home condition is required","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>8</id>
+			<field_key><![CDATA[child_condition]]></field_key>
+			<name><![CDATA[Child Condition]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>8</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select child condition","value":"","image":"Select child condition","src":false},{"label":"Excellent","value":"excellent","image":"Excellent","src":false},{"label":"Good","value":"good","image":"Good","src":false},{"label":"Fair","value":"fair","image":"Fair","src":false},{"label":"Poor","value":"poor","image":"Poor","src":false},{"label":"Concerning","value":"concerning","image":"Concerning","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"Child condition is required","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>9</id>
+			<field_key><![CDATA[observations]]></field_key>
+			<name><![CDATA[Observations]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>9</field_order>
+			<form_id>9</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Observations are required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>10</id>
+			<field_key><![CDATA[discussions]]></field_key>
+			<name><![CDATA[Discussions and Communications]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>10</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>11</id>
+			<field_key><![CDATA[concerns]]></field_key>
+			<name><![CDATA[Concerns]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>11</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>12</id>
+			<field_key><![CDATA[recommendations]]></field_key>
+			<name><![CDATA[Recommendations]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>12</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>13</id>
+			<field_key><![CDATA[follow_up_needed]]></field_key>
+			<name><![CDATA[Follow-up Needed]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[checkbox]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>13</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Follow-up action needed","value":"1","image":"Follow-up action needed","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>14</id>
+			<field_key><![CDATA[next_visit_date]]></field_key>
+			<name><![CDATA[Next Visit Date]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[date]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>14</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>15</id>
+			<field_key><![CDATA[submit]]></field_key>
+			<name><![CDATA[Submit Report]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[submit]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>15</field_order>
+			<form_id>9</form_id>
+			<required>0</required>
+			<options><![CDATA[[]]]></options>
+			<field_options><![CDATA[{"in_section":"0","classes":"frm6","custom_html":""}]]></field_options>
+		</field>
+	</form>
+	<view>
+		<title>Confirmation</title>
+		<link></link>
+		<post_author><![CDATA[admin]]></post_author>
+		<description></description>
+		<content><![CDATA[{"success_action":"message","success_msg":"Home visit report submitted successfully!","show_form":"","success_url":"","success_page_id":"","open_in_new_tab":"","redirect_delay":"","redirect_delay_time":8,"redirect_delay_msg":"Please wait while you are redirected.","event":["create"],"conditions":{"send_stop":"","any_all":""}}]]></content>
+		<excerpt><![CDATA[on_submit]]></excerpt>
+		<post_id>9</post_id>
+		<post_date>2025-08-07 18:07:18</post_date>
+		<post_date_gmt>2025-08-07 18:07:18</post_date_gmt>
+		<comment_status>closed</comment_status>
+		<ping_status>closed</ping_status>
+		<post_name>9_on_submit_</post_name>
+		<status>publish</status>
+		<post_parent>0</post_parent>
+		<menu_order>9</menu_order>
+		<post_type>frm_form_actions</post_type>
+		<post_password><![CDATA[]]></post_password>
+		<is_sticky>0</is_sticky>
+	</view>
+</channel>

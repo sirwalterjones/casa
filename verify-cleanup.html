@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🧹 CASA Document Cleanup Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .step { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .sql { background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; font-family: monospace; }
+        .success { background: #c6f6d5; border-left: 4px solid #38a169; }
+        .warning { background: #fef5e7; border-left: 4px solid #ed8936; }
+    </style>
+</head>
+<body>
+    <h1>🧹 CASA Document Cleanup Guide</h1>
+    
+    <div class="step warning">
+        <h3>⚠️ Before You Start</h3>
+        <p>This will permanently delete ALL documents from your CASA system. Make sure you want to start completely fresh!</p>
+    </div>
+
+    <div class="step">
+        <h3>📋 Step 1: Access Your Database</h3>
+        <p>Open your database management tool (phpMyAdmin, MySQL Workbench, or command line)</p>
+    </div>
+
+    <div class="step">
+        <h3>📊 Step 2: Check Current Documents (Optional)</h3>
+        <p>Run this query to see how many documents exist:</p>
+        <div class="sql">SELECT COUNT(*) as 'Current Documents' FROM wp_casa_documents;</div>
+    </div>
+
+    <div class="step">
+        <h3>🗑️ Step 3: Delete All Documents</h3>
+        <p>Run this query to delete all documents:</p>
+        <div class="sql">DELETE FROM wp_casa_documents;</div>
+    </div>
+
+    <div class="step">
+        <h3>🔄 Step 4: Reset Auto-Increment</h3>
+        <p>Run this query to reset the ID counter:</p>
+        <div class="sql">ALTER TABLE wp_casa_documents AUTO_INCREMENT = 1;</div>
+    </div>
+
+    <div class="step">
+        <h3>✅ Step 5: Verify Cleanup</h3>
+        <p>Run this query to confirm cleanup (should return 0):</p>
+        <div class="sql">SELECT COUNT(*) as 'Documents After Cleanup' FROM wp_casa_documents;</div>
+    </div>
+
+    <div class="step success">
+        <h3>🎉 Step 6: Test New Upload</h3>
+        <p>After cleanup:</p>
+        <ol>
+            <li>Go to <a href="http://localhost:3000/documents" target="_blank">Documents Page</a></li>
+            <li>Upload a new document</li>
+            <li>The document should get ID "1" (not a timestamp)</li>
+            <li>Download/view links should work perfectly!</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>🆘 Need Help?</h3>
+        <p>If you can't access your database, you can also:</p>
+        <ul>
+            <li>Use WordPress admin dashboard → Tools → Database</li>
+            <li>Contact your hosting provider for database access</li>
+            <li>Use phpMyAdmin if available</li>
+        </ul>
+    </div>
+
+    <script>
+        // Test if documents endpoint is accessible
+        fetch('http://casa-backend.local/wp-json/casa/v1/documents')
+            .then(response => response.json())
+            .then(data => {
+                const status = document.createElement('div');
+                status.className = 'step success';
+                status.innerHTML = `
+                    <h3>🌐 API Status: Connected</h3>
+                    <p>Your WordPress API is accessible. After cleanup, the system will be ready for fresh uploads!</p>
+                `;
+                document.body.appendChild(status);
+            })
+            .catch(error => {
+                const status = document.createElement('div');
+                status.className = 'step warning';
+                status.innerHTML = `
+                    <h3>🌐 API Status: Limited Access</h3>
+                    <p>The WordPress API has some restrictions, but the cleanup will still work through database access.</p>
+                `;
+                document.body.appendChild(status);
+            });
+    </script>
+</body>
+</html>

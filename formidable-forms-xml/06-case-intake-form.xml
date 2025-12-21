@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- generator="WordPress/6.8.2" created="2025-08-07 18:07" -->
+
+<channel>
+	<title>casa-backend</title>
+	<pubDate>Thu, 07 Aug 2025 18:07:41 +0000</pubDate>
+
+	<form>
+		<id>6</id>
+		<form_key><![CDATA[case_intake]]></form_key>
+		<name><![CDATA[CASA Case Intake Form]]></name>
+		<description><![CDATA[Create new CASA case records with comprehensive child and case information]]></description>
+		<created_at>2025-08-07 18:07:18</created_at>
+		<logged_in>0</logged_in>
+		<is_template>0</is_template>
+		<editable>0</editable>
+		<options><![CDATA[{"antispam":1,"on_submit_migrated":1,"submit_conditions":{"show_hide":"show","any_all":"all","hide_field":[],"hide_field_cond":["=="],"hide_opt":[]}}]]></options>
+		<status><![CDATA[published]]></status>
+		<parent_form_id>0</parent_form_id>
+		<field>
+			<id>1</id>
+			<field_key><![CDATA[child_first_name]]></field_key>
+			<name><![CDATA[Child First Name]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>1</field_order>
+			<form_id>6</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Child first name is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>2</id>
+			<field_key><![CDATA[child_last_name]]></field_key>
+			<name><![CDATA[Child Last Name]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>2</field_order>
+			<form_id>6</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Child last name is required","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>3</id>
+			<field_key><![CDATA[child_dob]]></field_key>
+			<name><![CDATA[Child Date of Birth]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[date]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>3</field_order>
+			<form_id>6</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Child date of birth is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>4</id>
+			<field_key><![CDATA[child_gender]]></field_key>
+			<name><![CDATA[Child Gender]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>4</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Select gender","value":"","image":"Select gender","src":false},{"label":"Male","value":"male","image":"Male","src":false},{"label":"Female","value":"female","image":"Female","src":false},{"label":"Other","value":"other","image":"Other","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>5</id>
+			<field_key><![CDATA[child_ethnicity]]></field_key>
+			<name><![CDATA[Child Ethnicity]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>5</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>6</id>
+			<field_key><![CDATA[case_number]]></field_key>
+			<name><![CDATA[Case Number]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>6</field_order>
+			<form_id>6</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Case number is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>7</id>
+			<field_key><![CDATA[case_type]]></field_key>
+			<name><![CDATA[Case Type]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>7</field_order>
+			<form_id>6</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select case type","value":"","image":"Select case type","src":false},{"label":"Dependency","value":"dependency","image":"Dependency","src":false},{"label":"Delinquency","value":"delinquency","image":"Delinquency","src":false},{"label":"Status Offense","value":"status_offense","image":"Status Offense","src":false},{"label":"Termination of Parental Rights","value":"termination","image":"Termination of Parental Rights","src":false},{"label":"Guardianship","value":"guardianship","image":"Guardianship","src":false},{"label":"Other","value":"other","image":"Other","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>8</id>
+			<field_key><![CDATA[case_priority]]></field_key>
+			<name><![CDATA[Case Priority]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>8</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Select priority","value":"","image":"Select priority","src":false},{"label":"Low","value":"low","image":"Low","src":false},{"label":"Medium","value":"medium","image":"Medium","src":false},{"label":"High","value":"high","image":"High","src":false},{"label":"Critical","value":"critical","image":"Critical","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>9</id>
+			<field_key><![CDATA[referral_date]]></field_key>
+			<name><![CDATA[Referral Date]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[date]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>9</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>10</id>
+			<field_key><![CDATA[case_summary]]></field_key>
+			<name><![CDATA[Case Summary]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>10</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>11</id>
+			<field_key><![CDATA[court_jurisdiction]]></field_key>
+			<name><![CDATA[Court Jurisdiction]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>11</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>12</id>
+			<field_key><![CDATA[assigned_judge]]></field_key>
+			<name><![CDATA[Assigned Judge]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>12</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>13</id>
+			<field_key><![CDATA[courtroom]]></field_key>
+			<name><![CDATA[Courtroom]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>13</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>14</id>
+			<field_key><![CDATA[current_placement]]></field_key>
+			<name><![CDATA[Current Placement]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>14</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Select placement type","value":"","image":"Select placement type","src":false},{"label":"Foster Care","value":"foster_care","image":"Foster Care","src":false},{"label":"Kinship Care","value":"kinship_care","image":"Kinship Care","src":false},{"label":"Group Home","value":"group_home","image":"Group Home","src":false},{"label":"Residential Treatment","value":"residential_treatment","image":"Residential Treatment","src":false},{"label":"With Parent(s)","value":"with_parents","image":"With Parent(s)","src":false},{"label":"Independent Living","value":"independent_living","image":"Independent Living","src":false},{"label":"Other","value":"other","image":"Other","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>15</id>
+			<field_key><![CDATA[placement_date]]></field_key>
+			<name><![CDATA[Placement Date]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[date]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>15</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>16</id>
+			<field_key><![CDATA[placement_contact_person]]></field_key>
+			<name><![CDATA[Placement Contact Person]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>16</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>17</id>
+			<field_key><![CDATA[placement_phone]]></field_key>
+			<name><![CDATA[Placement Contact Phone]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>17</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>18</id>
+			<field_key><![CDATA[placement_address]]></field_key>
+			<name><![CDATA[Placement Address]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>18</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>19</id>
+			<field_key><![CDATA[assigned_volunteer]]></field_key>
+			<name><![CDATA[Assigned Volunteer]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>19</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Select Volunteer (Optional)","value":"","image":"Select Volunteer (Optional)","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>20</id>
+			<field_key><![CDATA[assignment_date]]></field_key>
+			<name><![CDATA[Assignment Date]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[date]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>20</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>21</id>
+			<field_key><![CDATA[case_goals]]></field_key>
+			<name><![CDATA[Case Goals]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>21</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>22</id>
+			<field_key><![CDATA[submit]]></field_key>
+			<name><![CDATA[Create Case]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[submit]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>22</field_order>
+			<form_id>6</form_id>
+			<required>0</required>
+			<options><![CDATA[[]]]></options>
+			<field_options><![CDATA[{"in_section":"0","classes":"frm6","custom_html":""}]]></field_options>
+		</field>
+	</form>
+	<view>
+		<title>Confirmation</title>
+		<link></link>
+		<post_author><![CDATA[admin]]></post_author>
+		<description></description>
+		<content><![CDATA[{"success_action":"message","success_msg":"Case has been successfully created and added to the system.","show_form":"","success_url":"","success_page_id":"","open_in_new_tab":"","redirect_delay":"","redirect_delay_time":8,"redirect_delay_msg":"Please wait while you are redirected.","event":["create"],"conditions":{"send_stop":"","any_all":""}}]]></content>
+		<excerpt><![CDATA[on_submit]]></excerpt>
+		<post_id>6</post_id>
+		<post_date>2025-08-07 18:07:18</post_date>
+		<post_date_gmt>2025-08-07 18:07:18</post_date_gmt>
+		<comment_status>closed</comment_status>
+		<ping_status>closed</ping_status>
+		<post_name>6_on_submit_</post_name>
+		<status>publish</status>
+		<post_parent>0</post_parent>
+		<menu_order>6</menu_order>
+		<post_type>frm_form_actions</post_type>
+		<post_password><![CDATA[]]></post_password>
+		<is_sticky>0</is_sticky>
+	</view>
+</channel>

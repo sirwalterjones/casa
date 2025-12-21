@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- generator="WordPress/6.8.2" created="2025-08-07 18:07" -->
+
+<channel>
+	<title>casa-backend</title>
+	<pubDate>Thu, 07 Aug 2025 18:07:41 +0000</pubDate>
+
+	<form>
+		<id>10</id>
+		<form_key><![CDATA[document_upload]]></form_key>
+		<name><![CDATA[CASA Document Upload Form]]></name>
+		<description><![CDATA[Upload and manage documents for CASA cases]]></description>
+		<created_at>2025-08-07 18:07:18</created_at>
+		<logged_in>0</logged_in>
+		<is_template>0</is_template>
+		<editable>0</editable>
+		<options><![CDATA[{"antispam":1,"on_submit_migrated":1,"submit_conditions":{"show_hide":"show","any_all":"all","hide_field":[],"hide_field_cond":["=="],"hide_opt":[]}}]]></options>
+		<status><![CDATA[published]]></status>
+		<parent_form_id>0</parent_form_id>
+		<field>
+			<id>1</id>
+			<field_key><![CDATA[case_number]]></field_key>
+			<name><![CDATA[Case Number]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>1</field_order>
+			<form_id>10</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Case number is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>2</id>
+			<field_key><![CDATA[document_title]]></field_key>
+			<name><![CDATA[Document Title]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>2</field_order>
+			<form_id>10</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Document title is required","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>3</id>
+			<field_key><![CDATA[document_type]]></field_key>
+			<name><![CDATA[Document Type]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>3</field_order>
+			<form_id>10</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select document type","value":"","image":"Select document type","src":false},{"label":"Court Order","value":"court_order","image":"Court Order","src":false},{"label":"Medical Record","value":"medical_record","image":"Medical Record","src":false},{"label":"School Record","value":"school_record","image":"School Record","src":false},{"label":"Police Report","value":"police_report","image":"Police Report","src":false},{"label":"Social Worker Report","value":"social_worker_report","image":"Social Worker Report","src":false},{"label":"Psychological Evaluation","value":"psychological_evaluation","image":"Psychological Evaluation","src":false},{"label":"Case Plan","value":"case_plan","image":"Case Plan","src":false},{"label":"Contact Log","value":"contact_log","image":"Contact Log","src":false},{"label":"Home Visit Report","value":"home_visit_report","image":"Home Visit Report","src":false},{"label":"Other","value":"other","image":"Other","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"Document type is required","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>4</id>
+			<field_key><![CDATA[file_upload]]></field_key>
+			<name><![CDATA[File Upload]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[file]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>4</field_order>
+			<form_id>10</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"File upload is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>5</id>
+			<field_key><![CDATA[document_date]]></field_key>
+			<name><![CDATA[Document Date]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[date]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>5</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>6</id>
+			<field_key><![CDATA[document_source]]></field_key>
+			<name><![CDATA[Document Source]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>6</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>7</id>
+			<field_key><![CDATA[document_description]]></field_key>
+			<name><![CDATA[Document Description]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>7</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>8</id>
+			<field_key><![CDATA[document_priority]]></field_key>
+			<name><![CDATA[Document Priority]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>8</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Select priority","value":"","image":"Select priority","src":false},{"label":"Low","value":"low","image":"Low","src":false},{"label":"Normal","value":"normal","image":"Normal","src":false},{"label":"High","value":"high","image":"High","src":false},{"label":"Critical","value":"critical","image":"Critical","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>9</id>
+			<field_key><![CDATA[document_status]]></field_key>
+			<name><![CDATA[Document Status]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>9</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[{"label":"Select status","value":"","image":"Select status","src":false},{"label":"Draft","value":"draft","image":"Draft","src":false},{"label":"Pending Review","value":"pending_review","image":"Pending Review","src":false},{"label":"Approved","value":"approved","image":"Approved","src":false},{"label":"Rejected","value":"rejected","image":"Rejected","src":false},{"label":"Archived","value":"archived","image":"Archived","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"[field_name] is invalid","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>10</id>
+			<field_key><![CDATA[additional_notes]]></field_key>
+			<name><![CDATA[Additional Notes]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[textarea]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>10</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>11</id>
+			<field_key><![CDATA[submit]]></field_key>
+			<name><![CDATA[Upload Document]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[submit]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>11</field_order>
+			<form_id>10</form_id>
+			<required>0</required>
+			<options><![CDATA[[]]]></options>
+			<field_options><![CDATA[{"in_section":"0","classes":"frm6","custom_html":""}]]></field_options>
+		</field>
+	</form>
+	<view>
+		<title>Confirmation</title>
+		<link></link>
+		<post_author><![CDATA[admin]]></post_author>
+		<description></description>
+		<content><![CDATA[{"success_action":"message","success_msg":"Document uploaded successfully!","show_form":"","success_url":"","success_page_id":"","open_in_new_tab":"","redirect_delay":"","redirect_delay_time":8,"redirect_delay_msg":"Please wait while you are redirected.","event":["create"],"conditions":{"send_stop":"","any_all":""}}]]></content>
+		<excerpt><![CDATA[on_submit]]></excerpt>
+		<post_id>10</post_id>
+		<post_date>2025-08-07 18:07:18</post_date>
+		<post_date_gmt>2025-08-07 18:07:18</post_date_gmt>
+		<comment_status>closed</comment_status>
+		<ping_status>closed</ping_status>
+		<post_name>10_on_submit_</post_name>
+		<status>publish</status>
+		<post_parent>0</post_parent>
+		<menu_order>10</menu_order>
+		<post_type>frm_form_actions</post_type>
+		<post_password><![CDATA[]]></post_password>
+		<is_sticky>0</is_sticky>
+	</view>
+</channel>

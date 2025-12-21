@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<frm_form_set>
+  <form>
+    <name>Simple Form</name>
+    <description>Basic form for testing</description>
+    <options>
+      <success_action>message</success_action>
+      <success_msg>Success!</success_msg>
+      <submit_value>Submit</submit_value>
+      <akismet>0</akismet>
+      <ajax_load>1</ajax_load>
+      <antispam>0</antispam>
+      <no_save>0</no_save>
+      <logged_in>0</logged_in>
+    </options>
+    <fields>
+      <field>
+        <field_key>name</field_key>
+        <name>Name</name>
+        <description></description>
+        <type>text</type>
+        <default_value></default_value>
+        <placeholder>Enter your name</placeholder>
+        <options>
+          <required>1</required>
+          <label_position>top</label_position>
+          <size>large</size>
+          <max_length></max_length>
+          <invalid_msg>Name is required</invalid_msg>
+        </options>
+        <field_order>1</field_order>
+      </field>
+      <field>
+        <field_key>email</field_key>
+        <name>Email</name>
+        <description></description>
+        <type>email</type>
+        <default_value></default_value>
+        <placeholder>Enter your email</placeholder>
+        <options>
+          <required>1</required>
+          <label_position>top</label_position>
+          <size>large</size>
+          <max_length></max_length>
+          <invalid_msg>Valid email is required</invalid_msg>
+        </options>
+        <field_order>2</field_order>
+      </field>
+    </fields>
+  </form>
+</frm_form_set>

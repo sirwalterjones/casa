@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<frm_form_set>
+  <form>
+    <name>Test Form</name>
+    <description>Simple test form</description>
+    <options>
+      <success_action>message</success_action>
+      <success_msg>Form submitted successfully!</success_msg>
+      <submit_value>Submit</submit_value>
+      <akismet>0</akismet>
+      <ajax_load>1</ajax_load>
+      <antispam>0</antispam>
+      <no_save>0</no_save>
+      <logged_in>0</logged_in>
+    </options>
+    
+    <fields>
+      <field>
+        <field_key>test_field</field_key>
+        <name>Test Field</name>
+        <description></description>
+        <type>text</type>
+        <default_value></default_value>
+        <placeholder>Enter test data</placeholder>
+        <options>
+          <required>1</required>
+          <label_position>top</label_position>
+          <size>large</size>
+          <max_length></max_length>
+          <invalid_msg>This field is required</invalid_msg>
+        </options>
+        <field_order>1</field_order>
+      </field>
+    </fields>
+  </form>
+</frm_form_set>

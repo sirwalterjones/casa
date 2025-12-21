@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CASA API Endpoint Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .test-section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 10px 5px; }
+        textarea { width: 100%; height: 150px; font-family: monospace; }
+        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 8px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>🏠 CASA API Endpoint Test</h1>
+    <p>Use this page to test your CASA multi-tenant system endpoints</p>
+
+    <!-- Test API Availability -->
+    <div class="test-section">
+        <h2>1. Test API Availability</h2>
+        <button onclick="testAPI()">Test CASA API</button>
+        <div id="api-result"></div>
+    </div>
+
+    <!-- Test Organization Registration -->
+    <div class="test-section">
+        <h2>2. Test Organization Registration</h2>
+        <form onsubmit="testOrgRegistration(event)">
+            <label>Organization Name:</label>
+            <input type="text" id="orgName" value="Test CASA Program" required>
+            
+            <label>Organization Slug:</label>
+            <input type="text" id="orgSlug" value="test-casa-program" required>
+            
+            <label>Admin Email:</label>
+            <input type="email" id="adminEmail" value="admin@test-casa.com" required>
+            
+            <label>Admin Password:</label>
+            <input type="password" id="adminPassword" value="TestPassword123!" required>
+            
+            <label>Admin First Name:</label>
+            <input type="text" id="adminFirstName" value="Test" required>
+            
+            <label>Admin Last Name:</label>
+            <input type="text" id="adminLastName" value="Admin" required>
+            
+            <button type="submit">Create Test Organization</button>
+        </form>
+        <div id="org-result"></div>
+    </div>
+
+    <!-- Test Volunteer Registration -->
+    <div class="test-section">
+        <h2>3. Test Volunteer Registration</h2>
+        <p><strong>Note:</strong> You need a valid admin token from step 2 to test this</p>
+        <form onsubmit="testVolunteerRegistration(event)">
+            <label>Admin Token (from org registration):</label>
+            <input type="text" id="adminToken" placeholder="Paste token from organization registration">
+            
+            <label>Organization ID:</label>
+            <input type="text" id="organizationId" placeholder="Enter organization ID">
+            
+            <label>Volunteer Email:</label>
+            <input type="email" id="volunteerEmail" value="volunteer@test-casa.com" required>
+            
+            <label>Volunteer Password:</label>
+            <input type="password" id="volunteerPassword" value="VolunteerPass123!" required>
+            
+            <label>Volunteer First Name:</label>
+            <input type="text" id="volunteerFirstName" value="Test" required>
+            
+            <label>Volunteer Last Name:</label>
+            <input type="text" id="volunteerLastName" value="Volunteer" required>
+            
+            <button type="submit">Create Test Volunteer</button>
+        </form>
+        <div id="volunteer-result"></div>
+    </div>
+
+    <!-- Raw Response -->
+    <div class="test-section">
+        <h2>Raw API Responses</h2>
+        <textarea id="raw-response" readonly placeholder="API responses will appear here..."></textarea>
+    </div>
+
+    <script>
+        const API_BASE = 'http://casa-backend.local/wp-json/casa/v1';
+        
+        function logResponse(response) {
+            document.getElementById('raw-response').value = JSON.stringify(response, null, 2);
+        }
+        
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<p class="${isError ? 'error' : 'success'}">${message}</p>`;
+        }
+        
+        async function testAPI() {
+            try {
+                const response = await fetch(`${API_BASE}/`);
+                const data = await response.json();
+                logResponse(data);
+                
+                if (data.routes) {
+                    const hasOrgReg = data.routes['/casa/v1/register-organization'];
+                    const hasVolReg = data.routes['/casa/v1/register-volunteer'];
+                    
+                    let message = '✅ CASA API is accessible<br>';
+                    message += hasOrgReg ? '✅ Organization registration endpoint found<br>' : '❌ Organization registration endpoint NOT found<br>';
+                    message += hasVolReg ? '✅ Volunteer registration endpoint found<br>' : '❌ Volunteer registration endpoint NOT found<br>';
+                    
+                    showResult('api-result', message);
+                } else {
+                    showResult('api-result', '❌ API response format unexpected', true);
+                }
+            } catch (error) {
+                showResult('api-result', `❌ API test failed: ${error.message}`, true);
+                logResponse({ error: error.message });
+            }
+        }
+        
+        async function testOrgRegistration(event) {
+            event.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('orgName').value,
+                slug: document.getElementById('orgSlug').value,
+                adminEmail: document.getElementById('adminEmail').value,
+                adminPassword: document.getElementById('adminPassword').value,
+                adminFirstName: document.getElementById('adminFirstName').value,
+                adminLastName: document.getElementById('adminLastName').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/register-organization`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                logResponse(data);
+                
+                if (data.success) {
+                    showResult('org-result', `✅ Organization created successfully!<br>
+                        Organization ID: ${data.data.organization.id}<br>
+                        Admin User ID: ${data.data.user.id}<br>
+                        <strong>Token:</strong> ${data.data.token}`);
+                    
+                    // Auto-fill volunteer form
+                    document.getElementById('adminToken').value = data.data.token;
+                    document.getElementById('organizationId').value = data.data.organization.id;
+                } else {
+                    showResult('org-result', `❌ Organization creation failed: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('org-result', `❌ Request failed: ${error.message}`, true);
+                logResponse({ error: error.message });
+            }
+        }
+        
+        async function testVolunteerRegistration(event) {
+            event.preventDefault();
+            
+            const token = document.getElementById('adminToken').value;
+            if (!token) {
+                showResult('volunteer-result', '❌ Admin token is required', true);
+                return;
+            }
+            
+            const formData = {
+                organizationId: parseInt(document.getElementById('organizationId').value),
+                email: document.getElementById('volunteerEmail').value,
+                password: document.getElementById('volunteerPassword').value,
+                firstName: document.getElementById('volunteerFirstName').value,
+                lastName: document.getElementById('volunteerLastName').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/register-volunteer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                logResponse(data);
+                
+                if (data.success) {
+                    showResult('volunteer-result', `✅ Volunteer created successfully!<br>
+                        Volunteer User ID: ${data.data.user.id}<br>
+                        Email: ${data.data.user.email}`);
+                } else {
+                    showResult('volunteer-result', `❌ Volunteer creation failed: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('volunteer-result', `❌ Request failed: ${error.message}`, true);
+                logResponse({ error: error.message });
+            }
+        }
+        
+        // Auto-test API on page load
+        window.onload = () => {
+            testAPI();
+        };
+    </script>
+</body>
+</html>

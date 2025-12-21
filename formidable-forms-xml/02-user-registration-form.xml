@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- generator="WordPress/6.8.2" created="2025-08-07 18:07" -->
+
+<channel>
+	<title>casa-backend</title>
+	<pubDate>Thu, 07 Aug 2025 18:07:41 +0000</pubDate>
+
+	<form>
+		<id>2</id>
+		<form_key><![CDATA[user_registration]]></form_key>
+		<name><![CDATA[CASA User Registration Form]]></name>
+		<description><![CDATA[User account registration form for CASA case management system]]></description>
+		<created_at>2025-08-07 18:07:18</created_at>
+		<logged_in>0</logged_in>
+		<is_template>0</is_template>
+		<editable>0</editable>
+		<options><![CDATA[{"antispam":1,"on_submit_migrated":1,"submit_conditions":{"show_hide":"show","any_all":"all","hide_field":[],"hide_field_cond":["=="],"hide_opt":[]}}]]></options>
+		<status><![CDATA[published]]></status>
+		<parent_form_id>0</parent_form_id>
+		<field>
+			<id>1</id>
+			<field_key><![CDATA[first_name]]></field_key>
+			<name><![CDATA[First Name]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>1</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"First name is required","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>2</id>
+			<field_key><![CDATA[last_name]]></field_key>
+			<name><![CDATA[Last Name]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>2</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Last name is required","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>3</id>
+			<field_key><![CDATA[email]]></field_key>
+			<name><![CDATA[Email Address]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[email]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>3</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"autocomplete":"email","admin_only":[""],"in_section":"0","invalid":"Please enter a valid email address","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>4</id>
+			<field_key><![CDATA[password]]></field_key>
+			<name><![CDATA[Password]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[password]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>4</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Password is required","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>5</id>
+			<field_key><![CDATA[confirm_password]]></field_key>
+			<name><![CDATA[Confirm Password]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[password]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>5</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"Please confirm your password","classes":"frm6 frm_first"}]]></field_options>
+		</field>
+		<field>
+			<id>6</id>
+			<field_key><![CDATA[phone]]></field_key>
+			<name><![CDATA[Phone Number]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[text]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>6</field_order>
+			<form_id>2</form_id>
+			<required>0</required>
+			<options><![CDATA[]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"in_section":"0","invalid":"[field_name] is invalid","classes":"frm6"}]]></field_options>
+		</field>
+		<field>
+			<id>7</id>
+			<field_key><![CDATA[organization]]></field_key>
+			<name><![CDATA[Organization]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>7</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select Organization","value":"","image":"Select Organization","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"Organization is required","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>8</id>
+			<field_key><![CDATA[role]]></field_key>
+			<name><![CDATA[Role]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[select]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>8</field_order>
+			<form_id>2</form_id>
+			<required>1</required>
+			<options><![CDATA[{"label":"Select Role","value":"","image":"Select Role","src":false},{"label":"CASA Administrator","value":"casa_administrator","image":"CASA Administrator","src":false},{"label":"CASA Supervisor","value":"casa_supervisor","image":"CASA Supervisor","src":false},{"label":"CASA Volunteer","value":"casa_volunteer","image":"CASA Volunteer","src":false},{"label":"Court Staff","value":"court_staff","image":"Court Staff","src":false},{"label":"Social Worker","value":"social_worker","image":"Social Worker","src":false}]]></options>
+			<field_options><![CDATA[{"admin_only":[""],"other":"0","in_section":"0","invalid":"Role is required","image_options":"0","image_size":"small"}]]></field_options>
+		</field>
+		<field>
+			<id>9</id>
+			<field_key><![CDATA[submit]]></field_key>
+			<name><![CDATA[Create Account]]></name>
+			<description><![CDATA[]]></description>
+			<type><![CDATA[submit]]></type>
+			<default_value><![CDATA[]]></default_value>
+			<field_order>9</field_order>
+			<form_id>2</form_id>
+			<required>0</required>
+			<options><![CDATA[[]]]></options>
+			<field_options><![CDATA[{"in_section":"0","classes":"frm6","custom_html":""}]]></field_options>
+		</field>
+	</form>
+	<view>
+		<title>Confirmation</title>
+		<link></link>
+		<post_author><![CDATA[admin]]></post_author>
+		<description></description>
+		<content><![CDATA[{"success_action":"message","success_msg":"Account created successfully! You can now log in with your email and password.","show_form":"","success_url":"","success_page_id":"","open_in_new_tab":"","redirect_delay":"","redirect_delay_time":8,"redirect_delay_msg":"Please wait while you are redirected.","event":["create"],"conditions":{"send_stop":"","any_all":""}}]]></content>
+		<excerpt><![CDATA[on_submit]]></excerpt>
+		<post_id>2</post_id>
+		<post_date>2025-08-07 18:07:18</post_date>
+		<post_date_gmt>2025-08-07 18:07:18</post_date_gmt>
+		<comment_status>closed</comment_status>
+		<ping_status>closed</ping_status>
+		<post_name>2_on_submit_</post_name>
+		<status>publish</status>
+		<post_parent>0</post_parent>
+		<menu_order>2</menu_order>
+		<post_type>frm_form_actions</post_type>
+		<post_password><![CDATA[]]></post_password>
+		<is_sticky>0</is_sticky>
+	</view>
+</channel>

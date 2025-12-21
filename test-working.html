@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CASA Working Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 10px 5px; }
+        textarea { width: 100%; height: 200px; font-family: monospace; }
+        input { width: 100%; padding: 8px; margin: 5px 0; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>🏠 CASA Working System Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Create Organization</h2>
+        <button onclick="createOrganization()">Create Test Organization</button>
+        <div id="org-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Create Admin User</h2>
+        <input type="text" id="orgId" placeholder="Organization ID from step 1">
+        <button onclick="createAdminUser()">Create Admin User</button>
+        <div id="user-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Raw Response</h2>
+        <textarea id="response" readonly></textarea>
+    </div>
+
+    <script>
+        const API_BASE = 'http://casa-backend.local/wp-json/casa/v1';
+        
+        function log(data) {
+            document.getElementById('response').value = JSON.stringify(data, null, 2);
+        }
+        
+        async function createOrganization() {
+            const timestamp = Date.now();
+            const orgData = {
+                name: `Test CASA Program ${timestamp}`,
+                slug: `test-casa-${timestamp}`,
+                contact_email: `admin${timestamp}@testcasa.com`
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/organizations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(orgData)
+                });
+                
+                const data = await response.json();
+                log(data);
+                
+                if (data.success) {
+                    document.getElementById('org-result').innerHTML = 
+                        `<p class="success">✅ Organization created! ID: ${data.data.id}</p>`;
+                    document.getElementById('orgId').value = data.data.id;
+                } else {
+                    document.getElementById('org-result').innerHTML = 
+                        `<p class="error">❌ Failed: ${data.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('org-result').innerHTML = 
+                    `<p class="error">❌ Error: ${error.message}</p>`;
+                log({ error: error.message });
+            }
+        }
+        
+        async function createAdminUser() {
+            const orgId = document.getElementById('orgId').value;
+            if (!orgId) {
+                alert('Please create an organization first');
+                return;
+            }
+            
+            const timestamp = Date.now();
+            const userData = {
+                email: `admin${timestamp}@testcasa.com`,
+                password: 'TestPassword123!',
+                first_name: 'Test',
+                last_name: 'Admin',
+                casa_role: 'administrator',
+                organization_id: parseInt(orgId)
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                log(data);
+                
+                if (data.success) {
+                    document.getElementById('user-result').innerHTML = 
+                        `<p class="success">✅ Admin user created! ID: ${data.data?.id || 'Created'}</p>
+                         <p>Email: ${userData.email}</p>
+                         <p>Password: ${userData.password}</p>
+                         <p><strong>✅ Organization registration is now working!</strong></p>`;
+                } else {
+                    document.getElementById('user-result').innerHTML = 
+                        `<p class="error">❌ Failed: ${data.error || data.message || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('user-result').innerHTML = 
+                    `<p class="error">❌ Error: ${error.message}</p>`;
+                log({ error: error.message });
+            }
+        }
+    </script>
+</body>
+</html>
