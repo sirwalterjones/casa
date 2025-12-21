@@ -39,6 +39,7 @@ COPY flush-rules.php /var/www/html/
 COPY casa-fix.php /var/www/html/
 COPY cleanup_database.php /var/www/html/
 COPY setup-admin.php /var/www/html/
+COPY db-debug.php /var/www/html/
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
