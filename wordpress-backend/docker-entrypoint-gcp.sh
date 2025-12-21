@@ -38,14 +38,13 @@ define('DB_USER', getenv('WORDPRESS_DB_USER') ?: 'wordpress');
 define('DB_PASSWORD', getenv('WORDPRESS_DB_PASSWORD') ?: '');
 
 // For Cloud SQL Unix socket connection
-$db_host = getenv('WORDPRESS_DB_HOST') ?: '127.0.0.1';
-if (strpos($db_host, '/cloudsql/') === 0) {
-    // For Unix socket, use localhost and define socket separately
-    define('DB_HOST', 'localhost');
-    // Set MySQL socket via ini
-    ini_set('mysqli.default_socket', $db_host);
+// WordPress/MySQL uses format: :socket_path or null:null:socket_path
+$db_host_env = getenv('WORDPRESS_DB_HOST') ?: '127.0.0.1';
+if (strpos($db_host_env, '/cloudsql/') === 0) {
+    // Use null host with socket - WordPress interprets this correctly
+    define('DB_HOST', ':' . $db_host_env);
 } else {
-    define('DB_HOST', $db_host);
+    define('DB_HOST', $db_host_env);
 }
 define('DB_CHARSET', 'utf8mb4');
 define('DB_COLLATE', '');
