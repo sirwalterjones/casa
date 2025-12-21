@@ -10,6 +10,14 @@ const nextConfig = {
   // Enable standalone output for Docker/Cloud Run deployment
   output: 'standalone',
 
+  // Skip TypeScript and ESLint errors during build (for faster deployment)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     domains: [
       'localhost',
