@@ -4,7 +4,12 @@
  * This helps identify Cloud SQL socket connection issues
  */
 
+// Disable output buffering for immediate output
+while (ob_get_level()) ob_end_flush();
+ini_set('output_buffering', 'off');
+ini_set('implicit_flush', 1);
 header('Content-Type: text/plain');
+header('X-Accel-Buffering: no');
 
 echo "=== Database Connection Debug ===\n\n";
 
@@ -29,6 +34,9 @@ if (strpos($db_host, '/cloudsql/') !== false) {
 
     echo "Socket Path: $socket_path\n";
     echo "Socket exists: " . (file_exists($socket_path) ? 'YES' : 'NO') . "\n";
+    echo "Is socket: " . (is_readable($socket_path) && filetype($socket_path) === 'socket' ? 'YES' : 'NO') . "\n";
+    echo "File type: " . @filetype($socket_path) . "\n";
+    echo "Stat info: " . json_encode(@stat($socket_path)) . "\n";
 
     // Check directory
     $socket_dir = dirname($socket_path);
@@ -62,8 +70,10 @@ echo "\n=== Testing Connections ===\n\n";
 
 // Test 1: Direct socket connection
 echo "Test 1: Direct mysqli socket connection\n";
+flush();
 $socket = getenv('WORDPRESS_DB_HOST');
 $mysqli = mysqli_init();
+mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 5);
 $result = @mysqli_real_connect(
     $mysqli,
     null,
@@ -79,6 +89,7 @@ if ($result) {
 } else {
     echo "FAILED: " . mysqli_connect_error() . "\n";
 }
+flush();
 
 // Test 2: localhost:socket format
 echo "\nTest 2: localhost:socket format\n";
