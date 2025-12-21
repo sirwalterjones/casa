@@ -46,22 +46,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (credentials: LoginCredentials): Promise<void> => {
+  const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
       setLoading(true);
-      
+
       const response = await authService.login(credentials);
-      
+
       if (response.success && response.data) {
-        setUser(response.data.user);
-        setOrganization(response.data.organization);
-        
-        // Redirect to dashboard or intended page
-        const redirectTo = router.query.redirect as string || '/dashboard';
-        router.push(redirectTo);
-      } else {
-        throw new Error(response.error || 'Login failed');
+        // Check if 2FA is required
+        if ('requires_2fa' in response.data && response.data.requires_2fa) {
+          const twoFactorData = response.data as {
+            requires_2fa: boolean;
+            temp_token: string;
+            email: string;
+            organization_slug?: string;
+          };
+
+          // Redirect to 2FA verification page
+          router.push({
+            pathname: '/auth/verify-2fa',
+            query: {
+              temp_token: twoFactorData.temp_token,
+              email: twoFactorData.email,
+              organization_slug: twoFactorData.organization_slug || credentials.organizationSlug,
+            },
+          });
+          return true;
+        }
+
+        // Normal login flow (no 2FA or 2FA already verified)
+        if ('user' in response.data && 'organization' in response.data) {
+          setUser(response.data.user);
+          setOrganization(response.data.organization);
+
+          // Redirect to dashboard or intended page
+          const redirectTo = router.query.redirect as string || '/dashboard';
+          router.push(redirectTo);
+          return true;
+        }
       }
+
+      throw new Error(response.error || 'Login failed');
     } catch (error) {
       console.error('Login error:', error);
       throw error;

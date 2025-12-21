@@ -28,22 +28,28 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Include Two-Factor Authentication module
+require_once plugin_dir_path(__FILE__) . 'two-factor-auth.php';
+
 // Plugin activation hook
 register_activation_hook(__FILE__, 'casa_enhanced_activate');
 
 function casa_enhanced_activate() {
     // Add CASA user roles
     casa_add_user_roles();
-    
+
     // Create database tables
     casa_create_tables();
-    
+
+    // Create 2FA table
+    casa_create_2fa_table();
+
     // Register Custom Post Types
     casa_register_post_types();
-    
+
     // Set default capabilities
     casa_set_capabilities();
-    
+
     // Flush rewrite rules
     flush_rewrite_rules();
 }
@@ -547,10 +553,10 @@ add_action('rest_api_init', 'casa_register_enhanced_routes');
 function casa_register_enhanced_routes() {
     error_log('casa_register_enhanced_routes called');
     
-    // Enhanced authentication endpoint
+    // Enhanced authentication endpoint with 2FA
     register_rest_route('casa/v1', '/auth/login', array(
         'methods' => 'POST',
-        'callback' => 'casa_enhanced_login',
+        'callback' => 'casa_enhanced_login_with_2fa',
         'permission_callback' => '__return_true'
     ));
     

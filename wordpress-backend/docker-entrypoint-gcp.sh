@@ -54,6 +54,17 @@ if (getenv('GCS_BUCKET_NAME')) {
     define('GCS_BUCKET_NAME', getenv('GCS_BUCKET_NAME'));
 }
 
+// Brevo (Sendinblue) API for transactional emails
+if (getenv('BREVO_API_KEY')) {
+    define('BREVO_API_KEY', getenv('BREVO_API_KEY'));
+}
+if (getenv('BREVO_SENDER_EMAIL')) {
+    define('BREVO_SENDER_EMAIL', getenv('BREVO_SENDER_EMAIL'));
+}
+if (getenv('BREVO_SENDER_NAME')) {
+    define('BREVO_SENDER_NAME', getenv('BREVO_SENDER_NAME'));
+}
+
 // Security settings for Cloud Run
 define('FORCE_SSL_ADMIN', true);
 $_SERVER['HTTPS'] = 'on';

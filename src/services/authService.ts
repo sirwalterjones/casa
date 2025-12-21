@@ -14,265 +14,226 @@ import {
   PasswordResetResponse
 } from '@/types';
 
+// 2FA response interface
+interface TwoFactorResponse {
+  requires_2fa: boolean;
+  temp_token: string;
+  email: string;
+  organization_slug?: string;
+}
+
 export class AuthService {
     private static readonly TOKEN_KEY = 'auth_token';
     private static readonly USER_KEY = 'user_data';
     private static readonly ORGANIZATION_KEY = 'organization_id';
     private static readonly REFRESH_TOKEN_KEY = 'refresh_token';
 
-    // Login user
-    async login(credentials: LoginCredentials): Promise<ApiResponse<AuthLoginResponse>> {
+    // Login user - now returns 2FA requirement or success
+    async login(credentials: LoginCredentials): Promise<ApiResponse<AuthLoginResponse | TwoFactorResponse>> {
       try {
-        // Production authentication - no development bypasses
+        // Use CASA enhanced login endpoint with 2FA
+        const response = await apiClient.casaPost('auth/login', {
+          username: credentials.email,
+          password: credentials.password,
+          organization_slug: credentials.organizationSlug || 'default',
+        });
 
-        // WordPress JWT authentication - try multiple username formats
-        let response;
+        // Check if 2FA is required
+        if (response.success && response.data && (response.data as any).requires_2fa) {
+          const data = response.data as any;
+          return {
+            success: true,
+            data: {
+              requires_2fa: true,
+              temp_token: data.data.temp_token,
+              email: data.data.email,
+              organization_slug: data.data.organization_slug,
+            } as TwoFactorResponse,
+          };
+        }
+
+        // If we got here without 2FA, continue with old flow as fallback
+        // This handles the case where 2FA might not be set up yet
         let loginError;
-        
-        // Try 1: Login with email as username
+
+        // Fallback: WordPress JWT authentication
         try {
-          response = await apiClient.wpPost('jwt-auth/v1/token', {
+          const jwtResponse = await apiClient.wpPost('jwt-auth/v1/token', {
             username: credentials.email,
             password: credentials.password,
           });
+
+          if (jwtResponse.success && jwtResponse.data) {
+            return this.processLoginResponse(jwtResponse, credentials);
+          }
         } catch (error: any) {
           loginError = error;
-          
-          // Try 2: Login with username extracted from email
-          if (credentials.email.includes('@')) {
-            try {
-              const usernameFromEmail = credentials.email.split('@')[0];
-              response = await apiClient.wpPost('jwt-auth/v1/token', {
-                username: usernameFromEmail,
-                password: credentials.password,
-              });
-            } catch (error2: any) {
-              // Try 3: If organization slug provided, try that as username
-              if (credentials.organizationSlug) {
-                try {
-                  response = await apiClient.wpPost('jwt-auth/v1/token', {
-                    username: credentials.organizationSlug,
-                    password: credentials.password,
-                  });
-                } catch (error3: any) {
-                  // All attempts failed, throw the original error
-                  throw loginError;
-                }
-              } else {
-                throw loginError;
-              }
-            }
-          } else {
-            throw loginError;
-          }
         }
 
-        if (response.success && response.data) {
-          const { token, user_email, user_nicename, user_display_name } = response.data as WordPressJWTResponse;
-          
-          // Fetch actual user and organization data from the API
-          try {
-            // Temporarily set the token in cookies so API calls work
-            Cookies.set('auth_token', token, { expires: 7, secure: process.env.NODE_ENV === 'production' });
-            
-            // Get user profile without specifying organization - let backend determine user's organization
-            const userProfileResponse = await apiClient.casaGet('user/profile');
-            
-            // Check for authorization errors
-            if (!userProfileResponse.success) {
-              if (userProfileResponse.error?.includes('not assigned') || userProfileResponse.error?.includes('400')) {
-                throw new Error('You are not assigned to any organization. Please contact your administrator.');
-              } else {
-                throw new Error(userProfileResponse.error || 'Failed to load user profile');
-              }
-            }
-            
-            // Get organization data for the user's assigned organization
-            const organizationResponse = await apiClient.casaGet('organizations');
-            console.log('Organization response:', organizationResponse);
-            console.log('Organization response.data type:', typeof organizationResponse.data);
-            console.log('Organization response.data:', organizationResponse.data);
-            
-            let user: User;
-            let organization: CasaOrganization;
-            
-            if (userProfileResponse.success && userProfileResponse.data) {
-              // Map the API response to User interface
-              const apiUser = userProfileResponse.data as any;
-              console.log('API User data from profile:', apiUser);
-              console.log('API User roles:', apiUser.roles);
-              
-              console.log('API User organizationId value:', apiUser.organizationId);
-              console.log('API User organizationId type:', typeof apiUser.organizationId);
-              
-              user = {
-                id: apiUser.id?.toString() || 'wp-user-1',
-                email: apiUser.email || user_email || credentials.email,
-                firstName: apiUser.firstName || user_display_name?.split(' ')[0] || user_nicename || 'User',
-                lastName: apiUser.lastName || user_display_name?.split(' ')[1] || '',
-                roles: apiUser.roles && apiUser.roles.length > 0 ? apiUser.roles : 
-                  (credentials.email === 'walter@narcrms.net' ? ['casa_administrator'] : ['volunteer']),
-                organizationId: apiUser.organizationId !== null && apiUser.organizationId !== undefined ? 
-                  apiUser.organizationId.toString() : null,
-                isActive: apiUser.isActive !== undefined ? apiUser.isActive : true,
-                lastLogin: apiUser.lastLogin || new Date().toISOString(),
-                createdAt: apiUser.createdAt || new Date().toISOString(),
-                updatedAt: apiUser.updatedAt || new Date().toISOString(),
-              };
-              
-              console.log('Processed user object:', user);
-            } else {
-              // Fallback user data - but try to get better role info
-              console.log('Using fallback user data - user profile API failed');
-              user = {
-                id: 'wp-user-1',
-                email: user_email || credentials.email,
-                firstName: user_display_name?.split(' ')[0] || user_nicename || 'User',
-                lastName: user_display_name?.split(' ')[1] || '',
-                roles: ['casa_administrator'], // Default to admin role for walter@narcrms.net
-                organizationId: '',
-                isActive: true,
-                lastLogin: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            
-            console.log('Checking organization response conditions:');
-            console.log('- success:', organizationResponse.success);
-            console.log('- data exists:', !!organizationResponse.data);
-            console.log('- is array:', Array.isArray(organizationResponse.data));
-            console.log('- length > 0:', organizationResponse.data && Array.isArray(organizationResponse.data) ? organizationResponse.data.length > 0 : false);
-            
-            // Handle both array and object responses
-            let organizations = [];
-            if (organizationResponse.success && organizationResponse.data) {
-              if (Array.isArray(organizationResponse.data)) {
-                organizations = organizationResponse.data;
-              } else if (organizationResponse.data && typeof organizationResponse.data === 'object') {
-                // Check if data is nested (response.data.data)
-                if (organizationResponse.data.data && Array.isArray(organizationResponse.data.data)) {
-                  organizations = organizationResponse.data.data;
-                } else if (organizationResponse.data.organizations) {
-                  organizations = organizationResponse.data.organizations;
-                } else {
-                  // Treat the object as a single organization
-                  organizations = [organizationResponse.data];
-                }
-              }
-            }
-            
-            console.log('Processed organizations:', organizations);
-            
-            if (organizations.length > 0) {
-              // Use the first organization the user belongs to
-              const orgData = organizations[0];
-              console.log('Raw organization data from API:', orgData);
-              
-              organization = {
-                id: orgData.id.toString(),
-                name: orgData.name,
-                slug: orgData.slug,
-                domain: orgData.domain || 'casa-backend.local',
-                status: orgData.status || 'active',
-                settings: orgData.settings ? JSON.parse(orgData.settings) : {
-                  allowVolunteerSelfRegistration: true,
-                  requireBackgroundCheck: true,
-                  maxCasesPerVolunteer: 5,
-                },
-                createdAt: orgData.created_at || new Date().toISOString(),
-                updatedAt: orgData.updated_at || new Date().toISOString(),
-              };
-              
-              console.log('Processed organization object:', organization);
-            } else {
-              // No organization found - this should not happen if user is properly assigned
-              throw new Error('No organization found for user. Please contact your administrator.');
-            }
-            
-            console.log('About to set auth data with user:', user);
-            this.setAuthData(token, user, organization);
-            
-            // Verify the data was stored
-            const storedUser = this.getCurrentUser();
-            console.log('Stored user data verification:', storedUser);
-            
-            return {
-              success: true,
-              data: { user, organization, token },
-            };
-          } catch (apiError) {
-            console.warn('Failed to fetch user/org data from API, using fallback data:', apiError);
-            
-            // Use fallback data if API calls fail
-            const user: User = {
-              id: 'wp-user-1',
-              email: user_email || credentials.email,
-              firstName: user_display_name?.split(' ')[0] || user_nicename || 'User',
-              lastName: user_display_name?.split(' ')[1] || '',
-              roles: ['volunteer'],
-              organizationId: credentials.organizationSlug || '',
-              isActive: true,
-              lastLogin: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-
-            const organization: CasaOrganization = {
-              id: credentials.organizationSlug || 'demo-casa',
-              name: `${credentials.organizationSlug} CASA Program` || 'CASA Program',
-              slug: credentials.organizationSlug || 'demo-casa',
-              domain: 'casa-backend.local',
-              status: 'active',
-              settings: {
-                allowVolunteerSelfRegistration: true,
-                requireBackgroundCheck: true,
-                maxCasesPerVolunteer: 5,
-              },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            
-            this.setAuthData(token, user, organization);
-            return {
-              success: true,
-              data: { user, organization, token },
-            };
-          }
-        }
-
+        throw loginError || new Error('Login failed');
+      } catch (error: any) {
         return {
           success: false,
-          error: 'Invalid login response format'
+          error: error.message || 'Login failed',
         };
-      } catch (error: any) {
-        // Development fallback for any network error
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('WordPress not accessible, using development mode:', error.message);
-          // Extract name from email for offline user
-          const emailName = credentials.email.split('@')[0];
-          const nameParts = emailName.split(/[._-]/);
-          const firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'User';
-          const lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : '';
+      }
+    }
 
-          const mockUser: User = {
-            id: 'offline-user',
-            email: credentials.email,
-            firstName: firstName,
-            lastName: lastName,
-            roles: ['supervisor'],
-            organizationId: 'offline-org',
+    // Helper method to process JWT login response
+    private async processLoginResponse(response: any, credentials: LoginCredentials): Promise<ApiResponse<AuthLoginResponse>> {
+      const { token, user_email, user_nicename, user_display_name } = response.data as WordPressJWTResponse;
+
+      // Fetch actual user and organization data from the API
+      try {
+        // Temporarily set the token in cookies so API calls work
+        Cookies.set('auth_token', token, { expires: 7, secure: process.env.NODE_ENV === 'production' });
+
+        // Get user profile without specifying organization - let backend determine user's organization
+        const userProfileResponse = await apiClient.casaGet('user/profile');
+
+        // Check for authorization errors
+        if (!userProfileResponse.success) {
+          if (userProfileResponse.error?.includes('not assigned') || userProfileResponse.error?.includes('400')) {
+            throw new Error('You are not assigned to any organization. Please contact your administrator.');
+          } else {
+            throw new Error(userProfileResponse.error || 'Failed to load user profile');
+          }
+        }
+
+        // Get organization data for the user's assigned organization
+        const organizationResponse = await apiClient.casaGet('organizations');
+
+        let user: User;
+        let organization: CasaOrganization;
+
+        if (userProfileResponse.success && userProfileResponse.data) {
+          // Map the API response to User interface
+          const apiUser = userProfileResponse.data as any;
+
+          user = {
+            id: apiUser.id?.toString() || 'wp-user-1',
+            email: apiUser.email || user_email || credentials.email,
+            firstName: apiUser.firstName || user_display_name?.split(' ')[0] || user_nicename || 'User',
+            lastName: apiUser.lastName || user_display_name?.split(' ')[1] || '',
+            roles: apiUser.roles && apiUser.roles.length > 0 ? apiUser.roles :
+              (credentials.email === 'walter@narcrms.net' ? ['casa_administrator'] : ['volunteer']),
+            organizationId: apiUser.organizationId !== null && apiUser.organizationId !== undefined ?
+              apiUser.organizationId.toString() : null,
+            isActive: apiUser.isActive !== undefined ? apiUser.isActive : true,
+            lastLogin: apiUser.lastLogin || new Date().toISOString(),
+            createdAt: apiUser.createdAt || new Date().toISOString(),
+            updatedAt: apiUser.updatedAt || new Date().toISOString(),
+          };
+        } else {
+          // Fallback user data
+          user = {
+            id: 'wp-user-1',
+            email: user_email || credentials.email,
+            firstName: user_display_name?.split(' ')[0] || user_nicename || 'User',
+            lastName: user_display_name?.split(' ')[1] || '',
+            roles: ['casa_administrator'],
+            organizationId: '',
             isActive: true,
             lastLogin: new Date().toISOString(),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
+        }
 
-          const mockOrganization: CasaOrganization = {
-            id: 'offline-org',
-            name: 'Offline Organization',
-            slug: 'offline',
-            domain: 'localhost',
+        // Handle both array and object responses
+        let organizations = [];
+        if (organizationResponse.success && organizationResponse.data) {
+          if (Array.isArray(organizationResponse.data)) {
+            organizations = organizationResponse.data;
+          } else if (organizationResponse.data && typeof organizationResponse.data === 'object') {
+            if (organizationResponse.data.data && Array.isArray(organizationResponse.data.data)) {
+              organizations = organizationResponse.data.data;
+            } else if (organizationResponse.data.organizations) {
+              organizations = organizationResponse.data.organizations;
+            } else {
+              organizations = [organizationResponse.data];
+            }
+          }
+        }
+
+        if (organizations.length > 0) {
+          const orgData = organizations[0];
+          organization = {
+            id: orgData.id.toString(),
+            name: orgData.name,
+            slug: orgData.slug,
+            domain: orgData.domain || 'casa-backend.local',
+            status: orgData.status || 'active',
+            settings: orgData.settings ? JSON.parse(orgData.settings) : {
+              allowVolunteerSelfRegistration: true,
+              requireBackgroundCheck: true,
+              maxCasesPerVolunteer: 5,
+            },
+            createdAt: orgData.created_at || new Date().toISOString(),
+            updatedAt: orgData.updated_at || new Date().toISOString(),
+          };
+        } else {
+          throw new Error('No organization found for user. Please contact your administrator.');
+        }
+
+        this.setAuthData(token, user, organization);
+        return {
+          success: true,
+          data: { user, organization, token },
+        };
+      } catch (apiError: any) {
+        return {
+          success: false,
+          error: apiError.message || 'Login failed',
+        };
+      }
+    }
+
+    // Verify 2FA code and complete login
+    async verify2FA(tempToken: string, code: string, organizationSlug?: string): Promise<ApiResponse<AuthLoginResponse>> {
+      try {
+        const response = await apiClient.casaPost('auth/verify-2fa', {
+          temp_token: tempToken,
+          code: code,
+          organization_slug: organizationSlug || 'default',
+        });
+
+        if (response.success && response.data) {
+          const data = response.data as any;
+          const userData = data.data || data;
+
+          const user: User = {
+            id: userData.user.id?.toString() || 'wp-user-1',
+            email: userData.user.email,
+            firstName: userData.user.firstName,
+            lastName: userData.user.lastName || '',
+            roles: userData.user.roles || ['volunteer'],
+            organizationId: userData.organization?.id?.toString() || '',
+            isActive: userData.user.isActive !== undefined ? userData.user.isActive : true,
+            lastLogin: userData.user.lastLogin || new Date().toISOString(),
+            createdAt: userData.user.createdAt || new Date().toISOString(),
+            updatedAt: userData.user.updatedAt || new Date().toISOString(),
+          };
+
+          const organization: CasaOrganization = userData.organization ? {
+            id: userData.organization.id.toString(),
+            name: userData.organization.name,
+            slug: userData.organization.slug,
+            domain: userData.organization.domain || 'casa-backend.local',
+            status: userData.organization.status || 'active',
+            settings: userData.organization.settings ?
+              (typeof userData.organization.settings === 'string' ? JSON.parse(userData.organization.settings) : userData.organization.settings) : {
+              allowVolunteerSelfRegistration: true,
+              requireBackgroundCheck: true,
+              maxCasesPerVolunteer: 5,
+            },
+            createdAt: userData.organization.created_at || new Date().toISOString(),
+            updatedAt: userData.organization.updated_at || new Date().toISOString(),
+          } : {
+            id: 'default',
+            name: 'Default Organization',
+            slug: 'default',
+            domain: 'casa-backend.local',
             status: 'active',
             settings: {
               allowVolunteerSelfRegistration: true,
@@ -283,18 +244,52 @@ export class AuthService {
             updatedAt: new Date().toISOString(),
           };
 
-          const mockToken = 'offline-jwt-token-' + Date.now();
-          this.setAuthData(mockToken, mockUser, mockOrganization);
-          
+          this.setAuthData(userData.token, user, organization);
+
           return {
             success: true,
-            data: { user: mockUser, organization: mockOrganization, token: mockToken },
+            data: { user, organization, token: userData.token },
           };
         }
 
         return {
           success: false,
-          error: error.message || 'Login failed',
+          error: (response.data as any)?.message || 'Verification failed',
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          error: error.message || 'Verification failed',
+        };
+      }
+    }
+
+    // Resend 2FA code
+    async resend2FACode(tempToken: string): Promise<ApiResponse<{ temp_token: string; email: string }>> {
+      try {
+        const response = await apiClient.casaPost('auth/resend-2fa', {
+          temp_token: tempToken,
+        });
+
+        if (response.success && response.data) {
+          const data = response.data as any;
+          return {
+            success: true,
+            data: {
+              temp_token: data.data?.temp_token || data.temp_token,
+              email: data.data?.email || data.email,
+            },
+          };
+        }
+
+        return {
+          success: false,
+          error: (response.data as any)?.message || 'Failed to resend code',
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          error: error.message || 'Failed to resend code',
         };
       }
     }
