@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+
+// WordPress API URL - use environment variable or default for build time
+const WORDPRESS_API_URL = process.env.WORDPRESS_API_URL || process.env.NEXT_PUBLIC_WORDPRESS_URL || 'http://localhost:8000';
+
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
@@ -11,23 +15,40 @@ const nextConfig = {
       'localhost',
       'your-wordpress-domain.com',
       'storage.googleapis.com',
-      '*.run.app'
+      'run.app'
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.run.app',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.googleapis.com',
+      },
     ],
     unoptimized: process.env.NODE_ENV === 'development',
   },
+
+  // Environment variables exposed to the browser
   env: {
-    WORDPRESS_API_URL: process.env.WORDPRESS_API_URL,
-    JWT_SECRET: process.env.JWT_SECRET,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    WORDPRESS_API_URL: WORDPRESS_API_URL,
   },
+
+  // Rewrites for proxying API requests
   async rewrites() {
+    // Only add rewrites if we have a valid URL
+    if (!WORDPRESS_API_URL || WORDPRESS_API_URL === 'undefined') {
+      return [];
+    }
     return [
       {
         source: '/api/wp/:path*',
-        destination: `${process.env.WORDPRESS_API_URL}/wp-json/:path*`,
+        destination: `${WORDPRESS_API_URL}/wp-json/:path*`,
       },
     ];
   },
+
   async headers() {
     return [
       {
