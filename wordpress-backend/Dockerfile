@@ -46,8 +46,7 @@ RUN chown -R www-data:www-data /var/www/html
 COPY docker-entrypoint-gcp.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint-gcp.sh
 
-# Cloud Run uses PORT environment variable
-ENV PORT 8080
+# Cloud Run automatically sets PORT environment variable
 EXPOSE 8080
 
 ENTRYPOINT ["docker-entrypoint-gcp.sh"]
