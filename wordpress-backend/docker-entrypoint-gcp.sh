@@ -36,7 +36,15 @@ if [ ! -f /var/www/html/wp-config.php ]; then
 define('DB_NAME', getenv('WORDPRESS_DB_NAME') ?: 'wordpress');
 define('DB_USER', getenv('WORDPRESS_DB_USER') ?: 'wordpress');
 define('DB_PASSWORD', getenv('WORDPRESS_DB_PASSWORD') ?: '');
-define('DB_HOST', getenv('WORDPRESS_DB_HOST') ?: '127.0.0.1');
+
+// For Cloud SQL Unix socket, format is: localhost:/cloudsql/CONNECTION_NAME
+$db_host = getenv('WORDPRESS_DB_HOST') ?: '127.0.0.1';
+if (strpos($db_host, '/cloudsql/') === 0) {
+    // Convert socket path to WordPress format
+    define('DB_HOST', 'localhost:' . $db_host);
+} else {
+    define('DB_HOST', $db_host);
+}
 define('DB_CHARSET', 'utf8mb4');
 define('DB_COLLATE', '');
 
