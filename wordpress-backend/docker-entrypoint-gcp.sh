@@ -4,6 +4,20 @@ set -e
 # GCP Cloud Run entrypoint for WordPress
 # This script configures WordPress to work with Cloud SQL
 
+echo "Starting WordPress initialization..."
+
+# Copy WordPress files if they don't exist (from /usr/src/wordpress)
+if [ ! -f /var/www/html/wp-includes/version.php ]; then
+    echo "WordPress files not found, copying from /usr/src/wordpress..."
+    if [ -d /usr/src/wordpress ]; then
+        cp -r /usr/src/wordpress/* /var/www/html/
+        echo "WordPress files copied successfully"
+    else
+        echo "ERROR: /usr/src/wordpress not found!"
+        exit 1
+    fi
+fi
+
 # Wait for database to be ready (Cloud SQL via Cloud Run's automatic connection)
 echo "Waiting for database connection..."
 
