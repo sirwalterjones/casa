@@ -23,6 +23,9 @@ RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/a
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
+# Configure Apache to allow .htaccess overrides
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
 # Set recommended PHP settings for production
 RUN { \
     echo 'upload_max_filesize = 64M'; \
@@ -44,6 +47,9 @@ COPY cleanup_database.php /var/www/html/
 COPY setup-admin.php /var/www/html/
 COPY db-debug.php /var/www/html/
 COPY install-wordpress.php /var/www/html/
+
+# Copy .htaccess for pretty permalinks and wp-json routing
+COPY .htaccess /var/www/html/.htaccess
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
