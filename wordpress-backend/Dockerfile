@@ -34,6 +34,9 @@ RUN { \
 # Copy CASA Enhanced plugin
 COPY plugins/casa-enhanced /var/www/html/wp-content/plugins/casa-enhanced/
 
+# Copy Cloud SQL database drop-in
+COPY wp-content/db.php /var/www/html/wp-content/db.php
+
 # Copy custom configuration files
 COPY flush-rules.php /var/www/html/
 COPY casa-fix.php /var/www/html/
