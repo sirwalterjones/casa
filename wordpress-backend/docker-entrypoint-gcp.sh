@@ -38,14 +38,11 @@ define('DB_USER', getenv('WORDPRESS_DB_USER') ?: 'wordpress');
 define('DB_PASSWORD', getenv('WORDPRESS_DB_PASSWORD') ?: '');
 
 // For Cloud SQL Unix socket connection
+// Format: localhost:/path/to/socket for mysqli
 $db_host_env = getenv('WORDPRESS_DB_HOST') ?: '127.0.0.1';
 if (strpos($db_host_env, '/cloudsql/') === 0) {
-    // Cloud SQL socket path - use localhost and configure socket separately
-    define('DB_HOST', 'localhost');
-    // Set mysqli default socket to Cloud SQL socket
-    ini_set('mysqli.default_socket', $db_host_env);
-    // Also define for reference
-    define('MYSQL_SOCKET', $db_host_env);
+    // Cloud SQL socket - use localhost:socket_path format
+    define('DB_HOST', 'localhost:' . $db_host_env);
 } else {
     define('DB_HOST', $db_host_env);
 }
