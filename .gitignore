@@ -29,6 +29,10 @@ yarn-error.log*
 .env.production
 .env.gcp
 
+# Credentials (never commit)
+CREDENTIALS*.md
+*credentials*.md
+
 # Vercel
 .vercel
 
