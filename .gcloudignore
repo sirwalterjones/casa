@@ -1,0 +1,19 @@
+# Ignore wordpress backend for frontend deployment
+wordpress-backend/
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore Next.js build artifacts (they're rebuilt in Docker)
+.next/
+out/
+
+# Ignore node_modules (they're installed in Docker)
+node_modules/
+
+# Ignore other unnecessary files
+*.md
+*.log
+.env*
+.DS_Store

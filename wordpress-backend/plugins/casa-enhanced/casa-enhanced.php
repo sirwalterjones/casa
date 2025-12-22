@@ -1374,13 +1374,13 @@ function casa_get_dashboard_stats($request) {
     ));
     
     // Get upcoming court hearings count (next 30 days)
+    // Note: court_hearings table has organization_id directly, no need to join
     $court_hearings_table = $wpdb->prefix . 'casa_court_hearings';
     $court_hearings = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $court_hearings_table ch
-         JOIN $cases_table c ON ch.case_id = c.id
-         WHERE c.organization_id = %d 
-         AND ch.hearing_date >= CURDATE() 
-         AND ch.hearing_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)",
+        "SELECT COUNT(*) FROM $court_hearings_table
+         WHERE organization_id = %d
+         AND hearing_date >= CURDATE()
+         AND hearing_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)",
         $user_org
     ));
     

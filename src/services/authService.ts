@@ -393,15 +393,16 @@ export class AuthService {
       // Try to validate with WordPress
       try {
         const response = await apiClient.wpPost('jwt-auth/v1/token/validate');
-        
+
         if (response.success) {
           return {
             success: true,
             data: { user, organization: organization || {} as CasaOrganization }
           };
         }
-      } catch (validateError) {
-        // If validation endpoint fails but we have valid local data, continue
+
+        // Validation endpoint failed (returned success: false)
+        // If we have valid local data, continue anyway
         if (user && organization) {
           console.warn('Token validation endpoint failed, but continuing with local auth data');
           return {
@@ -409,9 +410,18 @@ export class AuthService {
             data: { user, organization }
           };
         }
+      } catch (validateError) {
+        // If validation endpoint throws an error but we have valid local data, continue
+        if (user && organization) {
+          console.warn('Token validation threw error, but continuing with local auth data');
+          return {
+            success: true,
+            data: { user, organization }
+          };
+        }
       }
 
-      // Only clear auth data if we really can't validate
+      // Only clear auth data if we really can't validate AND don't have local data
       this.clearAuthData();
       return {
         success: false,
