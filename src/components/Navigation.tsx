@@ -15,14 +15,18 @@ export default function Navigation({ currentPage }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
+  // Check if user is super admin
+  const isSuperAdmin = hasRole(['casa_super_admin', 'administrator']) ||
+    user?.email === 'walter@joneswebdesigns.com';
+
   // Define navigation items with role-based access
   const allNavigationItems = [
-    { name: 'Dashboard', href: '/dashboard', key: 'dashboard', roles: ['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
-    { name: 'Cases', href: '/cases', key: 'cases', roles: ['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
-    { name: 'Volunteers', href: '/volunteers/list', key: 'volunteers', roles: ['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor'] },
-    { name: 'Reports', href: '/reports/comprehensive', key: 'reports', roles: ['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
-    { name: 'Documents', href: '/documents', key: 'documents', roles: ['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
-    { name: 'Settings', href: '/settings', key: 'settings', roles: ['administrator', 'casa_administrator'] },
+    { name: 'Dashboard', href: '/dashboard', key: 'dashboard', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
+    { name: 'Cases', href: '/cases', key: 'cases', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
+    { name: 'Volunteers', href: '/volunteers/list', key: 'volunteers', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor'] },
+    { name: 'Reports', href: '/reports/comprehensive', key: 'reports', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
+    { name: 'Documents', href: '/documents', key: 'documents', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
+    { name: 'Settings', href: '/settings', key: 'settings', roles: ['administrator', 'casa_administrator', 'casa_super_admin'] },
   ];
 
   // Filter navigation items based on user role
@@ -97,6 +101,15 @@ export default function Navigation({ currentPage }: NavigationProps) {
                 {/* Profile dropdown menu */}
                 {isProfileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                    {isSuperAdmin && (
+                      <Link
+                        href="/super-admin"
+                        className="block px-4 py-2 text-sm text-purple-700 hover:bg-purple-50 font-medium"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Super Admin
+                      </Link>
+                    )}
                     {isAdmin && (
                       <Link
                         href="/settings"
@@ -173,6 +186,15 @@ export default function Navigation({ currentPage }: NavigationProps) {
                   <div className="text-sm font-medium text-gray-500">{organization?.name}</div>
                 </div>
                 <div className="mt-3 px-2 space-y-1">
+                  {isSuperAdmin && (
+                    <Link
+                      href="/super-admin"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-purple-700 hover:bg-purple-50"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Super Admin
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"

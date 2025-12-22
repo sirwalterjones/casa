@@ -575,15 +575,21 @@ export class AuthService {
 
   // Private methods for managing auth data
     private setAuthData(token: string, user: User, organization: CasaOrganization | null, refreshToken?: string): void {
-    const cookieOptions = { expires: 7, secure: process.env.NODE_ENV === 'production' };
-    
+    // Cookie options with proper settings for persistence
+    const cookieOptions: Cookies.CookieAttributes = {
+      expires: 7,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    };
+
     console.log('Setting auth data - organization:', organization);
     console.log('Setting auth data - user:', user);
     console.log('Setting auth data - token:', token ? 'present' : 'missing');
-    
+
     Cookies.set(AuthService.TOKEN_KEY, token, cookieOptions);
     Cookies.set(AuthService.USER_KEY, JSON.stringify(user), cookieOptions);
-    
+
     if (organization) {
       console.log('Storing organization in cookie:', JSON.stringify(organization));
       Cookies.set(AuthService.ORGANIZATION_KEY, JSON.stringify(organization), cookieOptions);
@@ -592,28 +598,39 @@ export class AuthService {
     } else {
       console.log('No organization to store');
     }
-    
+
     if (refreshToken) {
       Cookies.set(AuthService.REFRESH_TOKEN_KEY, refreshToken, cookieOptions);
     }
   }
 
     private setUser(user: User): void {
-    const cookieOptions = { expires: 7, secure: process.env.NODE_ENV === 'production' };
+    const cookieOptions: Cookies.CookieAttributes = {
+      expires: 7,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    };
     Cookies.set(AuthService.USER_KEY, JSON.stringify(user), cookieOptions);
   }
 
     private setOrganization(organization: CasaOrganization): void {
-    const cookieOptions = { expires: 7, secure: process.env.NODE_ENV === 'production' };
+    const cookieOptions: Cookies.CookieAttributes = {
+      expires: 7,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    };
     Cookies.set(AuthService.ORGANIZATION_KEY, JSON.stringify(organization), cookieOptions);
     apiClient.setTenant(organization.id); // TODO: Update apiClient to use organization
   }
 
     private clearAuthData(): void {
-    Cookies.remove(AuthService.TOKEN_KEY);
-    Cookies.remove(AuthService.USER_KEY);
-    Cookies.remove(AuthService.ORGANIZATION_KEY);
-    Cookies.remove(AuthService.REFRESH_TOKEN_KEY);
+    const removeOptions = { path: '/' };
+    Cookies.remove(AuthService.TOKEN_KEY, removeOptions);
+    Cookies.remove(AuthService.USER_KEY, removeOptions);
+    Cookies.remove(AuthService.ORGANIZATION_KEY, removeOptions);
+    Cookies.remove(AuthService.REFRESH_TOKEN_KEY, removeOptions);
   }
 
   // Check user permission

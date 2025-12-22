@@ -51,17 +51,19 @@ class ApiClient {
       (response) => response,
       async (error) => {
         if (error.response?.status === 401) {
-          // Token expired or invalid
-          Cookies.remove('auth_token');
-          Cookies.remove('user_data');
-          Cookies.remove('tenant_id');
-          
+          // Token expired or invalid - remove with path to match how they were set
+          const removeOptions = { path: '/' };
+          Cookies.remove('auth_token', removeOptions);
+          Cookies.remove('user_data', removeOptions);
+          Cookies.remove('organization_id', removeOptions);
+          Cookies.remove('tenant_id', removeOptions);
+
           // Redirect to login (you might want to use router here)
           if (typeof window !== 'undefined') {
             window.location.href = '/auth/login';
           }
         }
-        
+
         return Promise.reject(error);
       }
     );

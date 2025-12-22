@@ -31,12 +31,20 @@ if (!defined('ABSPATH')) {
 // Include Two-Factor Authentication module
 require_once plugin_dir_path(__FILE__) . 'two-factor-auth.php';
 
+// Include Multi-Tenancy & Super Admin module
+require_once plugin_dir_path(__FILE__) . 'multi-tenancy.php';
+
 // Plugin activation hook
 register_activation_hook(__FILE__, 'casa_enhanced_activate');
 
 function casa_enhanced_activate() {
     // Add CASA user roles
     casa_add_user_roles();
+
+    // Add super admin role (from multi-tenancy module)
+    if (function_exists('casa_add_super_admin_role')) {
+        casa_add_super_admin_role();
+    }
 
     // Create database tables
     casa_create_tables();
@@ -264,9 +272,22 @@ function casa_add_user_roles() {
 // Set up database tables
 function casa_create_tables() {
     global $wpdb;
-    
+
     $charset_collate = $wpdb->get_charset_collate();
-    
+
+    // Helper function to safely create table if not exists
+    $create_table_if_not_exists = function($table_name, $sql) use ($wpdb) {
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s",
+            DB_NAME,
+            $table_name
+        ));
+
+        if (!$table_exists) {
+            $wpdb->query($sql);
+        }
+    };
+
     // CASA Organizations table
     $table_name = $wpdb->prefix . 'casa_organizations';
     $sql = "CREATE TABLE $table_name (
@@ -274,7 +295,7 @@ function casa_create_tables() {
         name varchar(255) NOT NULL,
         slug varchar(100) NOT NULL,
         domain varchar(255),
-        status enum('active','inactive','suspended') DEFAULT 'active',
+        status varchar(20) DEFAULT 'active',
         contact_email varchar(255),
         phone varchar(20),
         address text,
@@ -284,9 +305,8 @@ function casa_create_tables() {
         PRIMARY KEY (id),
         UNIQUE KEY slug (slug)
     ) $charset_collate;";
-    
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-    dbDelta($sql);
+
+    $create_table_if_not_exists($table_name, $sql);
     
     // User organization mapping
     $table_name = $wpdb->prefix . 'casa_user_organizations';
@@ -295,10 +315,10 @@ function casa_create_tables() {
         user_id bigint(20) NOT NULL,
         organization_id bigint(20) NOT NULL,
         casa_role varchar(50) DEFAULT 'volunteer',
-        status enum('active','inactive','pending') DEFAULT 'active',
-        background_check_status enum('pending','approved','denied','expired') DEFAULT 'pending',
+        status varchar(20) DEFAULT 'active',
+        background_check_status varchar(20) DEFAULT 'pending',
         background_check_date datetime NULL,
-        training_status enum('pending','completed','expired') DEFAULT 'pending',
+        training_status varchar(20) DEFAULT 'pending',
         training_completion_date datetime NULL,
         assigned_cases_count int(11) DEFAULT 0,
         max_cases int(11) DEFAULT 5,
@@ -309,9 +329,9 @@ function casa_create_tables() {
         KEY user_id (user_id),
         KEY organization_id (organization_id)
     ) $charset_collate;";
-    
-    dbDelta($sql);
-    
+
+    $create_table_if_not_exists($table_name, $sql);
+
     // Cases table
     $table_name = $wpdb->prefix . 'casa_cases';
     $sql = "CREATE TABLE $table_name (
@@ -322,12 +342,12 @@ function casa_create_tables() {
         child_first_name varchar(100) NOT NULL,
         child_last_name varchar(100) NOT NULL,
         child_dob date NULL,
-        case_type enum('abuse','neglect','abandonment','dependency','other') DEFAULT 'other',
-        priority enum('low','medium','high','urgent') DEFAULT 'medium',
-        status enum('active','pending-review','on-hold','closed','transferred') DEFAULT 'active',
+        case_type varchar(30) DEFAULT 'other',
+        priority varchar(20) DEFAULT 'medium',
+        status varchar(30) DEFAULT 'active',
         court_jurisdiction varchar(255),
         assigned_judge varchar(255),
-        placement_type enum('foster-care','kinship-care','group-home','residential-facility','with-parent','other'),
+        placement_type varchar(30),
         placement_address text,
         case_summary text,
         referral_date date NULL,
@@ -341,9 +361,9 @@ function casa_create_tables() {
         KEY assigned_volunteer_id (assigned_volunteer_id),
         KEY status (status)
     ) $charset_collate;";
-    
-    dbDelta($sql);
-    
+
+    $create_table_if_not_exists($table_name, $sql);
+
     // Volunteers table
     $table_name = $wpdb->prefix . 'casa_volunteers';
     $sql = "CREATE TABLE $table_name (
@@ -380,10 +400,10 @@ function casa_create_tables() {
         gender_preference varchar(20),
         special_needs_experience boolean DEFAULT false,
         transportation_available boolean DEFAULT true,
-        volunteer_status enum('background_check','training','active','inactive','suspended') DEFAULT 'background_check',
-        background_check_status enum('pending','approved','denied','expired') DEFAULT 'pending',
+        volunteer_status varchar(30) DEFAULT 'background_check',
+        background_check_status varchar(20) DEFAULT 'pending',
         background_check_date datetime NULL,
-        training_status enum('pending','completed','expired') DEFAULT 'pending',
+        training_status varchar(20) DEFAULT 'pending',
         training_completion_date datetime NULL,
         assigned_cases_count int(11) DEFAULT 0,
         created_by bigint(20) NOT NULL,
@@ -395,9 +415,9 @@ function casa_create_tables() {
         KEY volunteer_status (volunteer_status),
         KEY email (email)
     ) $charset_collate;";
-    
-    dbDelta($sql);
-    
+
+    $create_table_if_not_exists($table_name, $sql);
+
     // Reports table
     $table_name = $wpdb->prefix . 'casa_reports';
     $sql = "CREATE TABLE $table_name (
@@ -405,7 +425,7 @@ function casa_create_tables() {
         organization_id bigint(20) NOT NULL,
         case_id bigint(20) NOT NULL,
         volunteer_id bigint(20) NOT NULL,
-        report_type enum('home_visit','court_report','monthly','incident','progress') DEFAULT 'home_visit',
+        report_type varchar(30) DEFAULT 'home_visit',
         visit_date date NOT NULL,
         visit_duration int(11) NULL,
         location varchar(255),
@@ -417,7 +437,7 @@ function casa_create_tables() {
         recommendations text,
         follow_up_required boolean DEFAULT false,
         follow_up_notes text,
-        status enum('draft','submitted','approved','needs_revision') DEFAULT 'draft',
+        status varchar(20) DEFAULT 'draft',
         supervisor_notes text,
         approved_by bigint(20) NULL,
         approved_at datetime NULL,
@@ -432,9 +452,9 @@ function casa_create_tables() {
         KEY status (status),
         KEY visit_date (visit_date)
     ) $charset_collate;";
-    
-    dbDelta($sql);
-    
+
+    $create_table_if_not_exists($table_name, $sql);
+
     // Documents table
     $table_name = $wpdb->prefix . 'casa_documents';
     $sql = "CREATE TABLE $table_name (
@@ -461,32 +481,16 @@ function casa_create_tables() {
         KEY upload_date (upload_date),
         KEY attachment_id (attachment_id)
     ) $charset_collate;";
-    
-    dbDelta($sql);
-    
-    // Add new columns to existing documents table if they don't exist
-    $documents_table = $wpdb->prefix . 'casa_documents';
-    
-    // Check if file_url column exists
-    $file_url_column = $wpdb->get_results("SHOW COLUMNS FROM $documents_table LIKE 'file_url'");
-    if (empty($file_url_column)) {
-        $wpdb->query("ALTER TABLE $documents_table ADD COLUMN file_url varchar(500) AFTER file_size");
-    }
-    
-    // Check if attachment_id column exists
-    $attachment_id_column = $wpdb->get_results("SHOW COLUMNS FROM $documents_table LIKE 'attachment_id'");
-    if (empty($attachment_id_column)) {
-        $wpdb->query("ALTER TABLE $documents_table ADD COLUMN attachment_id bigint(20) NULL AFTER file_url");
-        $wpdb->query("ALTER TABLE $documents_table ADD INDEX attachment_id (attachment_id)");
-    }
-    
+
+    $create_table_if_not_exists($table_name, $sql);
+
     // Contact logs table
     $table_name = $wpdb->prefix . 'casa_contact_logs';
     $sql = "CREATE TABLE $table_name (
         id bigint(20) NOT NULL AUTO_INCREMENT,
         case_number varchar(100) NOT NULL,
         organization_id bigint(20) NOT NULL,
-        contact_type enum('phone','email','in_person','home_visit','court_hearing','other') NOT NULL,
+        contact_type varchar(30) NOT NULL,
         contact_date datetime NOT NULL,
         contact_duration int(11) NULL,
         contact_person varchar(255),
@@ -502,9 +506,9 @@ function casa_create_tables() {
         KEY contact_type (contact_type),
         KEY contact_date (contact_date)
     ) $charset_collate;";
-    
-    dbDelta($sql);
-    
+
+    $create_table_if_not_exists($table_name, $sql);
+
     // Court hearings table
     $table_name = $wpdb->prefix . 'casa_court_hearings';
     $sql = "CREATE TABLE $table_name (
@@ -517,7 +521,7 @@ function casa_create_tables() {
         hearing_type varchar(100),
         court_room varchar(100),
         judge_name varchar(255),
-        status enum('scheduled','completed','cancelled','continued') DEFAULT 'scheduled',
+        status varchar(20) DEFAULT 'scheduled',
         casa_volunteer_assigned varchar(255),
         notes text,
         created_by bigint(20) NOT NULL,
@@ -529,8 +533,8 @@ function casa_create_tables() {
         KEY hearing_date (hearing_date),
         KEY status (status)
     ) $charset_collate;";
-    
-    dbDelta($sql);
+
+    $create_table_if_not_exists($table_name, $sql);
 }
 
 // Set capabilities for existing roles
@@ -922,71 +926,98 @@ function casa_enhanced_login($request) {
 // Get user's full CASA profile
 function casa_get_user_profile($request) {
     $current_user = wp_get_current_user();
-    
+
     if (!$current_user || $current_user->ID === 0) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Authentication required'
         ), 401);
     }
-    
+
     global $wpdb;
     $table_name = $wpdb->prefix . 'casa_user_organizations';
-    
+    $orgs_table = $wpdb->prefix . 'casa_organizations';
+
+    // Check if user is super admin
+    $is_super_admin = function_exists('casa_is_super_admin') && casa_is_super_admin($current_user->ID);
+
     // Check if a preferred organization was specified in the request
     $preferred_org_slug = $request->get_param('organization_slug');
-    
+
     // If a preferred organization is specified, validate that the user is assigned to it
     if ($preferred_org_slug) {
-        $orgs_table = $wpdb->prefix . 'casa_organizations';
         $preferred_org_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM $orgs_table WHERE slug = %s AND status = 'active'",
             $preferred_org_slug
         ));
-        
+
         if (!$preferred_org_id) {
             return new WP_REST_Response(array(
                 'success' => false,
                 'message' => 'Organization not found'
             ), 404);
         }
-        
-        // Check if user is assigned to this organization
-        $user_assigned = $wpdb->get_var($wpdb->prepare(
-            "SELECT organization_id FROM $table_name WHERE user_id = %d AND organization_id = %d AND status = 'active'",
-            $current_user->ID, $preferred_org_id
-        ));
-        
-        if (!$user_assigned) {
-            return new WP_REST_Response(array(
-                'success' => false,
-                'message' => 'You are not authorized to access this organization'
-            ), 403);
+
+        // Super admins can access any organization
+        if ($is_super_admin) {
+            $current_org_id = $preferred_org_id;
+        } else {
+            // Check if user is assigned to this organization
+            $user_assigned = $wpdb->get_var($wpdb->prepare(
+                "SELECT organization_id FROM $table_name WHERE user_id = %d AND organization_id = %d AND status = 'active'",
+                $current_user->ID, $preferred_org_id
+            ));
+
+            if (!$user_assigned) {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'You are not authorized to access this organization'
+                ), 403);
+            }
+
+            $current_org_id = $preferred_org_id;
         }
-        
-        $current_org_id = $preferred_org_id;
     } else {
         // No preferred organization specified, get user's default organization
         $current_org_id = casa_get_user_organization_id($current_user->ID);
     }
-    
+
     $casa_profiles = $wpdb->get_results($wpdb->prepare(
         "SELECT * FROM $table_name WHERE user_id = %d AND status = 'active'",
         $current_user->ID
     ), ARRAY_A);
-    
+
+    // Get first/last name with fallbacks from display_name
+    $first_name = get_user_meta($current_user->ID, 'first_name', true);
+    $last_name = get_user_meta($current_user->ID, 'last_name', true);
+
+    // If first_name is empty, try to extract from display_name
+    if (empty($first_name) && !empty($current_user->display_name)) {
+        $name_parts = explode(' ', $current_user->display_name, 2);
+        $first_name = $name_parts[0];
+        if (empty($last_name) && isset($name_parts[1])) {
+            $last_name = $name_parts[1];
+        }
+    }
+
+    // Final fallback to user_login or email
+    if (empty($first_name)) {
+        $first_name = !empty($current_user->user_login) ? $current_user->user_login : explode('@', $current_user->user_email)[0];
+    }
+
     $user_data = array(
         'id' => $current_user->ID,
         'email' => $current_user->user_email,
-        'firstName' => get_user_meta($current_user->ID, 'first_name', true),
-        'lastName' => get_user_meta($current_user->ID, 'last_name', true),
+        'firstName' => $first_name,
+        'lastName' => $last_name,
         'phone' => get_user_meta($current_user->ID, 'casa_phone', true),
         'roles' => array_values($current_user->roles),
         'organizationId' => $current_org_id ? (string)$current_org_id : null,
         'casa_profiles' => $casa_profiles,
         'capabilities' => array_keys($current_user->get_role_caps()),
+        'is_super_admin' => $is_super_admin,
     );
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => $user_data
@@ -1079,8 +1110,47 @@ function casa_get_user_organization_id($user_id, $preferred_org_slug = null) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'casa_user_organizations';
     $orgs_table = $wpdb->prefix . 'casa_organizations';
-    
+
     error_log("casa_get_user_organization_id: Looking for user_id = $user_id");
+
+    // Check if user is a super admin - they can access any org or use first available
+    if (function_exists('casa_is_super_admin') && casa_is_super_admin($user_id)) {
+        error_log("casa_get_user_organization_id: User is super admin");
+
+        // If preferred org slug specified, get that org
+        if ($preferred_org_slug) {
+            $org_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM $orgs_table WHERE slug = %s AND status = 'active'",
+                $preferred_org_slug
+            ));
+            if ($org_id) {
+                error_log("casa_get_user_organization_id: Super admin using preferred org = $org_id");
+                return $org_id;
+            }
+        }
+
+        // Check if super admin is assigned to any org
+        $assigned_org = $wpdb->get_var($wpdb->prepare(
+            "SELECT organization_id FROM $table_name WHERE user_id = %d AND status = 'active' AND organization_id != 0 ORDER BY id DESC LIMIT 1",
+            $user_id
+        ));
+
+        if ($assigned_org) {
+            error_log("casa_get_user_organization_id: Super admin using assigned org = $assigned_org");
+            return $assigned_org;
+        }
+
+        // Fall back to first available organization for super admin
+        $first_org = $wpdb->get_var("SELECT id FROM $orgs_table WHERE status = 'active' ORDER BY id ASC LIMIT 1");
+        if ($first_org) {
+            error_log("casa_get_user_organization_id: Super admin using first available org = $first_org");
+            return $first_org;
+        }
+
+        // No orgs exist - return null for super admin (they can still access super admin dashboard)
+        error_log("casa_get_user_organization_id: Super admin - no organizations exist");
+        return null;
+    }
     
     // If a preferred organization slug is provided, try to get that organization first
     if ($preferred_org_slug) {
@@ -1132,10 +1202,8 @@ function casa_get_user_organization_id($user_id, $preferred_org_slug = null) {
 }
 
 // Helper function to check if user can access organization data
-function casa_can_access_organization($user_id, $organization_id) {
-    $user_org = casa_get_user_organization_id($user_id);
-    return $user_org == $organization_id;
-}
+// casa_can_access_organization is now defined in multi-tenancy.php with super admin support
+// Note: The new signature is casa_can_access_organization($organization_id, $user_id = null)
 
 // Helper function to ensure organization context is available
 function casa_ensure_organization_context() {
@@ -1653,37 +1721,18 @@ function casa_get_cases($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
-    $current_user = wp_get_current_user();
-    
+
     global $wpdb;
     $cases_table = $wpdb->prefix . 'casa_cases';
-    $users_table = $wpdb->prefix . 'casa_user_organizations';
-    
-    // For development, if no current user, use first admin user
-    if (!$current_user || $current_user->ID === 0) {
-        $admin_users = get_users(['role' => 'administrator']);
-        if (empty($admin_users)) {
-            $admin_users = get_users(['role' => 'casa_administrator']);
-        }
-        if (!empty($admin_users)) {
-            $current_user = $admin_users[0];
-        }
-    }
-    
-    // Get user's organization
-    $user_org = $wpdb->get_var($wpdb->prepare(
-        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
-        $current_user->ID
-    ));
-    
-    // If no organization found, try to get any organization (for development)
-    if (!$user_org) {
-        $user_org = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
-    }
-    
-    $where_clause = "WHERE c.organization_id = %d";
-    $params = array($user_org);
+
+    // Get organization filter (NULL for super admins = all orgs, or specific org ID)
+    $requested_org_id = $request->get_param('organization_id');
+    $org_filter = casa_get_organization_filter(null, $requested_org_id);
+
+    // Build WHERE clause with organization filtering
+    $params = array();
+    $org_where = casa_build_org_where_clause('c.organization_id', $org_filter, $params);
+    $where_clause = "WHERE $org_where";
     
     // Add filters if provided
     $status = $request->get_param('status');
@@ -1719,23 +1768,27 @@ function casa_get_cases($request) {
             'post_type' => 'casa_case',
             'post_status' => 'publish',
             'posts_per_page' => -1,
-            'meta_query' => array(
+        );
+
+        // Only filter by org if not super admin (org_filter !== null)
+        if ($org_filter !== null) {
+            $args['meta_query'] = array(
                 array(
                     'key' => 'organization_id',
-                    'value' => $user_org,
+                    'value' => $org_filter,
                     'compare' => '='
                 )
-            )
-        );
-        
+            );
+        }
+
         $wp_cases = get_posts($args);
-        
+
         foreach ($wp_cases as $wp_case) {
             $case_meta = get_post_meta($wp_case->ID);
             $cases[] = array(
                 'id' => $wp_case->ID,
                 'case_number' => $case_meta['case_number'][0] ?? '',
-                'organization_id' => $case_meta['organization_id'][0] ?? $user_org,
+                'organization_id' => $case_meta['organization_id'][0] ?? $org_filter,
                 'child_first_name' => $case_meta['child_first_name'][0] ?? '',
                 'child_last_name' => $case_meta['child_last_name'][0] ?? '',
                 'child_dob' => $case_meta['child_dob'][0] ?? '',
@@ -1990,7 +2043,7 @@ function casa_get_organizations($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
+
     $current_user = wp_get_current_user();
     if (!$current_user || $current_user->ID === 0) {
         return new WP_REST_Response(array(
@@ -1998,27 +2051,41 @@ function casa_get_organizations($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
+
     global $wpdb;
     $table_name = $wpdb->prefix . 'casa_organizations';
     $user_orgs_table = $wpdb->prefix . 'casa_user_organizations';
-    
+
+    // Super admins can see all organizations
+    if (function_exists('casa_is_super_admin') && casa_is_super_admin($current_user->ID)) {
+        $organizations = $wpdb->get_results(
+            "SELECT * FROM $table_name WHERE status = 'active' ORDER BY name ASC",
+            ARRAY_A
+        );
+
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => $organizations,
+            'is_super_admin' => true
+        ), 200);
+    }
+
     // Get the user's organization ID
     $user_org_id = casa_get_user_organization_id($current_user->ID);
-    
+
     if (!$user_org_id) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'User not assigned to any organization'
         ), 400);
     }
-    
+
     // Get only the organization the user belongs to
     $organizations = $wpdb->get_results($wpdb->prepare(
         "SELECT * FROM $table_name WHERE id = %d AND status = 'active'",
         $user_org_id
     ), ARRAY_A);
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => $organizations
@@ -2314,22 +2381,18 @@ function casa_get_volunteers($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
-    $current_user = wp_get_current_user();
-    
+
     global $wpdb;
     $volunteers_table = $wpdb->prefix . 'casa_volunteers';
-    $users_table = $wpdb->prefix . 'casa_user_organizations';
-    
-    // Get user's organization
-    $user_org = $wpdb->get_var($wpdb->prepare(
-        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
-        $current_user->ID
-    ));
-    
-    // Filter out old test data (Jane Smith with ID 1 and org 0)
-    $where_clause = "WHERE organization_id = %d AND id != 1";
-    $params = array($user_org);
+
+    // Get organization filter (NULL for super admins = all orgs, or specific org ID)
+    $requested_org_id = $request->get_param('organization_id');
+    $org_filter = casa_get_organization_filter(null, $requested_org_id);
+
+    // Build WHERE clause with organization filtering (also filter out old test data with ID 1)
+    $params = array();
+    $org_where = casa_build_org_where_clause('organization_id', $org_filter, $params);
+    $where_clause = "WHERE $org_where AND id != 1";
     
     // Add filters if provided
     $status = $request->get_param('status');
@@ -2371,35 +2434,25 @@ function casa_delete_volunteer($request) {
         ), 400);
     }
     
-    $current_user = wp_get_current_user();
-    
-    // Get user's organization to ensure they can only delete volunteers from their org
-    $organization_id = casa_get_user_organization_id($current_user->ID);
-    if (!$organization_id) {
-        return new WP_REST_Response(array(
-            'success' => false,
-            'message' => 'User not associated with any organization'
-        ), 400);
-    }
-    
     global $wpdb;
     $volunteers_table = $wpdb->prefix . 'casa_volunteers';
-    
-    // First check if volunteer exists and belongs to user's organization
+
+    // First check if volunteer exists
     $volunteer = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $volunteers_table WHERE id = %d",
         $volunteer_id
     ), ARRAY_A);
-    
+
     if (!$volunteer) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Volunteer not found'
         ), 404);
     }
-    
-    // For security, allow deleting organization 0 (test data) or same organization
-    if ($volunteer['organization_id'] != '0' && $volunteer['organization_id'] != $organization_id) {
+
+    // Check organization access (super admins can access all, regular users only their org)
+    // Allow deleting organization 0 (test data) for anyone
+    if ($volunteer['organization_id'] != '0' && !casa_can_access_organization($volunteer['organization_id'])) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'You can only delete volunteers from your organization'
@@ -2682,42 +2735,22 @@ function casa_get_contact_logs($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
-    $current_user = wp_get_current_user();
-    
+
     global $wpdb;
     $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
     $cases_table = $wpdb->prefix . 'casa_cases';
-    $users_table = $wpdb->prefix . 'casa_user_organizations';
-    
-    // For development, if no current user, use first admin user
-    if (!$current_user || $current_user->ID === 0) {
-        $admin_users = get_users(['role' => 'administrator']);
-        if (empty($admin_users)) {
-            $admin_users = get_users(['role' => 'casa_administrator']);
-        }
-        if (!empty($admin_users)) {
-            $current_user = $admin_users[0];
-        }
-    }
-    
-    // Get user's organization
-    $user_org = $wpdb->get_var($wpdb->prepare(
-        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
-        $current_user->ID
-    ));
-    
-    // If no organization found, try to get any organization (for development)
-    if (!$user_org) {
-        $user_org = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
-    }
-    
+
+    // Get organization filter (NULL for super admins = all orgs, or specific org ID)
+    $requested_org_id = $request->get_param('organization_id');
+    $org_filter = casa_get_organization_filter(null, $requested_org_id);
+
+    // Build WHERE clause with organization filtering
+    $params = array();
+    $org_where = casa_build_org_where_clause('c.organization_id', $org_filter, $params);
+    $where_clause = "WHERE $org_where";
+
     // Get case_id filter if provided
     $case_id = $request->get_param('case_id');
-    
-    // Build query
-    $where_clause = "WHERE c.organization_id = %d";
-    $params = array($user_org);
     
     if ($case_id) {
         // Need to get the case_number for the given case_id
@@ -2758,42 +2791,22 @@ function casa_get_home_visit_reports($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
-    $current_user = wp_get_current_user();
-    
+
     global $wpdb;
     $reports_table = $wpdb->prefix . 'casa_reports';
     $cases_table = $wpdb->prefix . 'casa_cases';
-    $users_table = $wpdb->prefix . 'casa_user_organizations';
-    
-    // For development, if no current user, use first admin user
-    if (!$current_user || $current_user->ID === 0) {
-        $admin_users = get_users(['role' => 'administrator']);
-        if (empty($admin_users)) {
-            $admin_users = get_users(['role' => 'casa_administrator']);
-        }
-        if (!empty($admin_users)) {
-            $current_user = $admin_users[0];
-        }
-    }
-    
-    // Get user's organization
-    $user_org = $wpdb->get_var($wpdb->prepare(
-        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
-        $current_user->ID
-    ));
-    
-    // If no organization found, try to get any organization (for development)
-    if (!$user_org) {
-        $user_org = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
-    }
-    
+
+    // Get organization filter (NULL for super admins = all orgs, or specific org ID)
+    $requested_org_id = $request->get_param('organization_id');
+    $org_filter = casa_get_organization_filter(null, $requested_org_id);
+
+    // Build WHERE clause with organization filtering
+    $params = array();
+    $org_where = casa_build_org_where_clause('r.organization_id', $org_filter, $params);
+    $where_clause = "WHERE $org_where AND r.report_type = 'home_visit'";
+
     // Get case_id filter if provided
     $case_id = $request->get_param('case_id');
-    
-    // Build query
-    $where_clause = "WHERE r.organization_id = %d AND r.report_type = 'home_visit'";
-    $params = array($user_org);
     
     if ($case_id) {
         $where_clause .= " AND r.case_id = %d";
@@ -5114,6 +5127,13 @@ add_action('rest_api_init', function() {
         'callback' => 'casa_admin_cleanup_database',
         'permission_callback' => '__return_true'
     ));
+
+    // Setup Formidable Forms tables (for MySQL 8.0 compatibility)
+    register_rest_route('casa/v1', '/admin/setup-formidable-tables', array(
+        'methods' => 'POST',
+        'callback' => 'casa_setup_formidable_tables',
+        'permission_callback' => '__return_true'
+    ));
 });
 
 // Database cleanup function
@@ -5703,6 +5723,162 @@ function casa_formidable_test($request) {
         'message' => 'Formidable Forms endpoint is working',
         'timestamp' => current_time('mysql'),
         'formidable_active' => class_exists('FrmForm')
+    ), 200);
+}
+
+/**
+ * Setup Formidable Forms database tables for MySQL 8.0 compatibility
+ * This bypasses the dbDelta() function which has issues with MySQL 8.0
+ */
+function casa_setup_formidable_tables($request) {
+    global $wpdb;
+
+    $charset_collate = $wpdb->get_charset_collate();
+    $prefix = $wpdb->prefix;
+    $messages = array();
+
+    // Helper function to safely create table if not exists
+    $create_table_if_not_exists = function($table_name, $sql) use ($wpdb, &$messages) {
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s",
+            DB_NAME,
+            $table_name
+        ));
+
+        if (!$table_exists) {
+            $result = $wpdb->query($sql);
+            if ($result !== false) {
+                $messages[] = "Created table: $table_name";
+            } else {
+                $messages[] = "ERROR creating table $table_name: " . $wpdb->last_error;
+            }
+        } else {
+            $messages[] = "Table already exists: $table_name";
+        }
+    };
+
+    // 1. Create frm_fields table
+    $create_table_if_not_exists(
+        $prefix . 'frm_fields',
+        "CREATE TABLE {$prefix}frm_fields (
+            id BIGINT(20) NOT NULL auto_increment,
+            field_key varchar(100) default NULL,
+            name text default NULL,
+            description longtext default NULL,
+            type text default NULL,
+            default_value longtext default NULL,
+            options longtext default NULL,
+            field_order int(11) default 0,
+            required int(1) default NULL,
+            field_options longtext default NULL,
+            form_id int(11) default NULL,
+            created_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            KEY form_id (form_id),
+            UNIQUE KEY field_key (field_key)
+        ) $charset_collate"
+    );
+
+    // 2. Create frm_forms table
+    $create_table_if_not_exists(
+        $prefix . 'frm_forms',
+        "CREATE TABLE {$prefix}frm_forms (
+            id int(11) NOT NULL auto_increment,
+            form_key varchar(100) default NULL,
+            name varchar(255) default NULL,
+            description text default NULL,
+            parent_form_id int(11) default 0,
+            logged_in tinyint(1) default NULL,
+            editable tinyint(1) default NULL,
+            is_template tinyint(1) default 0,
+            default_template tinyint(1) default 0,
+            status varchar(255) default NULL,
+            options longtext default NULL,
+            created_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY form_key (form_key)
+        ) $charset_collate"
+    );
+
+    // 3. Create frm_items (entries) table
+    $create_table_if_not_exists(
+        $prefix . 'frm_items',
+        "CREATE TABLE {$prefix}frm_items (
+            id BIGINT(20) NOT NULL auto_increment,
+            item_key varchar(100) default NULL,
+            name varchar(255) default NULL,
+            description text default NULL,
+            ip text default NULL,
+            form_id BIGINT(20) default NULL,
+            post_id BIGINT(20) default NULL,
+            user_id BIGINT(20) default NULL,
+            parent_item_id BIGINT(20) default 0,
+            is_draft tinyint(1) default 0,
+            updated_by BIGINT(20) default NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            KEY form_id (form_id),
+            KEY item_key (item_key),
+            KEY user_id (user_id),
+            KEY parent_item_id (parent_item_id),
+            KEY post_id (post_id)
+        ) $charset_collate"
+    );
+
+    // 4. Create frm_item_metas table
+    $create_table_if_not_exists(
+        $prefix . 'frm_item_metas',
+        "CREATE TABLE {$prefix}frm_item_metas (
+            id BIGINT(20) NOT NULL auto_increment,
+            meta_value longtext default NULL,
+            field_id BIGINT(20) NOT NULL,
+            item_id BIGINT(20) NOT NULL,
+            created_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            KEY field_id (field_id),
+            KEY item_id (item_id)
+        ) $charset_collate"
+    );
+
+    // 5. Add composite indexes for optimization
+    $indexes_to_add = array(
+        array('table' => $prefix . 'frm_items', 'name' => 'idx_form_id_is_draft', 'columns' => 'form_id, is_draft'),
+        array('table' => $prefix . 'frm_item_metas', 'name' => 'idx_item_id_field_id', 'columns' => 'item_id, field_id'),
+    );
+
+    foreach ($indexes_to_add as $idx) {
+        $index_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.statistics
+             WHERE table_schema = %s AND table_name = %s AND index_name = %s",
+            DB_NAME,
+            $idx['table'],
+            $idx['name']
+        ));
+
+        if (!$index_exists) {
+            $table_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s",
+                DB_NAME,
+                $idx['table']
+            ));
+
+            if ($table_exists) {
+                $result = $wpdb->query("ALTER TABLE {$idx['table']} ADD INDEX {$idx['name']} ({$idx['columns']})");
+                if ($result !== false) {
+                    $messages[] = "Added index {$idx['name']} on {$idx['table']}";
+                }
+            }
+        }
+    }
+
+    // Update Formidable version option to mark installation as complete
+    update_option('frm_db_version', 109);
+    $messages[] = "Set frm_db_version option to 109";
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'messages' => $messages
     ), 200);
 }
 

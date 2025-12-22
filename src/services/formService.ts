@@ -1,166 +1,184 @@
 import { apiClient } from './apiClient';
 import { FormSchema, FormSubmission, ApiResponse, FileUploadProgress } from '@/types';
 
-// Formidable Forms field mappings
+// Formidable Forms field mappings - Updated for new GCP deployment
+// Form IDs: Case Intake (1), Volunteer Registration (2), Contact Log (3)
 export const FORMIDABLE_FORMS = {
-  USER_REGISTRATION: {
-    formId: 26,
+  // Case Intake Form - Form ID: 1
+  // Fields: Case Number (2), Child First Name (3), Child Last Name (4), Date of Birth (5), Case Status (6), Notes (7)
+  CASE_INTAKE: {
+    formId: 1,
     fields: {
-      first_name: 46,
-      last_name: 47,
-      email: 48,
-      password: 49,
-      confirm_password: 50,
-      phone: 51,
-      organization: 52,
-      role: 53
+      case_number: 2,
+      child_first_name: 3,
+      child_last_name: 4,
+      child_dob: 5,
+      case_status: 6,
+      notes: 7,
+      // Legacy field mappings for backwards compatibility - map to notes field
+      child_gender: 7,
+      child_ethnicity: 7,
+      case_type: 6,
+      case_priority: 6,
+      referral_date: 5,
+      case_summary: 7,
+      court_jurisdiction: 7,
+      assigned_judge: 7,
+      courtroom: 7,
+      current_placement: 7,
+      placement_date: 5,
+      placement_contact_person: 7,
+      placement_phone: 7,
+      placement_address: 7,
+      assigned_volunteer: 7,
+      assignment_date: 5,
+      case_goals: 7
+    }
+  },
+  // Volunteer Registration Form - Form ID: 2
+  // Fields: Name (8), Email (9), Phone (10), Address (11), Date of Birth (12), Availability (13), Notes (14)
+  VOLUNTEER_REGISTRATION: {
+    formId: 2,
+    fields: {
+      first_name: 8,
+      last_name: 8,
+      email: 9,
+      phone: 10,
+      address: 11,
+      date_of_birth: 12,
+      availability: 13,
+      notes: 14,
+      // Legacy field mappings for backwards compatibility
+      city: 11,
+      state: 11,
+      zip_code: 11,
+      emergency_contact_name: 14,
+      emergency_contact_phone: 14,
+      emergency_contact_relationship: 14,
+      employer: 14,
+      occupation: 14,
+      education_level: 14,
+      languages_spoken: 14,
+      previous_volunteer_experience: 14,
+      preferred_schedule: 13,
+      max_cases: 14,
+      availability_notes: 14,
+      reference1_name: 14,
+      reference1_phone: 14,
+      reference1_relationship: 14,
+      reference2_name: 14,
+      reference2_phone: 14,
+      reference2_relationship: 14,
+      age_preference: 14,
+      gender_preference: 14,
+      special_needs_experience: 14,
+      transportation_available: 14,
+      background_check_consent: 14,
+      liability_waiver: 14,
+      confidentiality_agreement: 14
+    }
+  },
+  // Contact Log Form - Form ID: 3
+  // Fields: Contact Date (15), Case Reference (16), Contact Type (17), Contact With (18), Notes (19)
+  CONTACT_LOG: {
+    formId: 3,
+    fields: {
+      contact_date: 15,
+      case_id: 16,
+      case_reference: 16,
+      contact_type: 17,
+      contact_with: 18,
+      contact_person: 18,
+      notes: 19,
+      // Legacy field mappings
+      contact_method: 17,
+      contact_summary: 19,
+      follow_up_required: 19,
+      follow_up_date: 15,
+      follow_up_notes: 19
+    }
+  },
+  // Placeholder forms - these would need to be created if needed
+  USER_REGISTRATION: {
+    formId: 1, // Using Case Intake as fallback
+    fields: {
+      first_name: 3,
+      last_name: 4,
+      email: 7,
+      password: 7,
+      confirm_password: 7,
+      phone: 7,
+      organization: 7,
+      role: 7
     }
   },
   ORGANIZATION_REGISTRATION: {
-    formId: 27,
+    formId: 1, // Using Case Intake as fallback
     fields: {
-      organization_name: 55,
-      organization_slug: 56,
-      contact_email: 66,
-      phone: 62,
-      address: 58,
-      website: 64,
-      director_name: 65,
-      director_title: 65
-    }
-  },
-  VOLUNTEER_REGISTRATION: {
-    formId: 28,
-    fields: {
-      first_name: 69,
-      last_name: 70,
-      email: 71,
-      phone: 72,
-      date_of_birth: 73,
-      address: 74,
-      city: 75,
-      state: 76,
-      zip_code: 77,
-      emergency_contact_name: 78,
-      emergency_contact_phone: 79,
-      emergency_contact_relationship: 80,
-      employer: 81,
-      occupation: 82,
-      education_level: 83,
-      languages_spoken: 84,
-      previous_volunteer_experience: 85,
-      preferred_schedule: 86,
-      max_cases: 87,
-      availability_notes: 88,
-      reference1_name: 89,
-      reference1_phone: 90,
-      reference1_relationship: 91,
-      reference2_name: 92,
-      reference2_phone: 93,
-      reference2_relationship: 94,
-      age_preference: 95,
-      gender_preference: 96,
-      special_needs_experience: 97,
-      transportation_available: 98,
-      background_check_consent: 99,
-      liability_waiver: 100,
-      confidentiality_agreement: 101
-    }
-  },
-  CASE_INTAKE: {
-    formId: 25,
-    fields: {
-      child_first_name: 24,
-      child_last_name: 25,
-      child_dob: 26,
-      child_gender: 27,
-      child_ethnicity: 28,
-      case_number: 29,
-      case_type: 30,
-      case_priority: 31,
-      referral_date: 32,
-      case_summary: 33,
-      court_jurisdiction: 34,
-      assigned_judge: 35,
-      courtroom: 36,
-      current_placement: 37,
-      placement_date: 38,
-      placement_contact_person: 39,
-      placement_phone: 40,
-      placement_address: 41,
-      assigned_volunteer: 42,
-      assignment_date: 43,
-      case_goals: 44
+      organization_name: 2,
+      organization_slug: 2,
+      contact_email: 7,
+      phone: 7,
+      address: 7,
+      website: 7,
+      director_name: 7,
+      director_title: 7
     }
   },
   CASE_EDIT: {
-    formId: 33,
+    formId: 1, // Using Case Intake
     fields: {
-      case_id: 146,
-      case_number: 146,
-      child_first_name: 147,
-      child_last_name: 148,
-      child_dob: 149,
-      child_gender: 147,
-      child_ethnicity: 147,
-      case_type: 146,
-      case_priority: 146,
-      case_status: 151,
-      case_summary: 152,
-      court_jurisdiction: 146,
-      assigned_judge: 146,
-      courtroom: 146,
-      current_placement: 146,
-      placement_date: 146,
-      placement_contact_person: 146,
-      placement_phone: 146,
-      placement_address: 146,
-      assigned_volunteer: 150,
-      assignment_date: 146,
-      case_goals: 152,
-      next_hearing_date: 146,
-      next_hearing_type: 146
-    }
-  },
-  CONTACT_LOG: {
-    formId: 32,
-    fields: {
-      case_id: 135,
-      contact_date: 137,
-      contact_type: 136,
-      contact_person: 138,
-      contact_method: 141,
-      contact_summary: 142,
-      follow_up_required: 143,
-      follow_up_date: 144,
-      follow_up_notes: 142
+      case_id: 2,
+      case_number: 2,
+      child_first_name: 3,
+      child_last_name: 4,
+      child_dob: 5,
+      case_status: 6,
+      case_summary: 7,
+      child_gender: 7,
+      child_ethnicity: 7,
+      case_type: 6,
+      case_priority: 6,
+      court_jurisdiction: 7,
+      assigned_judge: 7,
+      courtroom: 7,
+      current_placement: 7,
+      placement_date: 5,
+      placement_contact_person: 7,
+      placement_phone: 7,
+      placement_address: 7,
+      assigned_volunteer: 7,
+      assignment_date: 5,
+      case_goals: 7,
+      next_hearing_date: 5,
+      next_hearing_type: 7
     }
   },
   HOME_VISIT_REPORT: {
-    formId: 30,
+    formId: 3, // Using Contact Log as fallback
     fields: {
-      case_id: 109,
-      visit_date: 110,
-      visit_type: 112,
-      child_present: 114,
-      child_condition: 116,
-      placement_condition: 115,
-      safety_assessment: 115,
-      concerns_identified: 119,
-      recommendations: 120,
-      next_visit_date: 122,
-      volunteer_notes: 117
+      case_id: 16,
+      visit_date: 15,
+      visit_type: 17,
+      child_present: 19,
+      child_condition: 19,
+      placement_condition: 19,
+      safety_assessment: 19,
+      concerns_identified: 19,
+      recommendations: 19,
+      next_visit_date: 15,
+      volunteer_notes: 19
     }
   },
   DOCUMENT_UPLOAD: {
-    formId: 31,
+    formId: 3, // Using Contact Log as fallback
     fields: {
-      case_id: 124,
-      document_type: 126,
-      document_title: 125,
-      document_file: 127,
-      document_description: 130,
-      upload_date: 128
+      case_id: 16,
+      document_type: 17,
+      document_title: 18,
+      document_file: 19,
+      document_description: 19,
+      upload_date: 15
     }
   }
 };

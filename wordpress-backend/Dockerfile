@@ -37,6 +37,10 @@ RUN { \
 # Copy CASA Enhanced plugin
 COPY plugins/casa-enhanced /var/www/html/wp-content/plugins/casa-enhanced/
 
+# Copy Formidable Forms plugins
+COPY plugins/formidable /var/www/html/wp-content/plugins/formidable/
+COPY plugins/formidable-pro /var/www/html/wp-content/plugins/formidable-pro/
+
 # Copy Cloud SQL database drop-in
 COPY wp-content/db.php /var/www/html/wp-content/db.php
 
@@ -47,6 +51,7 @@ COPY cleanup_database.php /var/www/html/
 COPY setup-admin.php /var/www/html/
 COPY db-debug.php /var/www/html/
 COPY install-wordpress.php /var/www/html/
+COPY setup-formidable-tables.php /var/www/html/
 
 # Copy .htaccess for pretty permalinks and wp-json routing
 COPY .htaccess /var/www/html/.htaccess
