@@ -82,7 +82,9 @@ export default function Verify2FA() {
       );
 
       if (result.success) {
-        router.push('/dashboard');
+        // Use window.location for full page reload to reinitialize auth from cookies
+        // This ensures the AuthContext picks up the newly set cookie values
+        window.location.href = '/dashboard';
       } else {
         setError(result.error || 'Invalid verification code');
         setCode(['', '', '', '', '', '']);
