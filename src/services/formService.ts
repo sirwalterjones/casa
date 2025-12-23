@@ -226,8 +226,8 @@ export class FormService {
       const formidableData = this.transformToFormidableFormat(formConfig, data);
 
       // Use the proper Formidable Forms API endpoint
-      const response = await apiClient.frmPost('entries', {
-        form_id: formConfig.formId,
+      // POST to /forms/{formId}/entries to create an entry
+      const response = await apiClient.frmPost(`forms/${formConfig.formId}/entries`, {
         item_meta: formidableData
       });
 
