@@ -1528,8 +1528,10 @@ function casa_get_dashboard_stats($request) {
         $user_org
     ));
     
+    // Count volunteers from the actual volunteers table
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
     $volunteers = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $users_table WHERE organization_id = %d AND status = 'active'",
+        "SELECT COUNT(*) FROM $volunteers_table WHERE organization_id = %d AND volunteer_status = 'active'",
         $user_org
     ));
     
