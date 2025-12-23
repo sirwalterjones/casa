@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { VOLUNTEER_STATUS } from '@/utils/constants';
-import { FormService } from '@/services/formService';
 import { apiClient } from '@/services/apiClient';
+import { FormService } from '@/services/formService';
 import { useToast } from '@/components/common/Toast';
 
 interface VolunteerRegistrationData {
@@ -61,7 +61,7 @@ export default function VolunteerRegistration() {
   const { user, loading } = useRequireAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const { showToast } = useToast();
+  const { showToast, showSuccessAnimation } = useToast();
   
   const {
     register,
@@ -91,9 +91,55 @@ export default function VolunteerRegistration() {
   const onSubmit = async (data: VolunteerRegistrationData) => {
     try {
       setIsSubmitting(true);
-      
-      // Submit to Formidable Forms - Volunteer Registration
+
+      // Submit to Formidable Forms first
       const formidableData = {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        address: `${data.address}, ${data.city}, ${data.state} ${data.zip_code}`,
+        date_of_birth: data.date_of_birth,
+        availability: data.preferred_schedule || '',
+        notes: data.previous_volunteer_experience || '',
+        city: data.city,
+        state: data.state,
+        zip_code: data.zip_code,
+        emergency_contact_name: data.emergency_contact_name,
+        emergency_contact_phone: data.emergency_contact_phone,
+        emergency_contact_relationship: data.emergency_contact_relationship,
+        employer: data.employer || '',
+        occupation: data.occupation || '',
+        education_level: data.education_level || '',
+        languages_spoken: data.languages_spoken || '',
+        previous_volunteer_experience: data.previous_volunteer_experience || '',
+        preferred_schedule: data.preferred_schedule || '',
+        max_cases: String(data.max_cases),
+        availability_notes: data.availability_notes || '',
+        reference1_name: data.reference1_name,
+        reference1_phone: data.reference1_phone,
+        reference1_relationship: data.reference1_relationship,
+        reference2_name: data.reference2_name,
+        reference2_phone: data.reference2_phone,
+        reference2_relationship: data.reference2_relationship,
+        age_preference: data.age_preference || '',
+        gender_preference: data.gender_preference || '',
+        special_needs_experience: data.special_needs_experience ? 'yes' : 'no',
+        transportation_available: data.transportation_available ? 'yes' : 'no',
+        background_check_consent: data.background_check_consent ? 'yes' : 'no',
+        liability_waiver: data.liability_waiver ? 'yes' : 'no',
+        confidentiality_agreement: data.confidentiality_agreement ? 'yes' : 'no',
+      };
+
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('VOLUNTEER_REGISTRATION', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
+      }
+
+      // Submit to CASA API
+      const volunteerData = {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
@@ -126,73 +172,29 @@ export default function VolunteerRegistration() {
         transportation_available: data.transportation_available || false,
         background_check_consent: data.background_check_consent,
         liability_waiver: data.liability_waiver,
-        confidentiality_agreement: data.confidentiality_agreement
-      };
-
-      const formResponse = await FormService.submitFormWithFallback('VOLUNTEER_REGISTRATION', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit volunteer registration form');
-      }
-      showToast({ type: 'success', title: 'Application submitted', description: 'Your volunteer application was received.' });
-
-      // Formidable succeeded: show success immediately
-      setSubmitSuccess(true);
-      reset();
-
-      // Also create volunteer in WordPress for compatibility (non-blocking)
-      const volunteerData = {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        date_of_birth: data.date_of_birth,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zip_code: data.zip_code,
-        emergency_contact_name: data.emergency_contact_name,
-        emergency_contact_phone: data.emergency_contact_phone,
-        emergency_contact_relationship: data.emergency_contact_relationship,
-        employer: data.employer || '',
-        occupation: data.occupation || '',
-        education_level: data.education_level || '',
-        languages_spoken: data.languages_spoken || '',
-        previous_volunteer_experience: data.previous_volunteer_experience || '',
-        preferred_schedule: data.preferred_schedule || '',
-        max_cases: data.max_cases,
-        availability_notes: data.availability_notes || '',
-        reference1_name: data.reference1_name,
-        reference1_phone: data.reference1_phone,
-        reference1_relationship: data.reference1_relationship,
-        reference2_name: data.reference2_name,
-        reference2_phone: data.reference2_phone,
-        reference2_relationship: data.reference2_relationship,
-        age_preference: data.age_preference || '',
-        gender_preference: data.gender_preference || '',
-        special_needs_experience: data.special_needs_experience || false,
-        transportation_available: data.transportation_available || false,
+        confidentiality_agreement: data.confidentiality_agreement,
         volunteer_status: VOLUNTEER_STATUS.BACKGROUND_CHECK,
         organization_id: user?.organizationId || '',
         created_by: user?.id || '',
       };
 
-      try {
-        const response = await apiClient.casaPost('volunteers', volunteerData);
-        if (!response.success) {
-          console.warn('Volunteer WP record creation failed:', response.error);
-          showToast({ type: 'warning', title: 'Saved with warning', description: 'Form received but profile sync failed. You can retry later.' });
-        } else {
-          console.log('Volunteer registered in WP:', response.data);
-        }
-      } catch (wpErr: any) {
-        console.warn('Volunteer WP record creation threw:', wpErr?.message || wpErr);
-        showToast({ type: 'warning', title: 'Saved with warning', description: 'Form received but profile sync failed. You can retry later.' });
+      const response = await apiClient.casaPost('volunteers', volunteerData);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to register volunteer');
       }
+
+      console.log('Volunteer registered successfully:', response.data);
+
+      // Show success animation
+      showSuccessAnimation();
+
+      setSubmitSuccess(true);
+      reset();
 
       // Auto-hide success message after 5 seconds
       setTimeout(() => setSubmitSuccess(false), 5000);
-      
+
     } catch (error: any) {
       console.error('Failed to register volunteer:', error);
       showToast({ type: 'error', title: 'Submission failed', description: error?.message || 'Please check required fields and try again.' });

@@ -34,7 +34,7 @@ class ApiClient {
         
         // Add Formidable Forms API key for frm/v2 endpoints using Basic Auth
         if (config.url && config.url.includes('/frm/v2/')) {
-          config.headers.Authorization = `Basic ${btoa('1L5B-SY7E-7J6S-DOAN:x')}`;
+          config.headers.Authorization = `Basic ${btoa('6IEV-NDXS-QDPF-SQIN:x')}`;
         }
         
         // Note: Removed X-Tenant-ID header to avoid CORS issues in development

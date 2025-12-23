@@ -3,9 +3,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/router';
+import Cookies from 'js-cookie';
 import { apiClient } from '@/services/apiClient';
 import { authService } from '@/services/authService';
 import { FormService } from '@/services/formService';
+import { useToast } from '@/components/common/Toast';
 
 interface RegisterFormData {
   organizationName: string;
@@ -25,6 +27,7 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { showSuccessAnimation } = useToast();
 
   const {
     register,
@@ -46,7 +49,7 @@ export default function Register() {
         return;
       }
 
-      // Step 1: Submit to Formidable Forms - User Registration
+      // Submit to Formidable Forms first
       const formidableData = {
         first_name: data.firstName,
         last_name: data.lastName,
@@ -58,43 +61,59 @@ export default function Register() {
         role: 'casa_administrator'
       };
 
-      const formResponse = await FormService.submitFormWithFallback('USER_REGISTRATION', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit registration form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('USER_REGISTRATION', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
-      // Step 2: Register the organization
-      const orgResponse = await apiClient.casaPost('organizations', {
+      // Use single-step registration endpoint (same as organization-register.tsx)
+      const response = await apiClient.casaPost('register-organization', {
         name: data.organizationName,
         slug: data.organizationSlug,
-        domain: 'casa-backend.local',
-        contact_email: data.email,
-        phone: data.phone || '',
-        address: data.address || ''
+        adminEmail: data.email,
+        adminPassword: data.password,
+        adminFirstName: data.firstName,
+        adminLastName: data.lastName,
+        domain: 'casa-backend.local'
       });
 
-      if (!orgResponse.success) {
-        throw new Error(orgResponse.error || 'Failed to create organization');
+      if (!response.success) {
+        // Handle specific error cases
+        let errorMessage = response.error || 'Failed to create organization and admin user';
+
+        if (response.error?.includes('email already exists')) {
+          errorMessage = 'An account with this email address already exists. Please use a different email address or try logging in instead.';
+        } else if (response.error?.includes('slug already exists')) {
+          errorMessage = 'An organization with this name already exists. Please choose a different organization name.';
+        }
+
+        throw new Error(errorMessage);
       }
 
-      // Step 3: Register the user with the organization
-      const userResponse = await authService.register({
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        organizationSlug: data.organizationSlug,
-        role: 'administrator'
-      });
-
-      if (!userResponse.success) {
-        throw new Error(userResponse.error || 'Failed to create user account');
-      }
-      
+      showSuccessAnimation();
       setSuccess(true);
-      
-      // Redirect to login after 3 seconds
+
+      // Store credentials for auto-login if token returned
+      if (response.data?.token) {
+        localStorage.setItem('auth_token', response.data.token);
+        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        localStorage.setItem('organization_data', JSON.stringify(response.data.organization));
+
+        Cookies.set('auth_token', response.data.token, {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production'
+        });
+
+        // Auto-redirect to dashboard
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+        return;
+      }
+
+      // Redirect to login after 3 seconds if no auto-login
       setTimeout(() => {
         router.push('/auth/login');
       }, 3000);

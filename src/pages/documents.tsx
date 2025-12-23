@@ -51,7 +51,7 @@ const documentTypes = [
 
 export default function Documents() {
   const { user, loading } = useRequireAuth();
-  const { showToast } = useToast();
+  const { showToast, showSuccessAnimation } = useToast();
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<CaseDocument[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -106,10 +106,24 @@ export default function Documents() {
         }
         
         if (casesResponse.success && casesResponse.data) {
-          // Handle nested API response structure for cases
+          // Handle various API response structures for cases
           const casesApiData = casesResponse.data as any;
-          if (casesApiData.success && casesApiData.data && casesApiData.data.cases) {
-            const casesData = casesApiData.data.cases || [];
+          let casesData: any[] = [];
+
+          // Try different response structures
+          if (casesApiData.success && casesApiData.data?.cases) {
+            casesData = casesApiData.data.cases;
+          } else if (casesApiData.data?.cases) {
+            casesData = casesApiData.data.cases;
+          } else if (casesApiData.cases) {
+            casesData = casesApiData.cases;
+          } else if (Array.isArray(casesApiData.data)) {
+            casesData = casesApiData.data;
+          } else if (Array.isArray(casesApiData)) {
+            casesData = casesApiData;
+          }
+
+          if (casesData.length > 0) {
             setCases(casesData.map((c: any) => ({
               id: c.id,
               number: c.case_number,
@@ -180,24 +194,25 @@ export default function Documents() {
   const onSubmit = async (data: DocumentUploadFormData) => {
     try {
       setIsSubmitting(true);
-      
-      // Submit to Formidable Forms - Document Upload
+
+      // Submit to Formidable Forms first (metadata only - file upload handled separately)
       const formidableData = {
         case_id: data.case_number,
         document_type: data.document_type,
         document_title: data.document_name,
         document_file: data.file && data.file[0] ? data.file[0].name : '',
         document_description: data.description,
-        upload_date: new Date().toISOString().split('T')[0]
+        upload_date: new Date().toISOString().split('T')[0],
       };
 
-      const formResponse = await FormService.submitFormWithFallback('DOCUMENT_UPLOAD', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit document upload form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('DOCUMENT_UPLOAD', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
-      // Also create document in WordPress for compatibility
+      // Submit to CASA API
       const formData = new FormData();
       formData.append('case_number', data.case_number);
       formData.append('document_type', data.document_type);
@@ -250,6 +265,9 @@ export default function Documents() {
       
       // Refresh the document list from API to get the latest data
       await fetchDocuments();
+
+      // Show success animation
+      showSuccessAnimation();
 
       reset();
       setShowUploadModal(false);

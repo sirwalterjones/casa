@@ -8,6 +8,7 @@ import Navigation from '@/components/Navigation';
 import { apiClient } from '@/services/apiClient';
 import { FormService } from '@/services/formService';
 import { CONTACT_TYPES, CONTACT_TYPE_LABELS } from '@/utils/constants';
+import { useToast } from '@/components/common/Toast';
 
 interface ContactLogFormData {
   // Case Information
@@ -53,6 +54,7 @@ export default function ContactLog() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const { showToast, showSuccessAnimation } = useToast();
   
   const {
     register,
@@ -86,27 +88,31 @@ export default function ContactLog() {
   const onSubmit = async (data: ContactLogFormData) => {
     try {
       setIsSubmitting(true);
-      
-      // Submit to Formidable Forms - Contact Log
+
+      // Submit to Formidable Forms first
       const formidableData = {
-        case_id: data.case_number,
         contact_date: data.contact_date,
+        case_id: data.case_number,
+        case_reference: data.case_number,
         contact_type: data.contact_type,
+        contact_with: data.participants || '',
         contact_person: data.child_name,
-        contact_method: data.location || '',
+        notes: data.summary,
+        contact_method: data.contact_type,
         contact_summary: data.summary,
-        follow_up_required: data.follow_up_required || false,
+        follow_up_required: data.follow_up_required ? 'yes' : 'no',
         follow_up_date: data.next_contact_date || '',
-        follow_up_notes: data.follow_up_notes || ''
+        follow_up_notes: data.follow_up_notes || '',
       };
 
-      const formResponse = await FormService.submitFormWithFallback('CONTACT_LOG', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit contact log form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('CONTACT_LOG', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
-      // Also create contact log in WordPress for compatibility
+      // Submit to CASA API
       const contactData = {
         title: `Contact Log - ${data.case_number} - ${data.contact_date}`,
         status: 'publish',
@@ -144,16 +150,19 @@ export default function ContactLog() {
 
       const result = response.data;
       console.log('Contact log created successfully:', result);
-      
+
+      // Show success animation
+      showSuccessAnimation();
+
       setSubmitSuccess(true);
       reset();
-      
+
       // Auto-hide success message after 5 seconds
       setTimeout(() => setSubmitSuccess(false), 5000);
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Failed to submit contact log:', error);
-      alert('Failed to create contact log. Please try again.');
+      showToast({ type: 'error', title: 'Contact log creation failed', description: error?.message || 'Please try again.' });
     } finally {
       setIsSubmitting(false);
     }

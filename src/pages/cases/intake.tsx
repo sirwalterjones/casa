@@ -62,7 +62,7 @@ export default function CaseIntake() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [volunteers, setVolunteers] = useState<VolunteerOption[]>([]);
   const [isLoadingVolunteers, setIsLoadingVolunteers] = useState(true);
-  const { showToast } = useToast();
+  const { showToast, showSuccessAnimation } = useToast();
   
   const {
     register,
@@ -155,15 +155,15 @@ export default function CaseIntake() {
   const onSubmit = async (data: CaseIntakeFormData) => {
     try {
       setIsSubmitting(true);
-      
-      // Submit to Formidable Forms - Case Intake
+
+      // Submit to Formidable Forms first
       const formidableData = {
+        case_number: data.case_number,
         child_first_name: data.child_first_name,
         child_last_name: data.child_last_name,
         child_dob: data.child_dob,
         child_gender: data.child_gender || '',
         child_ethnicity: data.child_ethnicity || '',
-        case_number: data.case_number,
         case_type: data.case_type,
         case_priority: data.case_priority || 'medium',
         referral_date: data.referral_date || '',
@@ -173,54 +173,51 @@ export default function CaseIntake() {
         courtroom: data.courtroom || '',
         current_placement: data.current_placement || '',
         placement_date: data.placement_date || '',
+        placement_address: data.placement_address || '',
         placement_contact_person: data.placement_contact_person || '',
         placement_phone: data.placement_phone || '',
-        placement_address: data.placement_address || '',
         assigned_volunteer: data.assigned_volunteer || '',
         assignment_date: data.assignment_date || '',
-        case_goals: data.case_goals || ''
+        case_goals: data.case_goals || '',
       };
 
-      const formResponse = await FormService.submitFormWithFallback('CASE_INTAKE', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit case intake form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('CASE_INTAKE', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
-      // Also create case in WordPress for compatibility
+      // Submit to CASA API
       const caseData = {
-        title: `Case ${data.case_number} - ${data.child_first_name} ${data.child_last_name}`,
-        status: 'publish',
-        meta: {
-          case_number: data.case_number,
-          child_first_name: data.child_first_name,
-          child_last_name: data.child_last_name,
-          child_dob: data.child_dob,
-          child_gender: data.child_gender || '',
-          child_ethnicity: data.child_ethnicity || '',
-          case_type: data.case_type,
-          case_priority: data.case_priority || 'medium',
-          referral_date: data.referral_date || '',
-          case_summary: data.case_summary || '',
-          court_jurisdiction: data.court_jurisdiction || '',
-          assigned_judge: data.assigned_judge || '',
-          courtroom: data.courtroom || '',
-          current_placement: data.current_placement || '',
-          placement_date: data.placement_date || '',
-          placement_address: data.placement_address || '',
-          placement_contact_person: data.placement_contact_person || '',
-          placement_phone: data.placement_phone || '',
-          assigned_volunteer: data.assigned_volunteer || '',
-          assignment_date: data.assignment_date || '',
-          case_goals: data.case_goals || '',
-          case_status: 'active',
-          created_by: user?.id || '',
-          organization_id: user?.organizationId || '',
-        }
+        case_number: data.case_number,
+        child_first_name: data.child_first_name,
+        child_last_name: data.child_last_name,
+        child_dob: data.child_dob,
+        child_gender: data.child_gender || '',
+        child_ethnicity: data.child_ethnicity || '',
+        case_type: data.case_type,
+        case_priority: data.case_priority || 'medium',
+        referral_date: data.referral_date || '',
+        case_summary: data.case_summary || '',
+        court_jurisdiction: data.court_jurisdiction || '',
+        assigned_judge: data.assigned_judge || '',
+        courtroom: data.courtroom || '',
+        current_placement: data.current_placement || '',
+        placement_date: data.placement_date || '',
+        placement_address: data.placement_address || '',
+        placement_contact_person: data.placement_contact_person || '',
+        placement_phone: data.placement_phone || '',
+        assigned_volunteer: data.assigned_volunteer || '',
+        assignment_date: data.assignment_date || '',
+        case_goals: data.case_goals || '',
+        case_status: 'active',
+        created_by: user?.id || '',
+        organization_id: user?.organizationId || '',
       };
 
-      // Submit to WordPress API using authenticated client
-      const response = await apiClient.casaPost('cases', caseData.meta);
+      // Submit to CASA API
+      const response = await apiClient.casaPost('cases', caseData);
 
       if (!response.success) {
         throw new Error(response.error || 'Failed to create case');
@@ -228,13 +225,16 @@ export default function CaseIntake() {
 
       const result = response.data;
       console.log('Case created successfully:', result);
-      
+
+      // Show success animation
+      showSuccessAnimation();
+
       setSubmitSuccess(true);
       reset();
-      
+
       // Auto-hide success message after 5 seconds
       setTimeout(() => setSubmitSuccess(false), 5000);
-      
+
     } catch (error: any) {
       console.error('Failed to submit case:', error);
       showToast({ type: 'error', title: 'Case creation failed', description: error?.message || 'Please try again.' });

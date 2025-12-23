@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { apiClient } from '@/services/apiClient';
 import { FormService } from '@/services/formService';
+import { useToast } from '@/components/common/Toast';
 import Cookies from 'js-cookie';
 
 interface OrganizationRegistrationForm {
@@ -21,6 +22,7 @@ export default function OrganizationRegister() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const { showSuccessAnimation } = useToast();
 
   const {
     register,
@@ -58,7 +60,7 @@ export default function OrganizationRegister() {
     setError(null);
 
     try {
-      // Submit to Formidable Forms - Organization Registration
+      // Submit to Formidable Forms first
       const formidableData = {
         organization_name: data.name,
         organization_slug: data.slug,
@@ -70,10 +72,11 @@ export default function OrganizationRegister() {
         director_title: 'Administrator'
       };
 
-      const formResponse = await FormService.submitFormWithFallback('ORGANIZATION_REGISTRATION', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit organization registration form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('ORGANIZATION_REGISTRATION', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
       // Create organization and admin user in one call
@@ -92,6 +95,7 @@ export default function OrganizationRegister() {
       const response = await apiClient.casaPost('register-organization', requestData);
 
       if (response.success) {
+        showSuccessAnimation();
         setSuccess(true);
         
         // Store the credentials for auto-login

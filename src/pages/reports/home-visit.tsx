@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { useToast } from '@/components/common/Toast';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { apiClient } from '@/services/apiClient';
 import { FormService } from '@/services/formService';
 import { REPORT_TYPES } from '@/utils/constants';
 
@@ -56,6 +57,7 @@ export default function HomeVisitReport() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [cases, setCases] = useState<Case[]>([]);
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  const { showToast, showSuccessAnimation } = useToast();
   
   const {
     register,
@@ -82,12 +84,16 @@ export default function HomeVisitReport() {
 
   const fetchCases = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/casa/v1/cases?status=active`, {
-        headers: {},
-      });
-      const result = await response.json();
-      if (result.success) {
-        setCases(result.data.cases || []);
+      const response = await apiClient.casaGet<any>('cases?status=active');
+      if (response.success && response.data) {
+        const casesData = response.data as any;
+        if (casesData.success && casesData.data?.cases) {
+          setCases(casesData.data.cases);
+        } else if (Array.isArray(casesData.data)) {
+          setCases(casesData.data);
+        } else if (Array.isArray(casesData)) {
+          setCases(casesData);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch cases:', error);
@@ -96,12 +102,16 @@ export default function HomeVisitReport() {
 
   const fetchVolunteers = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/casa/v1/volunteers?status=active`, {
-        headers: {},
-      });
-      const result = await response.json();
-      if (result.success) {
-        setVolunteers(result.data.volunteers || []);
+      const response = await apiClient.casaGet<any>('volunteers?status=active');
+      if (response.success && response.data) {
+        const volunteersData = response.data as any;
+        if (volunteersData.success && volunteersData.data?.volunteers) {
+          setVolunteers(volunteersData.data.volunteers);
+        } else if (Array.isArray(volunteersData.data)) {
+          setVolunteers(volunteersData.data);
+        } else if (Array.isArray(volunteersData)) {
+          setVolunteers(volunteersData);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch volunteers:', error);
@@ -119,30 +129,30 @@ export default function HomeVisitReport() {
   const onSubmit = async (data: HomeVisitReportData) => {
     try {
       setIsSubmitting(true);
-      const { showToast } = useToast();
-      
-      // Submit to Formidable Forms - Home Visit Report
+
+      // Submit to Formidable Forms first
       const formidableData = {
         case_id: data.case_id,
         visit_date: data.visit_date,
         visit_type: 'home_visit',
-        child_present: true,
+        child_present: 'yes',
         child_condition: data.child_wellbeing,
         placement_condition: data.placement_stability,
         safety_assessment: data.safety_concerns,
-        concerns_identified: data.observations,
+        concerns_identified: data.safety_concerns,
         recommendations: data.recommendations,
-        next_visit_date: data.follow_up_required ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : '',
-        volunteer_notes: data.observations
+        next_visit_date: '',
+        volunteer_notes: data.observations,
       };
 
-      const formResponse = await FormService.submitFormWithFallback('HOME_VISIT_REPORT', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit home visit report form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('HOME_VISIT_REPORT', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
-      // Also create report in WordPress for compatibility
+      // Submit to CASA API
       const reportData = {
         case_id: parseInt(data.case_id),
         volunteer_id: parseInt(data.volunteer_id),
@@ -165,31 +175,25 @@ export default function HomeVisitReport() {
         physical_health: data.physical_health || '',
       };
 
-      // Submit to WordPress API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/casa/v1/reports`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(reportData),
-      });
+      const response = await apiClient.casaPost('reports', reportData);
 
-      if (!response.ok) {
-        throw new Error(`Failed to create report: ${response.statusText}`);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create report');
       }
 
-      const result = await response.json();
-      console.log('Report created successfully:', result);
-      
+      console.log('Report created successfully:', response.data);
+
+      // Show success animation
+      showSuccessAnimation();
+
       setSubmitSuccess(true);
       reset();
-      
+
       // Auto-hide success message after 5 seconds
       setTimeout(() => setSubmitSuccess(false), 5000);
-      
+
     } catch (error: any) {
       console.error('Failed to submit report:', error);
-      const { showToast } = useToast();
       showToast({ type: 'error', title: 'Report submission failed', description: error?.message || 'Please try again.' });
     } finally {
       setIsSubmitting(false);

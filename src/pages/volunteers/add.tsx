@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/services/apiClient';
 import { FormService } from '@/services/formService';
+import { useToast } from '@/components/common/Toast';
 
 interface VolunteerRegistrationForm {
   email: string;
@@ -20,6 +21,7 @@ export default function AddVolunteer() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const { showSuccessAnimation } = useToast();
 
   const {
     register,
@@ -52,27 +54,26 @@ export default function AddVolunteer() {
     setError(null);
 
     try {
-      // Submit to Formidable Forms - Volunteer Registration
+      // Submit to Formidable Forms first
       const formidableData = {
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
         phone: '',
         address: '',
-        emergency_contact: '',
-        emergency_phone: '',
+        date_of_birth: '',
         availability: '',
-        experience: '',
-        background_check: false,
-        training_completed: false
+        notes: 'Added by administrator',
       };
 
-      const formResponse = await FormService.submitFormWithFallback('VOLUNTEER_REGISTRATION', formidableData);
-      
-      if (!formResponse.success) {
-        throw new Error(formResponse.error || 'Failed to submit volunteer registration form');
+      // Submit to Formidable Forms (non-blocking - log errors but continue)
+      try {
+        await FormService.submitFormWithFallback('VOLUNTEER_REGISTRATION', formidableData);
+      } catch (ffError) {
+        console.warn('Formidable Forms submission failed:', ffError);
       }
 
+      // Submit to CASA API
       const response = await apiClient.casaPost('users', {
         email: data.email,
         password: data.password,
@@ -83,6 +84,9 @@ export default function AddVolunteer() {
       });
 
       if (response.success) {
+        // Show success animation
+        showSuccessAnimation();
+
         setSuccess(true);
         reset();
         // Clear success message after 3 seconds
