@@ -50,23 +50,34 @@ export default function Dashboard() {
       console.log('Fetching dashboard stats...');
       const response = await apiClient.casaGet('dashboard-stats');
       console.log('Dashboard stats response:', response);
-      
+
       if (response.success && response.data) {
         // Handle nested API response structure
         const apiData = response.data as any;
         let actualStatsData;
-        
+
         if (apiData.success && apiData.data) {
           // Double-nested structure from WordPress API
           actualStatsData = apiData.data;
           console.log('Found nested stats data:', actualStatsData);
-        } else {
-          // Direct structure
+        } else if (apiData.activeCases !== undefined || apiData.volunteers !== undefined) {
+          // Direct structure with expected fields
           actualStatsData = apiData;
           console.log('Found direct stats data:', actualStatsData);
+        } else {
+          // Fallback - try to extract from any structure
+          actualStatsData = apiData;
+          console.log('Using fallback stats data:', actualStatsData);
         }
-        
-        setStats(actualStatsData);
+
+        // Ensure all expected fields exist with defaults
+        setStats({
+          activeCases: actualStatsData.activeCases ?? actualStatsData.active_cases ?? 0,
+          volunteers: actualStatsData.volunteers ?? actualStatsData.active_volunteers ?? 0,
+          pendingReviews: actualStatsData.pendingReviews ?? actualStatsData.pending_reviews ?? 0,
+          courtHearings: actualStatsData.courtHearings ?? actualStatsData.court_hearings ?? 0,
+          recentActivity: actualStatsData.recentActivity ?? actualStatsData.recent_activity ?? []
+        });
       } else {
         console.error('Dashboard stats API returned unsuccessful response:', response);
         // Keep default empty data if API fails
