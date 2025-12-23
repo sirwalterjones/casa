@@ -106,7 +106,7 @@ export default function Dashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-blue-500">
+              <Link href="/cases" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-blue-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
@@ -124,12 +124,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-green-600">↗ Real-time data</div>
+                    <div className="text-sm text-blue-600">Click to view all cases →</div>
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-green-500">
+              <Link href="/volunteers" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-green-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
@@ -147,12 +147,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-green-600">↗ Real-time data</div>
+                    <div className="text-sm text-green-600">Click to view volunteers →</div>
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-yellow-500">
+              <Link href="/reports" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-yellow-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
@@ -170,12 +170,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-yellow-600">⚠ Real-time data</div>
+                    <div className="text-sm text-yellow-600">Click to view reports →</div>
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-purple-500">
+              <Link href="/calendar" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-purple-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
@@ -193,10 +193,10 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-purple-600">📅 Real-time data</div>
+                    <div className="text-sm text-purple-600">Click to view calendar →</div>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
 
             {/* Content Grid */}

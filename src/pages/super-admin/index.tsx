@@ -12,34 +12,58 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   useEffect(() => {
-    checkAccess();
-  }, [user]);
+    // Wait for auth to complete before checking access
+    if (!authLoading) {
+      checkAccess();
+    }
+  }, [authLoading, user]);
 
   const checkAccess = async () => {
+    // If no user after auth is complete, redirect to login
     if (!user) {
       setLoading(false);
+      setAccessChecked(true);
       return;
     }
 
     try {
+      console.log('Checking super admin access for user:', user?.email);
       const response = await superAdminService.getDashboard();
+      console.log('Super admin dashboard response:', response);
       if (response.success && response.data) {
         setDashboard(response.data);
         setIsSuperAdmin(true);
       } else {
-        setError('Access denied. Super admin privileges required.');
+        console.warn('Super admin access denied:', response.error);
+        setError(response.error || 'Access denied. Super admin privileges required.');
         setIsSuperAdmin(false);
       }
-    } catch (err) {
-      setError('Failed to load dashboard');
+    } catch (err: any) {
+      console.error('Super admin dashboard error:', err);
+      // If we get a 401 error, the user session may have expired
+      // Don't show "Failed to load" - the API client will handle redirect
+      if (err?.response?.status === 401) {
+        console.log('Super admin access check returned 401 - session may have expired');
+        return; // Let the API client interceptor handle the redirect
+      }
+      // For 403 (forbidden), show access denied message
+      if (err?.response?.status === 403) {
+        setError('Access denied. Super admin privileges required.');
+        setIsSuperAdmin(false);
+      } else {
+        setError('Failed to load dashboard');
+      }
     } finally {
       setLoading(false);
+      setAccessChecked(true);
     }
   };
 
-  if (authLoading || loading) {
+  // Always show loading until both auth AND access check are complete
+  if (authLoading || loading || !accessChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
@@ -50,6 +74,7 @@ export default function SuperAdminDashboard() {
     );
   }
 
+  // Only show auth required after access check is complete and user is still null
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">

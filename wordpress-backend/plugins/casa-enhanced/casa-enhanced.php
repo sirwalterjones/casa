@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CASA Enhanced User Management
  * Description: Complete CASA case management with WordPress user integration
- * Version: 2.0.54
+ * Version: 2.0.55
  * Author: CASA System
  *
  * Last Updated: 2025-08-07 - Fixed Formidable Forms integration
@@ -33,6 +33,171 @@ require_once plugin_dir_path(__FILE__) . 'two-factor-auth.php';
 
 // Include Multi-Tenancy & Super Admin module
 require_once plugin_dir_path(__FILE__) . 'multi-tenancy.php';
+
+// Include Forms and Sample Data Setup
+require_once plugin_dir_path(__FILE__) . 'setup-forms-and-data.php';
+
+/**
+ * JWT Authentication Filter
+ * Validates JWT tokens on REST API requests and sets the current user
+ * Using rest_pre_dispatch for better timing
+ */
+add_filter('rest_pre_dispatch', 'casa_jwt_rest_pre_dispatch', 10, 3);
+function casa_jwt_rest_pre_dispatch($result, $server, $request) {
+    // Get authorization header
+    $authorization = $request->get_header('Authorization');
+
+    error_log('CASA JWT Debug: rest_pre_dispatch called, auth header: ' . ($authorization ? 'present' : 'missing'));
+
+    if (!$authorization || strpos($authorization, 'Bearer ') !== 0) {
+        return $result;
+    }
+
+    $token = trim(substr($authorization, 7));
+    if (empty($token)) {
+        return $result;
+    }
+
+    error_log('CASA JWT Debug: Token found, validating...');
+
+    // Validate and decode JWT token
+    try {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            error_log('CASA JWT: Invalid token format');
+            return $result;
+        }
+
+        list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
+
+        // Decode payload
+        $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload_encoded)), true);
+
+        // User ID can be at different locations depending on token format
+        $user_id = null;
+        if (isset($payload['user_id'])) {
+            $user_id = $payload['user_id'];
+        } elseif (isset($payload['data']['user']['id'])) {
+            $user_id = $payload['data']['user']['id'];
+        } elseif (isset($payload['sub'])) {
+            $user_id = $payload['sub'];
+        }
+
+        if (!$user_id) {
+            error_log('CASA JWT: No user_id found in payload. Payload: ' . json_encode($payload));
+            return $result;
+        }
+
+        error_log('CASA JWT Debug: Payload decoded, user_id: ' . $user_id);
+
+        // Verify signature
+        $secret_key = defined('JWT_SECRET_KEY') ? JWT_SECRET_KEY :
+                      (defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY :
+                      (getenv('JWT_SECRET_KEY') ?: 'fallback-secret-key'));
+
+        error_log('CASA JWT Debug: Using secret key: ' . substr($secret_key, 0, 10) . '...');
+
+        $signature_check = base64_encode(hash_hmac('sha256', $header_encoded . "." . $payload_encoded, $secret_key, true));
+        // URL-safe base64 encoding
+        $signature_check = str_replace(['+', '/', '='], ['-', '_', ''], $signature_check);
+
+        if (!hash_equals($signature_check, $signature_encoded)) {
+            error_log('CASA JWT: Signature verification failed');
+            error_log('CASA JWT: Expected: ' . $signature_check);
+            error_log('CASA JWT: Got: ' . $signature_encoded);
+            return $result;
+        }
+
+        // Check expiration
+        if (isset($payload['exp']) && $payload['exp'] < time()) {
+            error_log('CASA JWT: Token expired');
+            return $result;
+        }
+
+        // Verify user exists
+        $user = get_user_by('ID', $user_id);
+        if (!$user) {
+            error_log('CASA JWT: User not found: ' . $user_id);
+            return $result;
+        }
+
+        // Set the current user
+        wp_set_current_user($user_id);
+        error_log('CASA JWT: User authenticated successfully: ' . $user->user_email);
+
+    } catch (Exception $e) {
+        error_log('CASA JWT validation error: ' . $e->getMessage());
+    }
+
+    return $result;
+}
+
+// Also add determine_current_user filter as backup
+add_filter('determine_current_user', 'casa_validate_jwt_token', 20);
+function casa_validate_jwt_token($user_id) {
+    // If user is already determined, don't override
+    if ($user_id) {
+        return $user_id;
+    }
+
+    // Get authorization header from multiple sources
+    $authorization = null;
+
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        $authorization = isset($headers['Authorization']) ? $headers['Authorization'] :
+                        (isset($headers['authorization']) ? $headers['authorization'] : null);
+    }
+
+    if (!$authorization && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authorization = $_SERVER['HTTP_AUTHORIZATION'];
+    }
+    if (!$authorization && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authorization = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+
+    if (!$authorization || strpos($authorization, 'Bearer ') !== 0) {
+        return $user_id;
+    }
+
+    $token = trim(substr($authorization, 7));
+    if (empty($token)) {
+        return $user_id;
+    }
+
+    try {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return $user_id;
+        }
+
+        $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1])), true);
+
+        // User ID can be at different locations
+        $jwt_user_id = null;
+        if (isset($payload['user_id'])) {
+            $jwt_user_id = $payload['user_id'];
+        } elseif (isset($payload['data']['user']['id'])) {
+            $jwt_user_id = $payload['data']['user']['id'];
+        } elseif (isset($payload['sub'])) {
+            $jwt_user_id = $payload['sub'];
+        }
+
+        if (!$jwt_user_id) {
+            return $user_id;
+        }
+
+        // Verify user exists
+        $user = get_user_by('ID', $jwt_user_id);
+        if ($user) {
+            return $jwt_user_id;
+        }
+    } catch (Exception $e) {
+        error_log('CASA JWT determine_current_user error: ' . $e->getMessage());
+    }
+
+    return $user_id;
+}
 
 // Plugin activation hook
 register_activation_hook(__FILE__, 'casa_enhanced_activate');
@@ -1534,17 +1699,85 @@ function casa_create_case($request) {
     }
     
     $db_case_id = $wpdb->insert_id;
-    
+
+    // Also create Formidable Forms entry for form integration
+    $frm_entry_id = casa_create_formidable_entry(1, $params, $current_user->ID); // Form ID 1 = Case Intake
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
             'id' => $db_case_id,
             'wp_post_id' => $case_id,
+            'frm_entry_id' => $frm_entry_id,
             'caseNumber' => $params['case_number'],
             'childName' => $params['child_first_name'] . ' ' . $params['child_last_name'],
             'message' => 'Case created successfully in CASA system'
         )
     ), 201);
+}
+
+/**
+ * Create a Formidable Forms entry
+ * This syncs data to FF so it's visible in WP admin
+ */
+function casa_create_formidable_entry($form_id, $data, $user_id = 0) {
+    global $wpdb;
+
+    $items_table = $wpdb->prefix . 'frm_items';
+    $metas_table = $wpdb->prefix . 'frm_item_metas';
+    $fields_table = $wpdb->prefix . 'frm_fields';
+
+    // Check if tables exist
+    if ($wpdb->get_var("SHOW TABLES LIKE '$items_table'") != $items_table) {
+        return null;
+    }
+
+    $now = current_time('mysql');
+
+    // Create the entry (item)
+    $item_key = 'entry_' . uniqid();
+    $wpdb->insert($items_table, array(
+        'item_key' => $item_key,
+        'name' => isset($data['case_number']) ? $data['case_number'] : (isset($data['first_name']) ? $data['first_name'] . ' ' . ($data['last_name'] ?? '') : 'Entry'),
+        'form_id' => $form_id,
+        'user_id' => $user_id,
+        'is_draft' => 0,
+        'created_at' => $now,
+        'updated_at' => $now
+    ));
+
+    $entry_id = $wpdb->insert_id;
+    if (!$entry_id) {
+        return null;
+    }
+
+    // Get fields for this form
+    $fields = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, field_key FROM $fields_table WHERE form_id = %d",
+        $form_id
+    ));
+
+    // Map data to field IDs and create meta entries
+    foreach ($fields as $field) {
+        $field_key = $field->field_key;
+        $value = null;
+
+        // Map field keys to data keys
+        if (isset($data[$field_key])) {
+            $value = $data[$field_key];
+        }
+
+        if ($value !== null && $value !== '') {
+            $wpdb->insert($metas_table, array(
+                'meta_value' => is_array($value) ? serialize($value) : $value,
+                'field_id' => $field->id,
+                'item_id' => $entry_id,
+                'created_at' => $now
+            ));
+        }
+    }
+
+    return $entry_id;
 }
 
 // ================================
@@ -1636,8 +1869,22 @@ function casa_create_organization_user($request) {
     $user = new WP_User($user_id);
     $user->set_role($wp_role);
     
-    // TODO: Send welcome email with password (implement separately)
-    
+    // Get organization name for email
+    $org_name = $wpdb->get_var($wpdb->prepare(
+        "SELECT name FROM {$wpdb->prefix}casa_organizations WHERE id = %d",
+        $admin_org_id
+    )) ?: 'CASA';
+
+    // Send welcome email with login credentials
+    casa_send_welcome_email(
+        $params['email'],
+        $params['first_name'],
+        $params['last_name'],
+        $password,
+        $params['casa_role'],
+        $org_name
+    );
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
@@ -1646,10 +1893,136 @@ function casa_create_organization_user($request) {
             'name' => $params['first_name'] . ' ' . $params['last_name'],
             'casa_role' => $params['casa_role'],
             'organization_id' => $admin_org_id,
-            'temp_password' => $password, // Remove this in production
-            'message' => 'User created successfully'
+            'message' => 'User created successfully and welcome email sent'
         )
     ), 201);
+}
+
+/**
+ * Send welcome email to new user via Brevo
+ */
+function casa_send_welcome_email($email, $first_name, $last_name, $password, $role, $org_name) {
+    $brevo_api_key = defined('BREVO_API_KEY') ? BREVO_API_KEY : getenv('BREVO_API_KEY');
+    $sender_email = defined('BREVO_SENDER_EMAIL') ? BREVO_SENDER_EMAIL : (getenv('BREVO_SENDER_EMAIL') ?: 'notify@notifyplus.org');
+    $sender_name = defined('BREVO_SENDER_NAME') ? BREVO_SENDER_NAME : (getenv('BREVO_SENDER_NAME') ?: 'PA-CASA');
+
+    if (empty($brevo_api_key)) {
+        error_log('CASA Welcome Email Error: BREVO_API_KEY not configured');
+        return false;
+    }
+
+    $login_url = 'https://casa.joneswebdesigns.com/auth/login';
+    $role_display = ucwords(str_replace('_', ' ', $role));
+
+    $subject = "Welcome to {$org_name} - Your CASA Account Has Been Created";
+
+    $html_content = '
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 8px; }
+            .header { background: linear-gradient(135deg, #0066cc, #004499); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; margin: -20px -20px 20px -20px; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .credentials-box { background: #f8f9fa; border: 2px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .credentials-box h3 { margin-top: 0; color: #0066cc; }
+            .credential { margin: 10px 0; }
+            .credential label { font-weight: bold; color: #666; }
+            .btn { display: inline-block; background: #0066cc; color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 15px; margin: 20px 0; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; text-align: center; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Welcome to ' . esc_html($org_name) . '</h1>
+                <p>CASA Case Management System</p>
+            </div>
+
+            <p>Hello ' . esc_html($first_name) . ' ' . esc_html($last_name) . ',</p>
+
+            <p>Your account has been created in the CASA Case Management System. You have been assigned the role of <strong>' . esc_html($role_display) . '</strong>.</p>
+
+            <div class="credentials-box">
+                <h3>Your Login Credentials</h3>
+                <div class="credential">
+                    <label>Email:</label>
+                    <span>' . esc_html($email) . '</span>
+                </div>
+                <div class="credential">
+                    <label>Temporary Password:</label>
+                    <span style="font-family: monospace; background: #fff; padding: 5px 10px; border-radius: 4px;">' . esc_html($password) . '</span>
+                </div>
+            </div>
+
+            <center>
+                <a href="' . esc_url($login_url) . '" class="btn">Login to CASA</a>
+            </center>
+
+            <div class="warning">
+                <strong>Important Security Notice:</strong>
+                <ul>
+                    <li>Please change your password after your first login</li>
+                    <li>Do not share your login credentials with anyone</li>
+                    <li>You will be required to verify your identity via email on each login</li>
+                </ul>
+            </div>
+
+            <p>If you have any questions or need assistance, please contact your CASA supervisor.</p>
+
+            <div class="footer">
+                <p>This is an automated message from ' . esc_html($org_name) . ' CASA Case Management System.</p>
+                <p>&copy; ' . date('Y') . ' Pennsylvania CASA. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    ';
+
+    $url = 'https://api.brevo.com/v3/smtp/email';
+
+    $payload = array(
+        'sender' => array(
+            'name' => $sender_name,
+            'email' => $sender_email
+        ),
+        'to' => array(
+            array(
+                'email' => $email,
+                'name' => $first_name . ' ' . $last_name
+            )
+        ),
+        'subject' => $subject,
+        'htmlContent' => $html_content
+    );
+
+    $args = array(
+        'method' => 'POST',
+        'headers' => array(
+            'accept' => 'application/json',
+            'api-key' => $brevo_api_key,
+            'content-type' => 'application/json'
+        ),
+        'body' => json_encode($payload),
+        'timeout' => 30
+    );
+
+    $response = wp_remote_post($url, $args);
+
+    if (is_wp_error($response)) {
+        error_log('CASA Welcome Email Error: ' . $response->get_error_message());
+        return false;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    if ($response_code >= 200 && $response_code < 300) {
+        error_log('CASA: Welcome email sent successfully to ' . $email);
+        return true;
+    } else {
+        error_log('CASA Welcome Email Error: HTTP ' . $response_code);
+        return false;
+    }
 }
 
 // Get all users in current user's organization

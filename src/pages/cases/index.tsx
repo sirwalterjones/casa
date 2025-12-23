@@ -94,6 +94,7 @@ export default function CasesList() {
       case 'active': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'closed': return 'bg-gray-100 text-gray-800';
+      case 'draft': return 'bg-orange-100 text-orange-800';
       default: return 'bg-blue-100 text-blue-800';
     }
   };
@@ -137,14 +138,22 @@ export default function CasesList() {
                   <h1 className="text-3xl font-light mb-2">Cases</h1>
                   <p className="text-blue-100 text-lg">Manage and track CASA cases in your organization</p>
                 </div>
-                {hasRole(['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor']) && (
+                <div className="flex gap-3">
                   <Link
-                    href="/cases/intake"
-                    className="bg-white text-blue-700 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors"
+                    href="/cases/drafts"
+                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-400 transition-colors border border-blue-400"
                   >
-                    + New Case
+                    Drafts
                   </Link>
-                )}
+                  {hasRole(['administrator', 'casa_administrator', 'supervisor', 'casa_supervisor']) && (
+                    <Link
+                      href="/cases/intake"
+                      className="bg-white text-blue-700 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors"
+                    >
+                      + New Case
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -182,6 +191,7 @@ export default function CasesList() {
                   <option value="all">All Statuses</option>
                   <option value="active">Active</option>
                   <option value="pending">Pending</option>
+                  <option value="draft">Draft</option>
                   <option value="closed">Closed</option>
                 </select>
               </div>
