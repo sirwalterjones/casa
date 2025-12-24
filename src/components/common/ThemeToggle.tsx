@@ -59,7 +59,7 @@ export default function ThemeToggle({
   if (!mounted) {
     return (
       <div
-        className={`${currentSize.button} rounded-lg bg-transparent ${className}`}
+        className={`${currentSize.button} rounded-lg bg-gray-100 ${className}`}
         aria-hidden="true"
       />
     );
@@ -75,14 +75,14 @@ export default function ThemeToggle({
         ${currentSize.button}
         ${className}
         relative inline-flex items-center justify-center
-        rounded-lg
+        rounded-lg border
         transition-all duration-200 ease-in-out
         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
         focus-visible:ring-blue-500
         hover:scale-105 active:scale-95
         ${isDark
-          ? 'bg-fintech-bg-tertiary hover:bg-fintech-bg-elevated text-fintech-text-primary'
-          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          ? 'bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600'
+          : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-300'
         }
       `}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
