@@ -21,7 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initializeAuth = async () => {
     try {
       setLoading(true);
-      
+
       // Check if user is authenticated
       if (!authService.isAuthenticated()) {
         setLoading(false);
@@ -30,9 +30,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Validate token and get user data
       const response = await authService.validateToken();
-      
+
       if (response.success && response.data) {
         setUser(response.data.user);
+
+        // Always fetch fresh organization data from API to avoid stale cookie data
+        try {
+          const { apiClient } = await import('@/services/apiClient');
+          const orgsResponse = await apiClient.casaGet('organizations');
+
+          if (orgsResponse.success && orgsResponse.data) {
+            // Handle different response structures
+            let organizations: any[];
+            if (Array.isArray(orgsResponse.data)) {
+              organizations = orgsResponse.data;
+            } else if (orgsResponse.data && Array.isArray(orgsResponse.data.data)) {
+              organizations = orgsResponse.data.data;
+            } else {
+              organizations = [orgsResponse.data];
+            }
+
+            if (organizations.length > 0) {
+              const orgData = organizations[0];
+              const freshOrganization = {
+                id: orgData.id?.toString() || response.data.organization?.id || '',
+                name: orgData.name || response.data.organization?.name || '',
+                slug: orgData.slug || response.data.organization?.slug || '',
+                domain: orgData.domain || response.data.organization?.domain || '',
+                status: orgData.status || 'active',
+                settings: orgData.settings ?
+                  (typeof orgData.settings === 'string' ? JSON.parse(orgData.settings) : orgData.settings) :
+                  response.data.organization?.settings || {},
+                createdAt: orgData.created_at || response.data.organization?.createdAt || '',
+                updatedAt: orgData.updated_at || response.data.organization?.updatedAt || '',
+              };
+              setOrganization(freshOrganization);
+              return;
+            }
+          }
+        } catch (orgError) {
+          console.warn('Failed to fetch fresh organization data, using cached:', orgError);
+        }
+
+        // Fallback to cached organization data
         setOrganization(response.data.organization);
       } else {
         // Token is invalid, clear auth data
