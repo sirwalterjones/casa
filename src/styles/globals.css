@@ -4,91 +4,483 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* ==========================================================================
+   THEME SYSTEM - CSS Custom Properties
+   Scoped themes using data-theme attribute for easy switching
+   ========================================================================== */
+
 @layer base {
+  /* Light Theme (Default) */
+  :root {
+    /* Background colors */
+    --color-bg-primary: #f9fafb;
+    --color-bg-secondary: #ffffff;
+    --color-bg-tertiary: #f3f4f6;
+    --color-bg-elevated: #ffffff;
+    --color-bg-nav: #ffffff;
+
+    /* Text colors */
+    --color-text-primary: #111827;
+    --color-text-secondary: #6b7280;
+    --color-text-tertiary: #9ca3af;
+    --color-text-inverse: #ffffff;
+
+    /* Accent colors */
+    --color-accent-primary: #4f46e5;
+    --color-accent-primary-hover: #4338ca;
+    --color-accent-secondary: #6366f1;
+
+    /* Semantic colors */
+    --color-success: #10b981;
+    --color-success-bg: #d1fae5;
+    --color-success-text: #065f46;
+    --color-danger: #ef4444;
+    --color-danger-bg: #fee2e2;
+    --color-danger-text: #991b1b;
+    --color-warning: #f59e0b;
+    --color-warning-bg: #fef3c7;
+    --color-warning-text: #92400e;
+    --color-info: #3b82f6;
+    --color-info-bg: #dbeafe;
+    --color-info-text: #1e40af;
+
+    /* Border colors */
+    --color-border-subtle: #f3f4f6;
+    --color-border-default: #e5e7eb;
+    --color-border-strong: #d1d5db;
+
+    /* Shadow colors */
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 1px 2px 0 var(--shadow-color);
+    --shadow-md: 0 4px 6px -1px var(--shadow-color);
+    --shadow-lg: 0 10px 15px -3px var(--shadow-color);
+
+    /* Component-specific */
+    --nav-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+
+    /* Border radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+
+    /* Transitions */
+    --transition-fast: 150ms;
+    --transition-base: 200ms;
+    --transition-slow: 300ms;
+  }
+
+  /* Dark Fintech Theme */
+  .dark {
+    /* Deep charcoal backgrounds (not pure black for premium feel) */
+    --color-bg-primary: #0f1419;
+    --color-bg-secondary: #1a1f2e;
+    --color-bg-tertiary: #242b3d;
+    --color-bg-elevated: #2d364a;
+    --color-bg-nav: #0f1419;
+
+    /* Text colors with clear hierarchy */
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #94a3b8;
+    --color-text-tertiary: #64748b;
+    --color-text-inverse: #0f1419;
+
+    /* Accent colors - electric blue/indigo for fintech feel */
+    --color-accent-primary: #3b82f6;
+    --color-accent-primary-hover: #2563eb;
+    --color-accent-secondary: #6366f1;
+
+    /* Semantic colors - adjusted for dark backgrounds */
+    --color-success: #10b981;
+    --color-success-bg: rgba(16, 185, 129, 0.15);
+    --color-success-text: #34d399;
+    --color-danger: #ef4444;
+    --color-danger-bg: rgba(239, 68, 68, 0.15);
+    --color-danger-text: #f87171;
+    --color-warning: #f59e0b;
+    --color-warning-bg: rgba(245, 158, 11, 0.15);
+    --color-warning-text: #fbbf24;
+    --color-info: #3b82f6;
+    --color-info-bg: rgba(59, 130, 246, 0.15);
+    --color-info-text: #60a5fa;
+
+    /* Border colors - muted for dark theme */
+    --color-border-subtle: #1e293b;
+    --color-border-default: #334155;
+    --color-border-strong: #475569;
+
+    /* Shadow colors - darker with subtle glow */
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.05);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.08);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 2px rgba(255, 255, 255, 0.1);
+
+    /* Component-specific */
+    --nav-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
   html {
     font-family: 'Inter', system-ui, sans-serif;
   }
-  
+
+  /* Base body styles using CSS variables */
   body {
-    @apply bg-gray-50 text-gray-900;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: background-color var(--transition-base) ease-in-out,
+                color var(--transition-base) ease-in-out;
   }
 }
 
 @layer components {
+  /* ==========================================================================
+     THEME-AWARE COMPONENTS
+     All components use CSS variables for seamless theme switching
+     ========================================================================== */
+
+  /* Buttons - Base */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base) ease-in-out;
   }
-  
+
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn text-white;
+    background-color: var(--color-accent-primary);
   }
-  
+
+  .btn-primary:hover {
+    background-color: var(--color-accent-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:focus {
+    @apply ring-primary-500;
+  }
+
+  /* Dark mode: add subtle gradient overlay for premium feel */
+  .dark .btn-primary {
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%),
+                var(--color-accent-primary);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25);
+  }
+
+  .dark .btn-primary:hover {
+    box-shadow: 0 6px 25px rgba(59, 130, 246, 0.35);
+  }
+
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
+    @apply btn;
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-default);
   }
-  
+
+  .btn-secondary:hover {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  .dark .btn-secondary {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-border-default);
+  }
+
+  .dark .btn-secondary:hover {
+    background-color: var(--color-bg-elevated);
+    border-color: var(--color-border-strong);
+  }
+
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply btn text-white;
+    background-color: var(--color-danger);
   }
-  
+
+  .btn-danger:hover {
+    @apply bg-red-700;
+    transform: translateY(-1px);
+  }
+
+  .dark .btn-danger {
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+  }
+
+  /* Ghost Button - for dark theme navigation */
+  .btn-ghost {
+    @apply btn;
+    background-color: transparent;
+    color: var(--color-text-secondary);
+  }
+
+  .btn-ghost:hover {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  /* Form Inputs */
   .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+    @apply block w-full px-3 py-2 shadow-sm focus:outline-none;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast) ease-in-out;
   }
-  
+
+  .input::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  .input:focus {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+
+  .dark .input {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-border-default);
+  }
+
+  .dark .input:focus {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-medium mb-1;
+    color: var(--color-text-secondary);
   }
-  
+
+  .dark .label {
+    color: var(--color-text-secondary);
+  }
+
+  /* Cards - Elevated surfaces */
   .card {
-    @apply bg-white overflow-hidden shadow rounded-lg;
+    @apply overflow-hidden;
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--color-border-subtle);
+    transition: all var(--transition-base) ease-in-out;
   }
-  
+
+  /* Dark mode: subtle gradient overlay for premium glass effect */
+  .dark .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%),
+                var(--color-bg-secondary);
+    border-color: var(--color-border-subtle);
+  }
+
+  .dark .card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-border-default);
+  }
+
   .card-header {
-    @apply px-4 py-5 sm:px-6 border-b border-gray-200;
+    @apply px-4 py-5 sm:px-6;
+    border-bottom: 1px solid var(--color-border-subtle);
   }
-  
+
   .card-body {
     @apply px-4 py-5 sm:p-6;
   }
-  
+
+  /* Badges - Status indicators */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-medium;
+    border-radius: 9999px;
   }
-  
+
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-800;
+    @apply badge;
+    background-color: var(--color-info-bg);
+    color: var(--color-info-text);
   }
-  
+
   .badge-success {
-    @apply badge bg-green-100 text-green-800;
+    @apply badge;
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
   }
-  
+
   .badge-warning {
-    @apply badge bg-yellow-100 text-yellow-800;
+    @apply badge;
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
   }
-  
+
   .badge-danger {
-    @apply badge bg-red-100 text-red-800;
+    @apply badge;
+    background-color: var(--color-danger-bg);
+    color: var(--color-danger-text);
   }
-  
+
+  /* Tables - Data-dense display */
   .table {
-    @apply min-w-full divide-y divide-gray-200;
+    @apply min-w-full;
+    border-collapse: separate;
+    border-spacing: 0;
   }
-  
+
   .table th {
-    @apply px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+    @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border-default);
   }
-  
+
   .table td {
-    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+    @apply px-6 py-4 whitespace-nowrap text-sm;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-border-subtle);
   }
-  
+
+  .table tbody tr {
+    transition: background-color var(--transition-fast) ease-in-out;
+  }
+
+  .table tbody tr:hover {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  .dark .table th {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  .dark .table tbody tr:hover {
+    background-color: var(--color-bg-elevated);
+  }
+
+  /* Sidebar Navigation */
   .sidebar-nav a {
-    @apply flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200;
+    @apply flex items-center px-4 py-2 text-sm font-medium;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast) ease-in-out;
+    border-radius: var(--radius-md);
   }
-  
+
+  .sidebar-nav a:hover {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
   .sidebar-nav a.active {
-    @apply bg-primary-50 text-primary-700 border-r-2 border-primary-500;
+    background-color: var(--color-info-bg);
+    color: var(--color-accent-primary);
+    border-right: 2px solid var(--color-accent-primary);
+  }
+
+  /* Navigation Bar */
+  .nav-bar {
+    background-color: var(--color-bg-nav);
+    box-shadow: var(--nav-shadow);
+    border-bottom: 1px solid var(--color-border-subtle);
+    transition: all var(--transition-base) ease-in-out;
+  }
+
+  .dark .nav-bar {
+    background: linear-gradient(90deg, #0f1419 0%, #1a1f2e 100%);
+    border-bottom-color: var(--color-border-subtle);
+  }
+
+  /* Navigation Links */
+  .nav-link {
+    @apply px-3 py-2 text-sm font-medium;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast) ease-in-out;
+  }
+
+  .nav-link:hover {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .nav-link.active {
+    background-color: var(--color-accent-primary);
+    color: white;
+  }
+
+  .dark .nav-link:hover:not(.active) {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  /* Avatar/Profile Button */
+  .avatar-btn {
+    @apply h-8 w-8 rounded-full flex items-center justify-center text-white font-medium;
+    background-color: var(--color-accent-primary);
+    transition: all var(--transition-fast) ease-in-out;
+  }
+
+  .avatar-btn:hover {
+    background-color: var(--color-accent-primary-hover);
+    transform: scale(1.05);
+  }
+
+  .dark .avatar-btn {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Dropdown Menus */
+  .dropdown-menu {
+    @apply absolute right-0 mt-2 w-48 py-1 z-50;
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .dropdown-item {
+    @apply block px-4 py-2 text-sm;
+    color: var(--color-text-primary);
+    transition: background-color var(--transition-fast) ease-in-out;
+  }
+
+  .dropdown-item:hover {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  /* Stat Cards - Dashboard metrics */
+  .stat-card {
+    @apply overflow-hidden;
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--color-border-subtle);
+    transition: all var(--transition-base) ease-in-out;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dark .stat-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%),
+                var(--color-bg-secondary);
+  }
+
+  .dark .stat-card:hover {
+    border-color: var(--color-border-default);
+  }
+
+  /* Profit/Loss indicators for fintech */
+  .value-gain {
+    color: var(--color-success);
+  }
+
+  .value-loss {
+    color: var(--color-danger);
+  }
+
+  .dark .value-gain {
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  }
+
+  .dark .value-loss {
+    text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
   }
 }
 
@@ -146,27 +538,49 @@
   animation: bounce 1s infinite;
 }
 
+/* ==========================================================================
+   THEME-AWARE UTILITY STYLES
+   ========================================================================== */
+
 /* Form validation styles */
 .field-error {
-  @apply border-red-300 focus:border-red-500 focus:ring-red-500;
+  border-color: var(--color-danger) !important;
+}
+
+.field-error:focus {
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
 }
 
 .error-message {
-  @apply mt-1 text-sm text-red-600;
+  @apply mt-1 text-sm;
+  color: var(--color-danger-text);
 }
 
 /* File upload styles */
 .file-drop-zone {
-  @apply border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors duration-200;
+  @apply border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200;
+  border-color: var(--color-border-default);
+  background-color: var(--color-bg-secondary);
+}
+
+.file-drop-zone:hover {
+  border-color: var(--color-border-strong);
 }
 
 .file-drop-zone.drag-over {
-  @apply border-primary-400 bg-primary-50;
+  border-color: var(--color-accent-primary);
+  background-color: var(--color-info-bg);
 }
 
 /* Modal styles */
 .modal-overlay {
-  @apply fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-50;
+  @apply fixed inset-0 transition-opacity z-50;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.75);
 }
 
 .modal-container {
@@ -177,55 +591,132 @@
   @apply flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0;
 }
 
-/* Toast notifications */
+.modal-panel {
+  @apply relative overflow-hidden text-left sm:my-8 sm:w-full sm:max-w-lg;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Toast notifications - theme aware */
 .toast {
-  @apply pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5;
+  @apply pointer-events-auto w-full max-w-sm overflow-hidden;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .toast-success {
-  @apply border-l-4 border-green-400;
+  border-left: 4px solid var(--color-success);
 }
 
 .toast-error {
-  @apply border-l-4 border-red-400;
+  border-left: 4px solid var(--color-danger);
 }
 
 .toast-warning {
-  @apply border-l-4 border-yellow-400;
+  border-left: 4px solid var(--color-warning);
 }
 
 .toast-info {
-  @apply border-l-4 border-blue-400;
+  border-left: 4px solid var(--color-info);
 }
 
 /* Progress bars */
 .progress-bar {
-  @apply w-full bg-gray-200 rounded-full h-2;
+  @apply w-full rounded-full h-2;
+  background-color: var(--color-bg-tertiary);
 }
 
 .progress-fill {
-  @apply bg-primary-600 h-2 rounded-full transition-all duration-300;
+  @apply h-2 rounded-full;
+  background-color: var(--color-accent-primary);
+  transition: width var(--transition-slow) ease-in-out;
 }
 
-/* Status indicators */
+.dark .progress-fill {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+/* Status indicators with glow in dark mode */
 .status-indicator {
   @apply inline-block w-2 h-2 rounded-full mr-2;
+  transition: box-shadow var(--transition-fast) ease-in-out;
 }
 
 .status-active {
-  @apply bg-green-400;
+  background-color: var(--color-success);
+}
+
+.dark .status-active {
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
 .status-inactive {
-  @apply bg-gray-400;
+  background-color: var(--color-text-tertiary);
 }
 
 .status-suspended {
-  @apply bg-red-400;
+  background-color: var(--color-danger);
+}
+
+.dark .status-suspended {
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
 }
 
 .status-pending {
-  @apply bg-yellow-400;
+  background-color: var(--color-warning);
+}
+
+.dark .status-pending {
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+/* Chart placeholder - for fintech dashboard */
+.chart-placeholder {
+  @apply rounded-lg p-6 flex items-center justify-center;
+  background-color: var(--color-bg-tertiary);
+  border: 1px dashed var(--color-border-default);
+  min-height: 200px;
+}
+
+.dark .chart-placeholder {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%),
+              var(--color-bg-tertiary);
+}
+
+/* Metric value display - prominent numbers for fintech */
+.metric-value {
+  @apply text-3xl font-bold tabular-nums;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.metric-label {
+  @apply text-sm font-medium uppercase tracking-wider;
+  color: var(--color-text-tertiary);
+}
+
+.metric-change {
+  @apply text-sm font-medium flex items-center gap-1;
+}
+
+.metric-change.positive {
+  color: var(--color-success);
+}
+
+.metric-change.negative {
+  color: var(--color-danger);
+}
+
+.dark .metric-change.positive {
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+.dark .metric-change.negative {
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
 }
 
 /* Responsive utilities */

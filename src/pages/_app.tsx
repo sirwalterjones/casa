@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { useState } from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/components/common/Toast';
+import { ThemeProvider } from '@/hooks/useTheme';
 import '@/styles/globals.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -31,11 +32,13 @@ function MyApp({ Component, pageProps }: AppProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ToastProvider>
-          <Component {...pageProps} />
-        </ToastProvider>
-      </AuthProvider>
+      <ThemeProvider defaultTheme="system">
+        <AuthProvider>
+          <ToastProvider>
+            <Component {...pageProps} />
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

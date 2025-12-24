@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/useAuth';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 interface NavigationProps {
   currentPage?: string;
@@ -47,29 +48,29 @@ export default function Navigation({ currentPage }: NavigationProps) {
   };
 
   return (
-    <nav className="bg-white shadow-lg border-b border-gray-200">
+    <nav className="nav-bar">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo and main navigation */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Link href="/dashboard" className="text-2xl font-bold text-indigo-600 hover:text-indigo-700">
+              <Link
+                href="/dashboard"
+                className="text-2xl font-bold transition-colors duration-200"
+                style={{ color: 'var(--color-accent-primary)' }}
+              >
                 CASA
               </Link>
             </div>
-            
+
             {/* Desktop navigation */}
             <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
+              <div className="ml-10 flex items-baseline space-x-1">
                 {navigation.map((item) => (
                   <Link
                     key={item.key}
                     href={item.href}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                      isCurrentPage(item.href)
-                        ? 'bg-indigo-700 text-white'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
+                    className={`nav-link ${isCurrentPage(item.href) ? 'active' : ''}`}
                   >
                     {item.name}
                   </Link>
@@ -78,33 +79,49 @@ export default function Navigation({ currentPage }: NavigationProps) {
             </div>
           </div>
 
-          {/* User profile section */}
-          <div className="flex items-center">
-            <div className="ml-4 flex items-center md:ml-6">
-              {/* User info */}
+          {/* Right side: Theme toggle, user info, profile */}
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <ThemeToggle size="md" />
+
+            <div className="ml-2 flex items-center md:ml-4">
+              {/* User info - hidden on small screens */}
               <div className="text-right mr-4 hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{organization?.name}</p>
+                <p
+                  className="text-xs"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {organization?.name}
+                </p>
               </div>
 
               {/* Profile dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="avatar-btn focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  style={{
+                    '--tw-ring-color': 'var(--color-accent-primary)',
+                    '--tw-ring-offset-color': 'var(--color-bg-primary)'
+                  } as React.CSSProperties}
                 >
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </button>
 
                 {/* Profile dropdown menu */}
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <div className="dropdown-menu">
                     {isSuperAdmin && (
                       <Link
                         href="/super-admin"
-                        className="block px-4 py-2 text-sm text-purple-700 hover:bg-purple-50 font-medium"
+                        className="dropdown-item font-medium"
+                        style={{ color: 'var(--color-accent-secondary)' }}
                         onClick={() => setIsProfileMenuOpen(false)}
                       >
                         Super Admin
@@ -113,7 +130,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
                     {isAdmin && (
                       <Link
                         href="/settings"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="dropdown-item"
                         onClick={() => setIsProfileMenuOpen(false)}
                       >
                         Settings
@@ -121,7 +138,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
                     )}
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="dropdown-item w-full text-left"
                     >
                       Sign out
                     </button>
@@ -133,7 +150,11 @@ export default function Navigation({ currentPage }: NavigationProps) {
               <div className="md:hidden ml-3">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="inline-flex items-center justify-center p-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    '--tw-ring-color': 'var(--color-accent-primary)'
+                  } as React.CSSProperties}
                 >
                   <span className="sr-only">Open main menu</span>
                   <svg
@@ -161,35 +182,48 @@ export default function Navigation({ currentPage }: NavigationProps) {
         {/* Mobile navigation menu */}
         {isMenuOpen && (
           <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200">
+            <div
+              className="px-2 pt-2 pb-3 space-y-1 sm:px-3"
+              style={{ borderTop: '1px solid var(--color-border-subtle)' }}
+            >
               {navigation.map((item) => (
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                    isCurrentPage(item.href)
-                      ? 'bg-indigo-700 text-white'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isCurrentPage(item.href) ? 'nav-link active' : 'nav-link'
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
                 </Link>
               ))}
-              
+
               {/* Mobile user info */}
-              <div className="pt-4 pb-3 border-t border-gray-200">
+              <div
+                className="pt-4 pb-3"
+                style={{ borderTop: '1px solid var(--color-border-subtle)' }}
+              >
                 <div className="px-3">
-                  <div className="text-base font-medium text-gray-800">
+                  <div
+                    className="text-base font-medium"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
                     {user?.firstName} {user?.lastName}
                   </div>
-                  <div className="text-sm font-medium text-gray-500">{organization?.name}</div>
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {organization?.name}
+                  </div>
                 </div>
                 <div className="mt-3 px-2 space-y-1">
                   {isSuperAdmin && (
                     <Link
                       href="/super-admin"
-                      className="block px-3 py-2 rounded-md text-base font-medium text-purple-700 hover:bg-purple-50"
+                      className="block px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200"
+                      style={{ color: 'var(--color-accent-secondary)' }}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Super Admin
@@ -197,7 +231,8 @@ export default function Navigation({ currentPage }: NavigationProps) {
                   )}
                   <button
                     onClick={handleLogout}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
                   >
                     Sign out
                   </button>
@@ -210,8 +245,8 @@ export default function Navigation({ currentPage }: NavigationProps) {
 
       {/* Click outside to close profile menu */}
       {isProfileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setIsProfileMenuOpen(false)}
         />
       )}
