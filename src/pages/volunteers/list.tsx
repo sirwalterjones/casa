@@ -236,12 +236,12 @@ export default function VolunteerList() {
         <meta name="description" content="Manage CASA volunteers" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-primary">
         {/* Header Navigation */}
         <Navigation currentPage="/volunteers/list" />
-        
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-fintech-bg-secondary dark:to-fintech-bg-tertiary text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-8">
               <h1 className="text-3xl font-light mb-2">Volunteer Management</h1>
@@ -251,18 +251,18 @@ export default function VolunteerList() {
         </div>
 
         {/* Sub Navigation Tabs */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="bg-white dark:bg-fintech-bg-secondary shadow-sm border-b border-gray-200 dark:border-fintech-border-subtle">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <nav className="flex space-x-8">
               <Link
                 href="/volunteers/register"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-fintech-text-secondary hover:text-gray-700 dark:hover:text-fintech-text-primary font-medium text-sm"
               >
                 Register Volunteer
               </Link>
               <Link
                 href="/volunteers/list"
-                className="py-4 px-1 border-b-2 border-blue-500 text-blue-600 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-blue-500 dark:border-fintech-accent-blue text-blue-600 dark:text-fintech-accent-blue font-medium text-sm"
               >
                 Volunteer List
               </Link>
@@ -273,7 +273,7 @@ export default function VolunteerList() {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Filters and Search */}
-          <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+          <div className="bg-white dark:bg-fintech-bg-secondary p-6 rounded-lg shadow-sm dark:shadow-fintech mb-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Search Volunteers</label>
@@ -314,64 +314,64 @@ export default function VolunteerList() {
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-fintech-bg-secondary p-6 rounded-lg shadow-sm dark:shadow-fintech">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-green-600 font-semibold">✓</span>
+                  <div className="w-8 h-8 bg-green-100 dark:bg-fintech-glow-green rounded-full flex items-center justify-center">
+                    <span className="text-green-600 dark:text-fintech-gain font-semibold">✓</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Active Volunteers</p>
-                  <p className="text-2xl font-semibold text-gray-900">
+                  <p className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary">Active Volunteers</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                     {volunteers.filter(v => v.status === 'active').length}
                   </p>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+
+            <div className="bg-white dark:bg-fintech-bg-secondary p-6 rounded-lg shadow-sm dark:shadow-fintech">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <span className="text-yellow-600 font-semibold">⏳</span>
+                  <div className="w-8 h-8 bg-yellow-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center">
+                    <span className="text-yellow-600 dark:text-fintech-warning font-semibold">⏳</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Pending</p>
-                  <p className="text-2xl font-semibold text-gray-900">
+                  <p className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary">Pending</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                     {volunteers.filter(v => v.status === 'pending').length}
                   </p>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+
+            <div className="bg-white dark:bg-fintech-bg-secondary p-6 rounded-lg shadow-sm dark:shadow-fintech">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold">📋</span>
+                  <div className="w-8 h-8 bg-blue-100 dark:bg-fintech-glow-blue rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 dark:text-fintech-accent-blue font-semibold">📋</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Cases</p>
-                  <p className="text-2xl font-semibold text-gray-900">
+                  <p className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary">Total Cases</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                     {volunteers.reduce((sum, v) => sum + v.cases_assigned, 0)}
                   </p>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+
+            <div className="bg-white dark:bg-fintech-bg-secondary p-6 rounded-lg shadow-sm dark:shadow-fintech">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-purple-600 font-semibold">⏰</span>
+                  <div className="w-8 h-8 bg-purple-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center">
+                    <span className="text-purple-600 dark:text-fintech-accent-indigo font-semibold">⏰</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Hours/Month</p>
-                  <p className="text-2xl font-semibold text-gray-900">
+                  <p className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary">Total Hours/Month</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                     {volunteers.reduce((sum, v) => sum + v.hours_per_month, 0)}
                   </p>
                 </div>
@@ -380,58 +380,58 @@ export default function VolunteerList() {
           </div>
 
           {/* Volunteer List */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
+          <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow-sm dark:shadow-fintech">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                 Volunteers ({filteredVolunteers.length})
               </h2>
             </div>
             
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-fintech-border-subtle">
+                <thead className="bg-gray-50 dark:bg-fintech-bg-tertiary">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Volunteer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Background Check
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Training
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Cases
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Last Contact
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-fintech-bg-secondary divide-y divide-gray-200 dark:divide-fintech-border-subtle">
                   {filteredVolunteers.map((volunteer) => (
-                    <tr key={volunteer.id} className="hover:bg-gray-50">
+                    <tr key={volunteer.id} className="hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-700">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-fintech-bg-tertiary flex items-center justify-center">
+                              <span className="text-sm font-medium text-blue-700 dark:text-fintech-accent-blue">
                                 {volunteer.first_name[0]}{volunteer.last_name[0]}
                               </span>
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
                               {volunteer.first_name} {volunteer.last_name}
                             </div>
-                            <div className="text-sm text-gray-500">{volunteer.email}</div>
-                            <div className="text-sm text-gray-500">{volunteer.phone}</div>
+                            <div className="text-sm text-gray-500 dark:text-fintech-text-secondary">{volunteer.email}</div>
+                            <div className="text-sm text-gray-500 dark:text-fintech-text-secondary">{volunteer.phone}</div>
                           </div>
                         </div>
                       </td>

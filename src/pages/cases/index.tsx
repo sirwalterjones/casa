@@ -128,9 +128,9 @@ export default function CasesList() {
 
       <Navigation currentPage="cases" />
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-primary">
         {/* Hero Header (matches other pages with color hero) */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-fintech-bg-secondary dark:to-fintech-bg-tertiary text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-8">
               <div className="flex justify-between items-center">
@@ -163,10 +163,10 @@ export default function CasesList() {
           {/* Header */}
 
           {/* Search and Filters */}
-          <div className="bg-white rounded-lg shadow mb-6 p-6">
+          <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech mb-6 p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-fintech-text-secondary mb-2">
                   Search Cases
                 </label>
                 <input
@@ -175,18 +175,18 @@ export default function CasesList() {
                   placeholder="Search by case number, child name, or volunteer..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-fintech-border-default dark:bg-fintech-bg-tertiary dark:text-fintech-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-fintech-text-secondary mb-2">
                   Status
                 </label>
                 <select
                   id="status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-fintech-border-default dark:bg-fintech-bg-tertiary dark:text-fintech-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="all">All Statuses</option>
                   <option value="active">Active</option>
@@ -196,14 +196,14 @@ export default function CasesList() {
                 </select>
               </div>
               <div>
-                <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-fintech-text-secondary mb-2">
                   Priority
                 </label>
                 <select
                   id="priority"
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-fintech-border-default dark:bg-fintech-bg-tertiary dark:text-fintech-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="all">All Priorities</option>
                   <option value="high">High</option>
@@ -218,7 +218,7 @@ export default function CasesList() {
                     setStatusFilter('all');
                     setPriorityFilter('all');
                   }}
-                  className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  className="w-full px-4 py-2 text-gray-600 dark:text-fintech-text-secondary border border-gray-300 dark:border-fintech-border-default rounded-md hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors"
                 >
                   Clear Filters
                 </button>
@@ -253,7 +253,7 @@ export default function CasesList() {
 
           {/* Cases List */}
           {!isLoading && !error && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech overflow-hidden">
               {filteredCases.length === 0 ? (
                 <div className="p-8 text-center">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -280,25 +280,25 @@ export default function CasesList() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-fintech-border-subtle">
+                    <thead className="bg-gray-50 dark:bg-fintech-bg-tertiary">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                           Case
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                           Child
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                           Priority
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                           Volunteer
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
                           Last Updated
                         </th>
                         <th className="relative px-6 py-3">
@@ -306,16 +306,16 @@ export default function CasesList() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-fintech-bg-secondary divide-y divide-gray-200 dark:divide-fintech-border-subtle">
                       {filteredCases.map((caseItem) => (
-                        <tr key={caseItem.id} className="hover:bg-gray-50">
+                        <tr key={caseItem.id} className="hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
                               {caseItem.case_number}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-gray-900 dark:text-fintech-text-primary">
                               {caseItem.child_first_name} {caseItem.child_last_name}
                             </div>
                           </td>
@@ -329,10 +329,10 @@ export default function CasesList() {
                               {caseItem.priority}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-fintech-text-primary">
                             {caseItem.assigned_volunteer_name || 'Unassigned'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-fintech-text-secondary">
                             {new Date(caseItem.updated_at).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -355,27 +355,27 @@ export default function CasesList() {
           {/* Summary Stats */}
           {!isLoading && !error && cases.length > 0 && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-2xl font-bold text-gray-900">{cases.length}</div>
-                <div className="text-sm text-gray-600">Total Cases</div>
+              <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech p-4">
+                <div className="text-2xl font-bold text-gray-900 dark:text-fintech-text-primary">{cases.length}</div>
+                <div className="text-sm text-gray-600 dark:text-fintech-text-secondary">Total Cases</div>
               </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech p-4">
+                <div className="text-2xl font-bold text-green-600 dark:text-fintech-gain">
                   {cases.filter(c => c.status === 'active').length}
                 </div>
-                <div className="text-sm text-gray-600">Active Cases</div>
+                <div className="text-sm text-gray-600 dark:text-fintech-text-secondary">Active Cases</div>
               </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-2xl font-bold text-yellow-600">
+              <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech p-4">
+                <div className="text-2xl font-bold text-yellow-600 dark:text-fintech-warning">
                   {cases.filter(c => c.status === 'pending').length}
                 </div>
-                <div className="text-sm text-gray-600">Pending Cases</div>
+                <div className="text-sm text-gray-600 dark:text-fintech-text-secondary">Pending Cases</div>
               </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-2xl font-bold text-red-600">
+              <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech p-4">
+                <div className="text-2xl font-bold text-red-600 dark:text-fintech-loss">
                   {cases.filter(c => c.priority === 'high').length}
                 </div>
-                <div className="text-sm text-gray-600">High Priority</div>
+                <div className="text-sm text-gray-600 dark:text-fintech-text-secondary">High Priority</div>
               </div>
             </div>
           )}

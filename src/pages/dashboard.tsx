@@ -98,7 +98,7 @@ export default function Dashboard() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-fintech-bg-primary dark:to-fintech-bg-secondary">
         {/* Header Navigation */}
         <Navigation currentPage="/dashboard" />
 
@@ -107,17 +107,17 @@ export default function Dashboard() {
           {/* Welcome Section */}
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-fintech-text-primary">
                 Welcome back, {user?.firstName || 'User'}!
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-gray-600 dark:text-fintech-text-secondary">
                 Here's what's happening with your CASA cases today.
               </p>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Link href="/cases" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-blue-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
+              <Link href="/cases" className="bg-white dark:bg-fintech-bg-secondary overflow-hidden shadow-xl dark:shadow-fintech rounded-lg border-l-4 border-blue-500 hover:shadow-2xl dark:hover:shadow-fintech-lg hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
@@ -129,22 +129,22 @@ export default function Dashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Active Cases</dt>
-                        <dd className="text-lg font-semibold text-gray-900">{loading ? '...' : stats.activeCases}</dd>
+                        <dt className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary truncate">Active Cases</dt>
+                        <dd className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">{loading ? '...' : stats.activeCases}</dd>
                       </dl>
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-blue-600">Click to view all cases →</div>
+                    <div className="text-sm text-blue-600 dark:text-fintech-accent-blue">Click to view all cases →</div>
                   </div>
                 </div>
               </Link>
 
-              <Link href="/volunteers" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-green-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
+              <Link href="/volunteers" className="bg-white dark:bg-fintech-bg-secondary overflow-hidden shadow-xl dark:shadow-fintech rounded-lg border-l-4 border-green-500 dark:border-fintech-gain hover:shadow-2xl dark:hover:shadow-fintech-lg hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                      <div className="w-8 h-8 bg-green-500 dark:bg-fintech-gain rounded-md flex items-center justify-center">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
@@ -152,22 +152,22 @@ export default function Dashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Active Volunteers</dt>
-                        <dd className="text-lg font-semibold text-gray-900">{loading ? '...' : stats.volunteers}</dd>
+                        <dt className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary truncate">Active Volunteers</dt>
+                        <dd className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">{loading ? '...' : stats.volunteers}</dd>
                       </dl>
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-green-600">Click to view volunteers →</div>
+                    <div className="text-sm text-green-600 dark:text-fintech-gain">Click to view volunteers →</div>
                   </div>
                 </div>
               </Link>
 
-              <Link href="/reports" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-yellow-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
+              <Link href="/reports" className="bg-white dark:bg-fintech-bg-secondary overflow-hidden shadow-xl dark:shadow-fintech rounded-lg border-l-4 border-yellow-500 dark:border-fintech-warning hover:shadow-2xl dark:hover:shadow-fintech-lg hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                      <div className="w-8 h-8 bg-yellow-500 dark:bg-fintech-warning rounded-md flex items-center justify-center">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -175,22 +175,22 @@ export default function Dashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Pending Reviews</dt>
-                        <dd className="text-lg font-semibold text-gray-900">{loading ? '...' : stats.pendingReviews}</dd>
+                        <dt className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary truncate">Pending Reviews</dt>
+                        <dd className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">{loading ? '...' : stats.pendingReviews}</dd>
                       </dl>
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-yellow-600">Click to view reports →</div>
+                    <div className="text-sm text-yellow-600 dark:text-fintech-warning">Click to view reports →</div>
                   </div>
                 </div>
               </Link>
 
-              <Link href="/calendar" className="bg-white overflow-hidden shadow-xl rounded-lg border-l-4 border-purple-500 hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer block">
+              <Link href="/calendar" className="bg-white dark:bg-fintech-bg-secondary overflow-hidden shadow-xl dark:shadow-fintech rounded-lg border-l-4 border-purple-500 dark:border-fintech-accent-indigo hover:shadow-2xl dark:hover:shadow-fintech-lg hover:scale-105 transition-all duration-200 cursor-pointer block">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                      <div className="w-8 h-8 bg-purple-500 dark:bg-fintech-accent-indigo rounded-md flex items-center justify-center">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
@@ -198,13 +198,13 @@ export default function Dashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Court Hearings</dt>
-                        <dd className="text-lg font-semibold text-gray-900">{loading ? '...' : stats.courtHearings}</dd>
+                        <dt className="text-sm font-medium text-gray-500 dark:text-fintech-text-secondary truncate">Court Hearings</dt>
+                        <dd className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">{loading ? '...' : stats.courtHearings}</dd>
                       </dl>
                     </div>
                   </div>
                   <div className="mt-3">
-                    <div className="text-sm text-purple-600">Click to view calendar →</div>
+                    <div className="text-sm text-purple-600 dark:text-fintech-accent-indigo">Click to view calendar →</div>
                   </div>
                 </div>
               </Link>
@@ -214,69 +214,69 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Recent Activity */}
               <div className="lg:col-span-2">
-                <div className="bg-white shadow-xl rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+                <div className="bg-white dark:bg-fintech-bg-secondary shadow-xl dark:shadow-fintech rounded-lg overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-fintech-text-primary">Recent Activity</h3>
                   </div>
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-fintech-border-subtle">
                     {loading ? (
                       <div className="px-6 py-8 text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                        <p className="mt-2 text-sm text-gray-500">Loading recent activity...</p>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-fintech-accent-blue mx-auto"></div>
+                        <p className="mt-2 text-sm text-gray-500 dark:text-fintech-text-secondary">Loading recent activity...</p>
                       </div>
                     ) : stats.recentActivity.length > 0 ? (
                       stats.recentActivity.map((activity, index) => (
                         <div key={index} className="px-6 py-4">
                           <div className="flex items-start">
                             <div className="flex-shrink-0">
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center">
+                                <svg className="w-4 h-4 text-blue-600 dark:text-fintech-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                               </div>
                             </div>
                             <div className="ml-4 flex-1">
                               <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium text-gray-900">{activity.type}</p>
-                                <span className="text-xs text-gray-500">{activity.date}</span>
+                                <p className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">{activity.type}</p>
+                                <span className="text-xs text-gray-500 dark:text-fintech-text-tertiary">{activity.date}</span>
                               </div>
-                              <p className="text-sm text-gray-600">{activity.description}</p>
+                              <p className="text-sm text-gray-600 dark:text-fintech-text-secondary">{activity.description}</p>
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="px-6 py-8 text-center">
-                        <p className="text-sm text-gray-500">No recent activity to display.</p>
-                        <p className="text-xs text-gray-400 mt-1">Activity will appear here as cases and reports are created.</p>
+                        <p className="text-sm text-gray-500 dark:text-fintech-text-secondary">No recent activity to display.</p>
+                        <p className="text-xs text-gray-400 dark:text-fintech-text-tertiary mt-1">Activity will appear here as cases and reports are created.</p>
                       </div>
                     )}
                   </div>
-                  <div className="px-6 py-3 bg-gray-50">
-                    <a href="#" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">View all activity →</a>
+                  <div className="px-6 py-3 bg-gray-50 dark:bg-fintech-bg-tertiary">
+                    <a href="#" className="text-sm font-medium text-indigo-600 dark:text-fintech-accent-blue hover:text-indigo-500">View all activity →</a>
                   </div>
                 </div>
               </div>
 
               {/* Upcoming Tasks */}
               <div className="lg:col-span-1">
-                <div className="bg-white shadow-xl rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">Upcoming Tasks</h3>
+                <div className="bg-white dark:bg-fintech-bg-secondary shadow-xl dark:shadow-fintech rounded-lg overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-fintech-text-primary">Upcoming Tasks</h3>
                   </div>
                   <div className="p-6">
                     {loading ? (
                       <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                        <p className="mt-2 text-sm text-gray-500">Loading tasks...</p>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-fintech-accent-blue mx-auto"></div>
+                        <p className="mt-2 text-sm text-gray-500 dark:text-fintech-text-secondary">Loading tasks...</p>
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-12 h-12 mx-auto text-gray-400 dark:text-fintech-text-tertiary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <p className="text-sm text-gray-500">No upcoming tasks</p>
-                        <p className="text-xs text-gray-400 mt-1">Tasks will appear here when scheduled</p>
+                        <p className="text-sm text-gray-500 dark:text-fintech-text-secondary">No upcoming tasks</p>
+                        <p className="text-xs text-gray-400 dark:text-fintech-text-tertiary mt-1">Tasks will appear here when scheduled</p>
                       </div>
                     )}
                   </div>
@@ -286,9 +286,9 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="mt-8">
-              <div className="bg-white shadow-xl rounded-lg overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+              <div className="bg-white dark:bg-fintech-bg-secondary shadow-xl dark:shadow-fintech rounded-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-fintech-text-primary">Quick Actions</h3>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
