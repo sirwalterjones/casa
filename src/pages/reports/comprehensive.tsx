@@ -24,7 +24,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <Head>
       <title>Comprehensive Reports - CASA Case Management</title>
     </Head>
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-primary">
       <Navigation currentPage="/reports/comprehensive" />
       {children}
     </div>
@@ -32,15 +32,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="bg-white rounded-lg shadow">{children}</div>
+  <div className="bg-white dark:bg-fintech-bg-secondary rounded-lg shadow dark:shadow-fintech">{children}</div>
 );
 
 const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`border-b px-6 py-4 ${className}`}>{children}</div>
+  <div className={`border-b border-gray-200 dark:border-fintech-border-subtle px-6 py-4 ${className}`}>{children}</div>
 );
 
 const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`font-semibold ${className}`}>{children}</div>
+  <div className={`font-semibold text-gray-900 dark:text-fintech-text-primary ${className}`}>{children}</div>
 );
 
 const CardContent: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -54,7 +54,7 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ child
 );
 
 const Badge: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <span className={`inline-flex items-center rounded-full bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 ${className}`}>
+  <span className={`inline-flex items-center rounded-full bg-gray-100 dark:bg-fintech-bg-tertiary text-gray-800 dark:text-fintech-text-primary text-xs font-medium px-2 py-0.5 ${className}`}>
     {children}
   </span>
 );
@@ -195,8 +195,8 @@ const ComprehensiveReports: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Comprehensive Reports</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-fintech-text-primary">Comprehensive Reports</h1>
+            <p className="text-gray-600 dark:text-fintech-text-secondary mt-2">
               Overview of CASA program performance and statistics
             </p>
           </div>
@@ -204,7 +204,7 @@ const ComprehensiveReports: React.FC = () => {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2"
+              className="border border-gray-300 dark:border-fintech-border-default dark:bg-fintech-bg-tertiary dark:text-fintech-text-primary rounded-md px-3 py-2"
             >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
@@ -227,8 +227,8 @@ const ComprehensiveReports: React.FC = () => {
                   <Badge variant="secondary">{reportData.totalCases}</Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.totalCases}</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-fintech-text-primary">{reportData.totalCases}</div>
+                  <p className="text-xs text-gray-500 dark:text-fintech-text-secondary">
                     {reportData.activeCases} active, {reportData.closedCases} closed
                   </p>
                 </CardContent>
@@ -240,8 +240,8 @@ const ComprehensiveReports: React.FC = () => {
                   <Badge variant="secondary">{reportData.activeVolunteers}</Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.totalVolunteers}</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-fintech-text-primary">{reportData.totalVolunteers}</div>
+                  <p className="text-xs text-gray-500 dark:text-fintech-text-secondary">
                     {reportData.activeVolunteers} active volunteers
                   </p>
                 </CardContent>
@@ -253,8 +253,8 @@ const ComprehensiveReports: React.FC = () => {
                   <Badge variant="secondary">{reportData.totalContacts}</Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.totalContacts}</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-fintech-text-primary">{reportData.totalContacts}</div>
+                  <p className="text-xs text-gray-500 dark:text-fintech-text-secondary">
                     Total contact interactions
                   </p>
                 </CardContent>
@@ -266,8 +266,8 @@ const ComprehensiveReports: React.FC = () => {
                   <Badge variant="secondary">{reportData.totalHomeVisits}</Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.totalHomeVisits}</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-fintech-text-primary">{reportData.totalHomeVisits}</div>
+                  <p className="text-xs text-gray-500 dark:text-fintech-text-secondary">
                     Completed home visits
                   </p>
                 </CardContent>
@@ -378,28 +378,28 @@ const ComprehensiveReports: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Metric</th>
-                        <th className="text-right py-2">Value</th>
-                        <th className="text-right py-2">Percentage</th>
+                      <tr className="border-b border-gray-200 dark:border-fintech-border-subtle">
+                        <th className="text-left py-2 text-gray-900 dark:text-fintech-text-primary">Metric</th>
+                        <th className="text-right py-2 text-gray-900 dark:text-fintech-text-primary">Value</th>
+                        <th className="text-right py-2 text-gray-900 dark:text-fintech-text-primary">Percentage</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      <tr className="border-b">
+                    <tbody className="text-gray-700 dark:text-fintech-text-secondary">
+                      <tr className="border-b border-gray-200 dark:border-fintech-border-subtle">
                         <td className="py-2">Active Cases</td>
                         <td className="text-right">{reportData.activeCases}</td>
                         <td className="text-right">
                           {((reportData.activeCases / reportData.totalCases) * 100).toFixed(1)}%
                         </td>
                       </tr>
-                      <tr className="border-b">
+                      <tr className="border-b border-gray-200 dark:border-fintech-border-subtle">
                         <td className="py-2">Closed Cases</td>
                         <td className="text-right">{reportData.closedCases}</td>
                         <td className="text-right">
                           {((reportData.closedCases / reportData.totalCases) * 100).toFixed(1)}%
                         </td>
                       </tr>
-                      <tr className="border-b">
+                      <tr className="border-b border-gray-200 dark:border-fintech-border-subtle">
                         <td className="py-2">Active Volunteers</td>
                         <td className="text-right">{reportData.activeVolunteers}</td>
                         <td className="text-right">
