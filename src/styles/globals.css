@@ -131,6 +131,21 @@
     transition: background-color var(--transition-base) ease-in-out,
                 color var(--transition-base) ease-in-out;
   }
+
+  /* Force light mode for auth pages - overrides dark theme completely */
+  .force-light {
+    --color-bg-primary: #f9fafb !important;
+    --color-bg-secondary: #ffffff !important;
+    --color-bg-tertiary: #f3f4f6 !important;
+    --color-bg-elevated: #ffffff !important;
+    --color-text-primary: #111827 !important;
+    --color-text-secondary: #6b7280 !important;
+    --color-text-tertiary: #9ca3af !important;
+    --color-border-default: #e5e7eb !important;
+    --color-border-subtle: #f3f4f6 !important;
+    background-color: #f9fafb !important;
+    color: #111827 !important;
+  }
 }
 
 @layer components {
