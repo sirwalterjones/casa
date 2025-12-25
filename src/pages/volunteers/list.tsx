@@ -276,22 +276,22 @@ export default function VolunteerList() {
           <div className="bg-white dark:bg-fintech-bg-secondary p-6 rounded-lg shadow-sm dark:shadow-fintech mb-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Search Volunteers</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-fintech-text-secondary mb-1">Search Volunteers</label>
                 <input
                   type="text"
                   placeholder="Search by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-fintech-border-default dark:bg-fintech-bg-tertiary dark:text-fintech-text-primary rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              
+
               <div className="sm:w-48">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status Filter</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-fintech-text-secondary mb-1">Status Filter</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-fintech-border-default dark:bg-fintech-bg-tertiary dark:text-fintech-text-primary rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -450,10 +450,10 @@ export default function VolunteerList() {
                           {volunteer.training_status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-fintech-text-primary">
                         {volunteer.cases_assigned}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-fintech-text-secondary">
                         {volunteer.last_contact}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

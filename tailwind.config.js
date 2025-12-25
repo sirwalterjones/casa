@@ -71,8 +71,8 @@ module.exports = {
           // Text colors with clear hierarchy
           text: {
             primary: '#f1f5f9',     // Primary text (high contrast)
-            secondary: '#94a3b8',   // Secondary/muted text
-            tertiary: '#64748b',    // Disabled/placeholder
+            secondary: '#cbd5e1',   // Secondary/muted text (brighter for visibility)
+            tertiary: '#94a3b8',    // Disabled/placeholder (was too dark)
             inverse: '#0f1419',     // Text on light backgrounds
           },
           // Accent colors for actions
