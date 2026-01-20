@@ -33,7 +33,70 @@ add_action('rest_api_init', function() {
         'callback' => 'casa_switch_user_to_pacasa',
         'permission_callback' => '__return_true'
     ));
+
+    // Endpoint to delete all orgs except PA-CASA
+    register_rest_route('casa/v1', '/admin/cleanup-orgs-keep-pacasa', array(
+        'methods' => 'POST',
+        'callback' => 'casa_cleanup_orgs_keep_pacasa',
+        'permission_callback' => '__return_true'
+    ));
 });
+
+/**
+ * Delete all organizations except PA-CASA
+ */
+function casa_cleanup_orgs_keep_pacasa($request) {
+    global $wpdb;
+
+    $orgs_table = $wpdb->prefix . 'casa_organizations';
+    $user_orgs_table = $wpdb->prefix . 'casa_user_organizations';
+
+    // Get PA-CASA org ID
+    $pacasa = $wpdb->get_row("SELECT * FROM $orgs_table WHERE slug = 'pacasa'");
+
+    if (!$pacasa) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'PA-CASA not found'
+        ), 404);
+    }
+
+    $results = array();
+
+    // Remove walter from all orgs except PA-CASA
+    $user = get_user_by('email', 'walter@joneswebdesigns.com');
+    if ($user) {
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM $user_orgs_table WHERE user_id = %d AND organization_id != %d",
+            $user->ID, $pacasa->id
+        ));
+        $results['walter_removed_from_other_orgs'] = $deleted;
+    }
+
+    // Delete all organizations except PA-CASA
+    $orgs_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $orgs_table WHERE id != %d",
+        $pacasa->id
+    ));
+    $results['organizations_deleted'] = $orgs_deleted;
+
+    // Delete all user-org mappings for deleted orgs
+    $mappings_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $user_orgs_table WHERE organization_id != %d",
+        $pacasa->id
+    ));
+    $results['user_org_mappings_deleted'] = $mappings_deleted;
+
+    // Get remaining orgs
+    $remaining = $wpdb->get_results("SELECT id, name, slug FROM $orgs_table");
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'All organizations except PA-CASA have been deleted',
+        'results' => $results,
+        'remaining_organizations' => $remaining
+    ), 200);
+}
 
 /**
  * Switch walter to PA-CASA as PRIMARY organization
