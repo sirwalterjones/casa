@@ -26,7 +26,85 @@ add_action('rest_api_init', function() {
         'callback' => 'casa_setup_pa_casa_test_data',
         'permission_callback' => '__return_true'
     ));
+
+    // Endpoint to switch user to PA-CASA
+    register_rest_route('casa/v1', '/admin/switch-to-pacasa', array(
+        'methods' => 'POST',
+        'callback' => 'casa_switch_user_to_pacasa',
+        'permission_callback' => '__return_true'
+    ));
 });
+
+/**
+ * Switch walter to PA-CASA as PRIMARY organization
+ * This updates the database so login returns PA-CASA
+ */
+function casa_switch_user_to_pacasa($request) {
+    global $wpdb;
+
+    $user = get_user_by('email', 'walter@joneswebdesigns.com');
+    if (!$user) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User walter@joneswebdesigns.com not found'
+        ), 404);
+    }
+
+    // Get PA-CASA organization
+    $orgs_table = $wpdb->prefix . 'casa_organizations';
+    $user_orgs_table = $wpdb->prefix . 'casa_user_organizations';
+
+    $pacasa = $wpdb->get_row("SELECT * FROM $orgs_table WHERE slug = 'pacasa'");
+
+    if (!$pacasa) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'PA-CASA organization not found. Run setup-pa-casa-data first.'
+        ), 404);
+    }
+
+    // Remove walter from organization 1 (Default/Bartow)
+    $wpdb->delete($user_orgs_table, array(
+        'user_id' => $user->ID,
+        'organization_id' => 1
+    ));
+
+    // Ensure walter is in PA-CASA org
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $user_orgs_table WHERE user_id = %d AND organization_id = %d",
+        $user->ID, $pacasa->id
+    ));
+
+    if (!$existing) {
+        $wpdb->insert($user_orgs_table, array(
+            'user_id' => $user->ID,
+            'organization_id' => $pacasa->id,
+            'casa_role' => 'admin',
+            'status' => 'active',
+            'background_check_status' => 'approved',
+            'training_status' => 'completed',
+            'max_cases' => 10,
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ));
+    }
+
+    // Get updated user orgs
+    $user_orgs = $wpdb->get_results($wpdb->prepare(
+        "SELECT uo.*, o.name, o.slug FROM $user_orgs_table uo
+         JOIN $orgs_table o ON uo.organization_id = o.id
+         WHERE uo.user_id = %d",
+        $user->ID
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Walter is now ONLY in PA-CASA organization. Please log out and log back in.',
+        'user_id' => $user->ID,
+        'pacasa_org_id' => $pacasa->id,
+        'user_organizations' => $user_orgs
+    ), 200);
+}
 
 /**
  * Main PA-CASA setup function
