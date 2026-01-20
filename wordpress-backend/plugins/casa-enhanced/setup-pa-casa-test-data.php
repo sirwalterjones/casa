@@ -55,7 +55,7 @@ function casa_setup_pa_casa_test_data($request) {
     $orgs_table = $wpdb->prefix . 'casa_organizations';
 
     // Check if organization already exists
-    $existing_org = $wpdb->get_row("SELECT * FROM $orgs_table WHERE slug = 'pa-casa'");
+    $existing_org = $wpdb->get_row("SELECT * FROM $orgs_table WHERE slug = 'pacasa'");
 
     if ($existing_org) {
         $organization_id = $existing_org->id;
@@ -63,8 +63,8 @@ function casa_setup_pa_casa_test_data($request) {
     } else {
         $wpdb->insert($orgs_table, array(
             'name' => 'Pennsylvania CASA Program',
-            'slug' => 'pa-casa',
-            'domain' => 'pacasa.org',
+            'slug' => 'pacasa',
+            'domain' => 'pacasa.joneswebdesigns.com',
             'status' => 'active',
             'contact_email' => 'admin@pacasa.org',
             'phone' => '(717) 555-0100',
