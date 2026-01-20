@@ -37,6 +37,9 @@ require_once plugin_dir_path(__FILE__) . 'multi-tenancy.php';
 // Include Forms and Sample Data Setup
 require_once plugin_dir_path(__FILE__) . 'setup-forms-and-data.php';
 
+// Include PA-CASA Test Data Setup
+require_once plugin_dir_path(__FILE__) . 'setup-pa-casa-test-data.php';
+
 /**
  * JWT Authentication Filter
  * Validates JWT tokens on REST API requests and sets the current user
