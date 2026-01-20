@@ -349,10 +349,34 @@ function casa_verify_2fa_code($request) {
         ), 404);
     }
 
-    // Get organization
+    // Get organization - first try by slug, then try user's assigned org
     $organization = casa_get_organization_by_slug($organization_slug);
     if (!$organization) {
-        $organization = casa_create_default_organization($organization_slug);
+        // Try to get user's assigned organization instead of creating default
+        global $wpdb;
+        $user_org = $wpdb->get_row($wpdb->prepare(
+            "SELECT o.* FROM {$wpdb->prefix}casa_organizations o
+             JOIN {$wpdb->prefix}casa_user_organizations uo ON o.id = uo.organization_id
+             WHERE uo.user_id = %d AND o.status = 'active'
+             ORDER BY uo.id ASC LIMIT 1",
+            $user->ID
+        ));
+
+        if ($user_org) {
+            $organization = array(
+                'id' => $user_org->id,
+                'name' => $user_org->name,
+                'slug' => $user_org->slug,
+                'domain' => $user_org->domain,
+                'status' => $user_org->status,
+                'settings' => json_decode($user_org->settings, true),
+                'createdAt' => $user_org->created_at,
+                'updatedAt' => $user_org->updated_at
+            );
+        } else {
+            // Only create default as last resort
+            $organization = casa_create_default_organization($organization_slug);
+        }
     }
 
     // Get CASA profile
