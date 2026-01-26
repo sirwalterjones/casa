@@ -1639,9 +1639,9 @@ function casa_reset_and_create_test_data($request) {
     $admin_user = get_user_by('email', 'walter@joneswebdesigns.com');
     $volunteers_table = $wpdb->prefix . 'casa_volunteers';
 
-    // Get volunteer IDs
+    // Get volunteer IDs (use volunteer_status column, not status)
     $volunteers = $wpdb->get_results($wpdb->prepare(
-        "SELECT id, user_id, first_name, last_name FROM $volunteers_table WHERE organization_id = %d AND status = 'active'",
+        "SELECT id, user_id, first_name, last_name FROM $volunteers_table WHERE organization_id = %d AND volunteer_status = 'active'",
         $organization_id
     ));
 
