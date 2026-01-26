@@ -1,0 +1,36 @@
+# CASA Frontend - Cloud Build Configuration
+# Simplified config for frontend deployment only
+
+steps:
+  # Deploy Frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'casa-frontend'
+      - '--source'
+      - '.'
+      - '--region'
+      - 'us-east4'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'NEXT_PUBLIC_WORDPRESS_URL=https://casa-backend-241015914634.us-east4.run.app'
+      - '--set-env-vars'
+      - 'WORDPRESS_API_URL=https://casa-backend-241015914634.us-east4.run.app'
+      - '--set-env-vars'
+      - 'NODE_ENV=production'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '1'
+      - '--max-instances'
+      - '10'
+    id: 'deploy-frontend'
+
+timeout: '1800s'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

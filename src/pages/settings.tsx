@@ -249,14 +249,32 @@ export default function Settings() {
                 console.log('Organization name:', currentOrg.name);
                 console.log('Organization slug:', currentOrg.slug);
                 
+                // Parse address if it contains city, state, zip in one line
+                let streetAddress = currentOrg.address || '';
+                let city = currentOrg.city || '';
+                let state = currentOrg.state || '';
+                let zipCode = currentOrg.zip_code || '';
+
+                // If city/state/zip are empty but address contains them, try to parse
+                if (streetAddress && !city && !state && !zipCode) {
+                  // Pattern: "Street Address, City, ST ZIPCODE" or "Street Address, City, ST ZIP"
+                  const addressMatch = streetAddress.match(/^(.+?),\s*([^,]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+                  if (addressMatch) {
+                    streetAddress = addressMatch[1].trim();
+                    city = addressMatch[2].trim();
+                    state = addressMatch[3].trim();
+                    zipCode = addressMatch[4].trim();
+                  }
+                }
+
                 const orgSettings: OrganizationSettings = {
                   name: currentOrg.name || '',
                   slug: currentOrg.slug || '',
                   domain: currentOrg.domain || 'casa-backend.local',
-                  address: currentOrg.address || '',
-                  city: '',
-                  state: '',
-                  zip_code: '',
+                  address: streetAddress,
+                  city: city,
+                  state: state,
+                  zip_code: zipCode,
                   phone: currentOrg.phone || '',
                   email: currentOrg.contact_email || '', // Map contact_email to email field
                   website: '',
@@ -266,7 +284,7 @@ export default function Settings() {
                   training_requirements: '',
                   contact_frequency_days: 30,
                 };
-                
+
                 console.log('Setting organization data:', orgSettings);
                 setOrganizationData(orgSettings);
                 resetOrg(orgSettings); // Update form with real data
@@ -313,14 +331,32 @@ export default function Settings() {
                   console.log('Organization name:', currentOrg.name);
                   console.log('Organization slug:', currentOrg.slug);
                   
+                  // Parse address if it contains city, state, zip in one line
+                  let streetAddress2 = currentOrg.address || '';
+                  let city2 = currentOrg.city || '';
+                  let state2 = currentOrg.state || '';
+                  let zipCode2 = currentOrg.zip_code || '';
+
+                  // If city/state/zip are empty but address contains them, try to parse
+                  if (streetAddress2 && !city2 && !state2 && !zipCode2) {
+                    // Pattern: "Street Address, City, ST ZIPCODE" or "Street Address, City, ST ZIP"
+                    const addressMatch2 = streetAddress2.match(/^(.+?),\s*([^,]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+                    if (addressMatch2) {
+                      streetAddress2 = addressMatch2[1].trim();
+                      city2 = addressMatch2[2].trim();
+                      state2 = addressMatch2[3].trim();
+                      zipCode2 = addressMatch2[4].trim();
+                    }
+                  }
+
                   const orgSettings: OrganizationSettings = {
                     name: currentOrg.name || '',
                     slug: currentOrg.slug || '',
                     domain: currentOrg.domain || 'casa-backend.local',
-                    address: currentOrg.address || '',
-                    city: '',
-                    state: '',
-                    zip_code: '',
+                    address: streetAddress2,
+                    city: city2,
+                    state: state2,
+                    zip_code: zipCode2,
                     phone: currentOrg.phone || '',
                     email: currentOrg.contact_email || '',
                     website: '',
@@ -330,7 +366,7 @@ export default function Settings() {
                     training_requirements: '',
                     contact_frequency_days: 30,
                   };
-                  
+
                   console.log('Setting organization data:', orgSettings);
                   setOrganizationData(orgSettings);
                   resetOrg(orgSettings);
