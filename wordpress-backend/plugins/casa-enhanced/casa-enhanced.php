@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CASA Enhanced User Management
  * Description: Complete CASA case management with WordPress user integration
- * Version: 2.0.55
+ * Version: 2.0.56
  * Author: CASA System
  *
  * Last Updated: 2025-08-07 - Fixed Formidable Forms integration
@@ -1115,6 +1115,31 @@ function casa_register_enhanced_routes() {
     register_rest_route('casa/v1', '/home-visit-reports', array(
         'methods' => 'POST',
         'callback' => 'casa_create_home_visit_report',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Settings endpoints
+    register_rest_route('casa/v1', '/settings/security', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_security_settings',
+        'permission_callback' => '__return_true'
+    ));
+
+    register_rest_route('casa/v1', '/settings/security', array(
+        'methods' => 'POST',
+        'callback' => 'casa_save_security_settings',
+        'permission_callback' => '__return_true'
+    ));
+
+    register_rest_route('casa/v1', '/settings/notifications', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_notification_settings',
+        'permission_callback' => '__return_true'
+    ));
+
+    register_rest_route('casa/v1', '/settings/notifications', array(
+        'methods' => 'POST',
+        'callback' => 'casa_save_notification_settings',
         'permission_callback' => '__return_true'
     ));
 }
@@ -3614,6 +3639,264 @@ function casa_get_home_visit_reports($request) {
         'success' => true,
         'data' => $formatted_reports,
         'total' => count($formatted_reports)
+    ), 200);
+}
+
+/**
+ * Get security settings for an organization
+ */
+function casa_get_security_settings($request) {
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with any organization'
+        ), 403);
+    }
+
+    global $wpdb;
+    $settings_table = $wpdb->prefix . 'casa_organization_settings';
+
+    // Check if table exists
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$settings_table'");
+
+    // Default settings
+    $default_settings = array(
+        'require_min_length' => true,
+        'require_mixed_case' => true,
+        'require_special_chars' => false,
+        'require_numbers' => false,
+        'session_timeout_minutes' => 30
+    );
+
+    if (!$table_exists) {
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => $default_settings
+        ), 200);
+    }
+
+    $settings = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $settings_table WHERE organization_id = %d AND setting_type = 'security'",
+        $organization_id
+    ), ARRAY_A);
+
+    if ($settings && !empty($settings['settings_json'])) {
+        $saved_settings = json_decode($settings['settings_json'], true);
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => array_merge($default_settings, $saved_settings)
+        ), 200);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $default_settings
+    ), 200);
+}
+
+/**
+ * Save security settings for an organization
+ */
+function casa_save_security_settings($request) {
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with any organization'
+        ), 403);
+    }
+
+    // Get settings from request
+    $settings = array(
+        'require_min_length' => (bool) $request->get_param('require_min_length'),
+        'require_mixed_case' => (bool) $request->get_param('require_mixed_case'),
+        'require_special_chars' => (bool) $request->get_param('require_special_chars'),
+        'require_numbers' => (bool) $request->get_param('require_numbers'),
+        'session_timeout_minutes' => (int) ($request->get_param('session_timeout_minutes') ?: 30)
+    );
+
+    global $wpdb;
+    $settings_table = $wpdb->prefix . 'casa_organization_settings';
+
+    // Create table if it doesn't exist
+    $charset_collate = $wpdb->get_charset_collate();
+    $wpdb->query("CREATE TABLE IF NOT EXISTS $settings_table (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        organization_id bigint(20) unsigned NOT NULL,
+        setting_type varchar(50) NOT NULL,
+        settings_json longtext NOT NULL,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY org_type (organization_id, setting_type)
+    ) $charset_collate;");
+
+    // Check if settings exist
+    $existing = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM $settings_table WHERE organization_id = %d AND setting_type = 'security'",
+        $organization_id
+    ));
+
+    $settings_json = json_encode($settings);
+
+    if ($existing) {
+        $wpdb->update(
+            $settings_table,
+            array('settings_json' => $settings_json),
+            array('organization_id' => $organization_id, 'setting_type' => 'security'),
+            array('%s'),
+            array('%d', '%s')
+        );
+    } else {
+        $wpdb->insert(
+            $settings_table,
+            array(
+                'organization_id' => $organization_id,
+                'setting_type' => 'security',
+                'settings_json' => $settings_json
+            ),
+            array('%d', '%s', '%s')
+        );
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Security settings saved successfully',
+        'data' => $settings
+    ), 200);
+}
+
+/**
+ * Get notification settings for an organization
+ */
+function casa_get_notification_settings($request) {
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with any organization'
+        ), 403);
+    }
+
+    global $wpdb;
+    $settings_table = $wpdb->prefix . 'casa_organization_settings';
+
+    // Default settings
+    $default_settings = array(
+        'new_case_assignments' => true,
+        'upcoming_court_dates' => true,
+        'overdue_contact_logs' => false,
+        'volunteer_registration_requests' => false,
+        'task_reminders' => true,
+        'report_due_reminders' => false
+    );
+
+    // Check if table exists
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$settings_table'");
+
+    if (!$table_exists) {
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => $default_settings
+        ), 200);
+    }
+
+    $settings = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $settings_table WHERE organization_id = %d AND setting_type = 'notifications'",
+        $organization_id
+    ), ARRAY_A);
+
+    if ($settings && !empty($settings['settings_json'])) {
+        $saved_settings = json_decode($settings['settings_json'], true);
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => array_merge($default_settings, $saved_settings)
+        ), 200);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $default_settings
+    ), 200);
+}
+
+/**
+ * Save notification settings for an organization
+ */
+function casa_save_notification_settings($request) {
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with any organization'
+        ), 403);
+    }
+
+    // Get settings from request
+    $settings = array(
+        'new_case_assignments' => (bool) $request->get_param('new_case_assignments'),
+        'upcoming_court_dates' => (bool) $request->get_param('upcoming_court_dates'),
+        'overdue_contact_logs' => (bool) $request->get_param('overdue_contact_logs'),
+        'volunteer_registration_requests' => (bool) $request->get_param('volunteer_registration_requests'),
+        'task_reminders' => (bool) $request->get_param('task_reminders'),
+        'report_due_reminders' => (bool) $request->get_param('report_due_reminders')
+    );
+
+    global $wpdb;
+    $settings_table = $wpdb->prefix . 'casa_organization_settings';
+
+    // Create table if it doesn't exist
+    $charset_collate = $wpdb->get_charset_collate();
+    $wpdb->query("CREATE TABLE IF NOT EXISTS $settings_table (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        organization_id bigint(20) unsigned NOT NULL,
+        setting_type varchar(50) NOT NULL,
+        settings_json longtext NOT NULL,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY org_type (organization_id, setting_type)
+    ) $charset_collate;");
+
+    // Check if settings exist
+    $existing = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM $settings_table WHERE organization_id = %d AND setting_type = 'notifications'",
+        $organization_id
+    ));
+
+    $settings_json = json_encode($settings);
+
+    if ($existing) {
+        $wpdb->update(
+            $settings_table,
+            array('settings_json' => $settings_json),
+            array('organization_id' => $organization_id, 'setting_type' => 'notifications'),
+            array('%s'),
+            array('%d', '%s')
+        );
+    } else {
+        $wpdb->insert(
+            $settings_table,
+            array(
+                'organization_id' => $organization_id,
+                'setting_type' => 'notifications',
+                'settings_json' => $settings_json
+            ),
+            array('%d', '%s', '%s')
+        );
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Notification settings saved successfully',
+        'data' => $settings
     ), 200);
 }
 

@@ -49,6 +49,81 @@ interface PasswordChangeData {
   confirm_password: string;
 }
 
+interface SecuritySettings {
+  require_min_length: boolean;
+  require_mixed_case: boolean;
+  require_special_chars: boolean;
+  require_numbers: boolean;
+  session_timeout_minutes: number;
+}
+
+interface NotificationSettings {
+  new_case_assignments: boolean;
+  upcoming_court_dates: boolean;
+  overdue_contact_logs: boolean;
+  volunteer_registration_requests: boolean;
+  task_reminders: boolean;
+  report_due_reminders: boolean;
+}
+
+// All 50 US States
+const US_STATES = [
+  { value: 'AL', label: 'Alabama' },
+  { value: 'AK', label: 'Alaska' },
+  { value: 'AZ', label: 'Arizona' },
+  { value: 'AR', label: 'Arkansas' },
+  { value: 'CA', label: 'California' },
+  { value: 'CO', label: 'Colorado' },
+  { value: 'CT', label: 'Connecticut' },
+  { value: 'DE', label: 'Delaware' },
+  { value: 'FL', label: 'Florida' },
+  { value: 'GA', label: 'Georgia' },
+  { value: 'HI', label: 'Hawaii' },
+  { value: 'ID', label: 'Idaho' },
+  { value: 'IL', label: 'Illinois' },
+  { value: 'IN', label: 'Indiana' },
+  { value: 'IA', label: 'Iowa' },
+  { value: 'KS', label: 'Kansas' },
+  { value: 'KY', label: 'Kentucky' },
+  { value: 'LA', label: 'Louisiana' },
+  { value: 'ME', label: 'Maine' },
+  { value: 'MD', label: 'Maryland' },
+  { value: 'MA', label: 'Massachusetts' },
+  { value: 'MI', label: 'Michigan' },
+  { value: 'MN', label: 'Minnesota' },
+  { value: 'MS', label: 'Mississippi' },
+  { value: 'MO', label: 'Missouri' },
+  { value: 'MT', label: 'Montana' },
+  { value: 'NE', label: 'Nebraska' },
+  { value: 'NV', label: 'Nevada' },
+  { value: 'NH', label: 'New Hampshire' },
+  { value: 'NJ', label: 'New Jersey' },
+  { value: 'NM', label: 'New Mexico' },
+  { value: 'NY', label: 'New York' },
+  { value: 'NC', label: 'North Carolina' },
+  { value: 'ND', label: 'North Dakota' },
+  { value: 'OH', label: 'Ohio' },
+  { value: 'OK', label: 'Oklahoma' },
+  { value: 'OR', label: 'Oregon' },
+  { value: 'PA', label: 'Pennsylvania' },
+  { value: 'RI', label: 'Rhode Island' },
+  { value: 'SC', label: 'South Carolina' },
+  { value: 'SD', label: 'South Dakota' },
+  { value: 'TN', label: 'Tennessee' },
+  { value: 'TX', label: 'Texas' },
+  { value: 'UT', label: 'Utah' },
+  { value: 'VT', label: 'Vermont' },
+  { value: 'VA', label: 'Virginia' },
+  { value: 'WA', label: 'Washington' },
+  { value: 'WV', label: 'West Virginia' },
+  { value: 'WI', label: 'Wisconsin' },
+  { value: 'WY', label: 'Wyoming' },
+  { value: 'DC', label: 'District of Columbia' },
+  { value: 'PR', label: 'Puerto Rico' },
+  { value: 'VI', label: 'Virgin Islands' },
+  { value: 'GU', label: 'Guam' },
+];
+
 const mockUsers: UserManagementData[] = [
   {
     id: '1',
@@ -106,6 +181,23 @@ export default function Settings() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [organizationData, setOrganizationData] = useState<OrganizationSettings | null>(null);
   const [selectedUserForPassword, setSelectedUserForPassword] = useState<UserManagementData | null>(null);
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+    require_min_length: true,
+    require_mixed_case: true,
+    require_special_chars: false,
+    require_numbers: false,
+    session_timeout_minutes: 30,
+  });
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    new_case_assignments: true,
+    upcoming_court_dates: true,
+    overdue_contact_logs: false,
+    volunteer_registration_requests: false,
+    task_reminders: true,
+    report_due_reminders: false,
+  });
+  const [savingSecuritySettings, setSavingSecuritySettings] = useState(false);
+  const [savingNotificationSettings, setSavingNotificationSettings] = useState(false);
 
   const {
     register: registerOrg,
@@ -395,6 +487,54 @@ export default function Settings() {
     loadOrganizationData();
   }, [user, resetOrg]);
 
+  // Load security settings
+  useEffect(() => {
+    const loadSecuritySettings = async () => {
+      if (!user) return;
+      try {
+        const response = await apiClient.casaGet('settings/security');
+        if (response.success && response.data) {
+          let settingsData = response.data;
+          // Handle nested response
+          if (settingsData && typeof settingsData === 'object' && 'success' in settingsData && 'data' in settingsData) {
+            settingsData = settingsData.data;
+          }
+          setSecuritySettings(prev => ({
+            ...prev,
+            ...settingsData,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load security settings:', error);
+      }
+    };
+    loadSecuritySettings();
+  }, [user]);
+
+  // Load notification settings
+  useEffect(() => {
+    const loadNotificationSettings = async () => {
+      if (!user) return;
+      try {
+        const response = await apiClient.casaGet('settings/notifications');
+        if (response.success && response.data) {
+          let settingsData = response.data;
+          // Handle nested response
+          if (settingsData && typeof settingsData === 'object' && 'success' in settingsData && 'data' in settingsData) {
+            settingsData = settingsData.data;
+          }
+          setNotificationSettings(prev => ({
+            ...prev,
+            ...settingsData,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load notification settings:', error);
+      }
+    };
+    loadNotificationSettings();
+  }, [user]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -532,6 +672,66 @@ export default function Settings() {
     } catch (error) {
       console.error('Failed to change password:', error);
       alert('Failed to change password. Please try again.');
+    }
+  };
+
+  const handleSecuritySettingChange = (key: keyof SecuritySettings, value: boolean | number) => {
+    setSecuritySettings(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleNotificationSettingChange = (key: keyof NotificationSettings, value: boolean) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const saveSecuritySettings = async () => {
+    try {
+      setSavingSecuritySettings(true);
+
+      const response = await apiClient.casaPost('settings/security', {
+        organization_id: user?.organizationId,
+        ...securitySettings,
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save security settings');
+      }
+
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+    } catch (error) {
+      console.error('Failed to save security settings:', error);
+      alert('Failed to save security settings. Please try again.');
+    } finally {
+      setSavingSecuritySettings(false);
+    }
+  };
+
+  const saveNotificationSettings = async () => {
+    try {
+      setSavingNotificationSettings(true);
+
+      const response = await apiClient.casaPost('settings/notifications', {
+        organization_id: user?.organizationId,
+        ...notificationSettings,
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save notification settings');
+      }
+
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+      alert('Failed to save notification settings. Please try again.');
+    } finally {
+      setSavingNotificationSettings(false);
     }
   };
 
@@ -680,12 +880,11 @@ export default function Settings() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           >
                             <option value="">Select State</option>
-                            <option value="GA">Georgia</option>
-                            <option value="AL">Alabama</option>
-                            <option value="FL">Florida</option>
-                            <option value="NC">North Carolina</option>
-                            <option value="SC">South Carolina</option>
-                            <option value="TN">Tennessee</option>
+                            {US_STATES.map((state) => (
+                              <option key={state.value} value={state.value}>
+                                {state.label}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         
@@ -1093,28 +1292,58 @@ export default function Settings() {
               {activeTab === 'security' && (
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Security Settings</h2>
-                  
+
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Password Policy</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Configure password requirements for all users in your organization.
+                      </p>
                       <div className="space-y-3">
                         <label className="flex items-center">
-                          <input type="checkbox" defaultChecked className="h-4 w-4 text-purple-600" />
+                          <input
+                            type="checkbox"
+                            checked={securitySettings.require_min_length}
+                            onChange={(e) => handleSecuritySettingChange('require_min_length', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Require minimum 8 characters</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" defaultChecked className="h-4 w-4 text-purple-600" />
+                          <input
+                            type="checkbox"
+                            checked={securitySettings.require_mixed_case}
+                            onChange={(e) => handleSecuritySettingChange('require_mixed_case', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Require uppercase and lowercase letters</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-purple-600" />
-                          <span className="ml-2 text-sm text-gray-700">Require special characters</span>
+                          <input
+                            type="checkbox"
+                            checked={securitySettings.require_special_chars}
+                            onChange={(e) => handleSecuritySettingChange('require_special_chars', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Require special characters (!@#$%^&*)</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={securitySettings.require_numbers}
+                            onChange={(e) => handleSecuritySettingChange('require_numbers', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Require at least one number</span>
                         </label>
                       </div>
                     </div>
-                    
+
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Session Management</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Control how long users can remain logged in without activity.
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1122,13 +1351,28 @@ export default function Settings() {
                           </label>
                           <input
                             type="number"
-                            defaultValue={30}
+                            value={securitySettings.session_timeout_minutes}
+                            onChange={(e) => handleSecuritySettingChange('session_timeout_minutes', parseInt(e.target.value) || 30)}
                             min="5"
                             max="480"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Users will be logged out after this period of inactivity (5-480 minutes)
+                          </p>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={saveSecuritySettings}
+                        disabled={savingSecuritySettings}
+                        className="bg-purple-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                      >
+                        {savingSecuritySettings ? 'Saving...' : 'Save Security Settings'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1137,28 +1381,86 @@ export default function Settings() {
               {activeTab === 'notifications' && (
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Notification Settings</h2>
-                  
+
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Email Notifications</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Configure which email notifications are sent to users in your organization.
+                      </p>
                       <div className="space-y-3">
                         <label className="flex items-center">
-                          <input type="checkbox" defaultChecked className="h-4 w-4 text-purple-600" />
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.new_case_assignments}
+                            onChange={(e) => handleNotificationSettingChange('new_case_assignments', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">New case assignments</span>
+                          <span className="ml-2 text-xs text-gray-400">- Notify volunteers when assigned to a new case</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" defaultChecked className="h-4 w-4 text-purple-600" />
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.upcoming_court_dates}
+                            onChange={(e) => handleNotificationSettingChange('upcoming_court_dates', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Upcoming court dates</span>
+                          <span className="ml-2 text-xs text-gray-400">- Remind volunteers about upcoming hearings</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-purple-600" />
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.overdue_contact_logs}
+                            onChange={(e) => handleNotificationSettingChange('overdue_contact_logs', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Overdue contact logs</span>
+                          <span className="ml-2 text-xs text-gray-400">- Alert when contact logs are overdue</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-purple-600" />
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.volunteer_registration_requests}
+                            onChange={(e) => handleNotificationSettingChange('volunteer_registration_requests', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Volunteer registration requests</span>
+                          <span className="ml-2 text-xs text-gray-400">- Notify admins of new volunteer signups</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.task_reminders}
+                            onChange={(e) => handleNotificationSettingChange('task_reminders', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Task reminders</span>
+                          <span className="ml-2 text-xs text-gray-400">- Remind users of upcoming task deadlines</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.report_due_reminders}
+                            onChange={(e) => handleNotificationSettingChange('report_due_reminders', e.target.checked)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Report due reminders</span>
+                          <span className="ml-2 text-xs text-gray-400">- Alert volunteers when reports are due</span>
                         </label>
                       </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={saveNotificationSettings}
+                        disabled={savingNotificationSettings}
+                        className="bg-purple-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                      >
+                        {savingNotificationSettings ? 'Saving...' : 'Save Notification Settings'}
+                      </button>
                     </div>
                   </div>
                 </div>
