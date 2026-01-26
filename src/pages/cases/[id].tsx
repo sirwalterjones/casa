@@ -253,6 +253,7 @@ export default function CaseDetail() {
   const [editFormData, setEditFormData] = useState<CaseDetails | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [assignedVolunteerName, setAssignedVolunteerName] = useState<string | null>(null);
+  const [isLoadingCase, setIsLoadingCase] = useState(true);
   
   // Contact log editing states
   const [selectedContactLog, setSelectedContactLog] = useState<ContactLog | null>(null);
@@ -269,6 +270,10 @@ export default function CaseDetail() {
   useEffect(() => {
     const loadCaseData = async () => {
       if (!id || !user) return;
+
+      // Reset state for new case and show loading
+      setIsLoadingCase(true);
+      setCaseDetails(null);
 
       try {
         // Load case details using the individual case endpoint
@@ -408,13 +413,16 @@ export default function CaseDetail() {
         setCourtHearings([]);
         setHomeVisitReports([]);
         setCourtReports([]);
+      } finally {
+        setIsLoadingCase(false);
       }
     };
 
     loadCaseData();
   }, [id, user]);
 
-  if (loading) {
+  // Show loading state while auth or case data is loading
+  if (loading || isLoadingCase) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
@@ -422,6 +430,7 @@ export default function CaseDetail() {
     );
   }
 
+  // Only show "not found" after loading is complete and case is still null
   if (!caseDetails) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -698,8 +707,8 @@ export default function CaseDetail() {
     }
   };
 
-  // Show loading state if case details haven't loaded yet
-  if (loading) {
+  // Show loading state while auth or case data is loading
+  if (loading || isLoadingCase) {
     return (
       <>
         <Head>
@@ -722,6 +731,7 @@ export default function CaseDetail() {
     );
   }
 
+  // Only show "not found" after loading is complete and case is still null
   if (!caseDetails) {
     console.log('Case details is null, showing not found message');
     return (
