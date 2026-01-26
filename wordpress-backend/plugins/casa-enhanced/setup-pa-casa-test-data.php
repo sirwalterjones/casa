@@ -1973,6 +1973,7 @@ function casa_reset_and_create_test_data($request) {
         array('case' => 'PA-CASA-2024-009', 'date' => date('Y-m-d', strtotime('+14 days')), 'time' => '13:00:00', 'type' => 'case_closure', 'status' => 'scheduled')
     );
 
+    $ff_hearing_count = 0;
     foreach ($hearings as $hearing) {
         $wpdb->insert($court_hearings_table, array(
             'organization_id' => $organization_id,
@@ -1986,8 +1987,50 @@ function casa_reset_and_create_test_data($request) {
             'created_at' => $now
         ));
         $hearing_count++;
+
+        // Create Formidable Forms entry for court hearing (Form 7)
+        $wpdb->insert($frm_items, array(
+            'form_id' => 7,
+            'user_id' => $admin_user ? $admin_user->ID : 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+            'is_draft' => 0,
+            'ip' => '127.0.0.1',
+            'name' => $hearing['case'] . ' - ' . ucwords(str_replace('_', ' ', $hearing['type'])),
+            'item_key' => 'hearing-' . strtolower(str_replace(array('PA-CASA-', '-'), array('', ''), $hearing['case'])) . '-' . ($ff_hearing_count + 1)
+        ));
+        $ff_entry_id = $wpdb->insert_id;
+
+        if ($ff_entry_id) {
+            // Court Hearing Form 7 field IDs: 130-140
+            $hearing_field_map = array(
+                130 => $hearing['case'],                                    // hearing_case_number
+                131 => '',                                                  // hearing_child_name (will be filled from case)
+                132 => $hearing['date'],                                    // hearing_date
+                133 => $hearing['time'],                                    // hearing_time
+                134 => $hearing['type'],                                    // hearing_type
+                135 => 'Room ' . rand(100, 400),                           // hearing_court_room
+                136 => 'Judge ' . array('Thompson', 'Garcia', 'Williams', 'Brown', 'Davis')[rand(0, 4)], // hearing_judge_name
+                137 => $hearing['status'],                                  // hearing_status
+                138 => $volunteer_ids[0] ?? '',                            // hearing_volunteer_assigned
+                139 => 'Scheduled hearing for case ' . $hearing['case'],   // hearing_notes
+                140 => $organization_id                                     // hearing_organization_id
+            );
+
+            foreach ($hearing_field_map as $field_id => $value) {
+                if (!empty($value) || $value === 0 || $value === '0') {
+                    $wpdb->insert($frm_item_metas, array(
+                        'meta_value' => $value,
+                        'field_id' => $field_id,
+                        'item_id' => $ff_entry_id,
+                        'created_at' => $now
+                    ));
+                }
+            }
+            $ff_hearing_count++;
+        }
     }
-    $results['court_hearings'] = "Created $hearing_count court hearings";
+    $results['court_hearings'] = "Created $hearing_count court hearings + $ff_hearing_count FF entries";
 
     // ========================================
     // 8. CREATE TASKS
@@ -2013,13 +2056,15 @@ function casa_reset_and_create_test_data($request) {
         array('case' => 'PA-CASA-2024-009', 'title' => 'Complete case closure summary', 'due' => '+10 days', 'priority' => 'medium', 'status' => 'pending')
     );
 
+    $ff_task_count = 0;
     foreach ($tasks as $task) {
         if (isset($case_ids[$task['case']])) {
+            $due_date = date('Y-m-d', strtotime($task['due']));
             $wpdb->insert($tasks_table, array(
                 'organization_id' => $organization_id,
                 'case_id' => $case_ids[$task['case']],
                 'title' => $task['title'],
-                'due_date' => date('Y-m-d', strtotime($task['due'])),
+                'due_date' => $due_date,
                 'priority' => $task['priority'],
                 'status' => $task['status'],
                 'assigned_to' => $volunteer_ids[0] ?? null,
@@ -2028,9 +2073,49 @@ function casa_reset_and_create_test_data($request) {
                 'updated_at' => $now
             ));
             $task_count++;
+
+            // Create Formidable Forms entry for task (Form 6)
+            $wpdb->insert($frm_items, array(
+                'form_id' => 6,
+                'user_id' => $admin_user ? $admin_user->ID : 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'is_draft' => 0,
+                'ip' => '127.0.0.1',
+                'name' => $task['title'],
+                'item_key' => 'task-' . strtolower(str_replace(array(' ', "'", '-'), array('-', '', ''), substr($task['title'], 0, 30))) . '-' . ($ff_task_count + 1)
+            ));
+            $ff_entry_id = $wpdb->insert_id;
+
+            if ($ff_entry_id) {
+                // Task Form 6 field IDs: 120-128
+                $task_field_map = array(
+                    120 => $task['title'],                      // task_title
+                    121 => 'Task for case ' . $task['case'],   // task_description
+                    122 => $due_date,                           // task_due_date
+                    123 => '',                                  // task_due_time (optional)
+                    124 => $task['priority'],                   // task_priority
+                    125 => $task['status'],                     // task_status
+                    126 => $case_ids[$task['case']],           // task_case_id
+                    127 => $volunteer_ids[0] ?? '',            // task_assigned_to
+                    128 => $organization_id                     // task_organization_id
+                );
+
+                foreach ($task_field_map as $field_id => $value) {
+                    if (!empty($value) || $value === 0 || $value === '0') {
+                        $wpdb->insert($frm_item_metas, array(
+                            'meta_value' => $value,
+                            'field_id' => $field_id,
+                            'item_id' => $ff_entry_id,
+                            'created_at' => $now
+                        ));
+                    }
+                }
+                $ff_task_count++;
+            }
         }
     }
-    $results['tasks'] = "Created $task_count tasks";
+    $results['tasks'] = "Created $task_count tasks + $ff_task_count FF entries";
 
         return new WP_REST_Response(array(
             'success' => true,
