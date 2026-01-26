@@ -855,7 +855,13 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_create_report',
         'permission_callback' => 'casa_check_report_create_permission'
     ));
-    
+
+    register_rest_route('casa/v1', '/reports/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'casa_delete_report',
+        'permission_callback' => 'casa_check_report_create_permission'
+    ));
+
     // User management endpoints for organization admins
     register_rest_route('casa/v1', '/users', array(
         'methods' => 'POST',
@@ -2918,12 +2924,40 @@ function casa_create_volunteer($request) {
     }
     
     $volunteer_id = $wpdb->insert_id;
-    
+
+    // Create Formidable Forms entry (Form 2 = Volunteer Registration)
+    $ff_data = array(
+        'vol_first_name' => $first_name,
+        'vol_last_name' => $last_name,
+        'vol_email' => $email,
+        'vol_phone' => $params['phone'] ?? '',
+        'vol_dob' => $params['date_of_birth'] ?? '',
+        'vol_address' => $params['address'] ?? '',
+        'vol_city' => $params['city'] ?? '',
+        'vol_state' => $params['state'] ?? '',
+        'vol_zip' => $params['zip_code'] ?? '',
+        'emergency_name' => $params['emergency_contact_name'] ?? '',
+        'emergency_phone' => $params['emergency_contact_phone'] ?? '',
+        'emergency_relationship' => $params['emergency_contact_relationship'] ?? '',
+        'employer' => $params['employer'] ?? '',
+        'occupation' => $params['occupation'] ?? '',
+        'max_cases' => $params['max_cases'] ?? 3,
+        'ref1_name' => $params['reference1_name'] ?? '',
+        'ref1_phone' => $params['reference1_phone'] ?? '',
+        'ref1_relationship' => $params['reference1_relationship'] ?? '',
+        'ref2_name' => $params['reference2_name'] ?? '',
+        'ref2_phone' => $params['reference2_phone'] ?? '',
+        'ref2_relationship' => $params['reference2_relationship'] ?? '',
+        'vol_organization_id' => $organization_id
+    );
+    $frm_entry_id = casa_create_formidable_entry(2, $ff_data, $current_user->ID);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
             'id' => $volunteer_id,
             'user_id' => $user_id,
+            'frm_entry_id' => $frm_entry_id,
             'username' => $username,
             'password' => $password, // Temporary password for first login
             'name' => $first_name . ' ' . $last_name,
@@ -3043,7 +3077,12 @@ function casa_delete_volunteer($request) {
             'message' => 'Volunteer not found or already deleted'
         ), 404);
     }
-    
+
+    // Also delete from Formidable Forms (Form 2 = Volunteers, field key 'vol_email')
+    if (!empty($volunteer['email'])) {
+        casa_delete_formidable_entry_by_field(2, 'vol_email', $volunteer['email']);
+    }
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => 'Volunteer and WordPress user deleted successfully'
@@ -3119,11 +3158,32 @@ function casa_create_report($request) {
     }
     
     $report_id = $wpdb->insert_id;
-    
+
+    // Create Formidable Forms entry (Form 4 = Home Visit Report)
+    $ff_data = array(
+        'visit_case_id' => $params['case_id'],
+        'visit_volunteer_id' => $params['volunteer_id'],
+        'visit_date' => $params['visit_date'],
+        'visit_duration' => $params['visit_duration'] ?? '',
+        'visit_location' => $params['location'] ?? '',
+        'visit_attendees' => $params['attendees'] ?? '',
+        'visit_observations' => $params['observations'] ?? '',
+        'child_wellbeing' => $params['child_wellbeing'] ?? '',
+        'placement_stability' => $params['placement_stability'] ?? '',
+        'safety_concerns' => $params['safety_concerns'] ?? '',
+        'visit_recommendations' => $params['recommendations'] ?? '',
+        'visit_follow_up' => $params['follow_up_required'] ?? false,
+        'visit_follow_up_notes' => $params['follow_up_notes'] ?? '',
+        'visit_status' => $params['status'] ?? 'draft',
+        'visit_organization_id' => $user_org
+    );
+    $frm_entry_id = casa_create_formidable_entry(4, $ff_data, $current_user->ID);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
             'id' => $report_id,
+            'frm_entry_id' => $frm_entry_id,
             'report_type' => $params['report_type'],
             'visit_date' => $params['visit_date'],
             'message' => 'Report created successfully'
@@ -3197,6 +3257,54 @@ function casa_get_reports($request) {
                 'pages' => 1
             )
         )
+    ), 200);
+}
+
+function casa_delete_report($request) {
+    global $wpdb;
+    $report_id = $request['id'];
+    $reports_table = $wpdb->prefix . 'casa_reports';
+
+    $current_user = wp_get_current_user();
+    $users_table = $wpdb->prefix . 'casa_user_organizations';
+    $organization_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
+        $current_user->ID
+    ));
+
+    // Get report details before deleting (needed for FF deletion)
+    $report = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $reports_table WHERE id = %d AND organization_id = %d",
+        $report_id, $organization_id
+    ));
+
+    if (!$report) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Report not found'
+        ), 404);
+    }
+
+    $result = $wpdb->delete($reports_table, array(
+        'id' => $report_id,
+        'organization_id' => $organization_id
+    ), array('%d', '%d'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to delete report'
+        ), 500);
+    }
+
+    // Also delete from Formidable Forms (Form 4 = Home Visit Reports, use visit_date + case_id as identifier)
+    if (!empty($report->visit_date) && !empty($report->case_id)) {
+        casa_delete_formidable_entry_by_field(4, 'visit_case_id', $report->case_id);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Report deleted successfully'
     ), 200);
 }
 
@@ -4798,12 +4906,26 @@ function casa_upload_document_test($request) {
             'message' => 'Failed to save document: ' . $wpdb->last_error
         ), 500);
     }
-    
+
+    $document_id = $wpdb->insert_id;
+
+    // Create Formidable Forms entry (Form 5 = Document Upload)
+    $ff_data = array(
+        'doc_case_id' => $case_number,
+        'doc_type' => $document_type,
+        'doc_name' => $document_name,
+        'doc_description' => $description,
+        'doc_confidential' => $is_confidential,
+        'doc_organization_id' => $organization_id
+    );
+    $frm_entry_id = casa_create_formidable_entry(5, $ff_data, 1);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
-            'id' => $wpdb->insert_id,
+            'id' => $document_id,
             'attachment_id' => $attachment_id,
+            'frm_entry_id' => $frm_entry_id,
             'file_url' => $uploaded_file['url'],
             'file_name' => basename($uploaded_file['file']),
             'file_size' => $file['size'],
@@ -4943,12 +5065,24 @@ function casa_upload_document_new($request) {
     
     $document_id = $wpdb->insert_id;
     error_log("Document saved with ID: " . $document_id);
-    
+
+    // Create Formidable Forms entry (Form 5 = Document Upload)
+    $ff_data = array(
+        'doc_case_id' => $case_number,
+        'doc_type' => $document_type,
+        'doc_name' => $document_name,
+        'doc_description' => $description,
+        'doc_confidential' => $is_confidential,
+        'doc_organization_id' => $organization_id
+    );
+    $frm_entry_id = casa_create_formidable_entry(5, $ff_data, 1);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
             'id' => $document_id,
             'attachment_id' => $attachment_id,
+            'frm_entry_id' => $frm_entry_id,
             'file_url' => $uploaded_file['url'],
             'file_name' => basename($uploaded_file['file']),
             'file_size' => $file['size'],
@@ -5229,14 +5363,19 @@ function casa_delete_document($request) {
     
     // Delete from database
     $result = $wpdb->delete($documents_table, array('id' => $document_id));
-    
+
     if ($result === false) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Failed to delete document'
         ), 500);
     }
-    
+
+    // Also delete from Formidable Forms (Form 5 = Documents, field key 'doc_name')
+    if (!empty($document->document_name)) {
+        casa_delete_formidable_entry_by_field(5, 'doc_name', $document->document_name);
+    }
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => 'Document deleted successfully'
