@@ -30,6 +30,28 @@ export default function CasesList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (caseId: string, caseNumber: string) => {
+    if (!confirm(`Are you sure you want to delete case ${caseNumber}? This will also delete all associated contact logs, tasks, documents, and court hearings.`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(caseId);
+      const response = await apiClient.casaDelete(`cases/${caseId}`);
+      if (response.success) {
+        setCases(cases.filter(c => c.id !== caseId));
+      } else {
+        alert('Failed to delete case');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete case:', error);
+      alert(error?.message || 'Failed to delete case');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Load cases from API
   useEffect(() => {
@@ -335,13 +357,22 @@ export default function CasesList() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-fintech-text-secondary">
                             {new Date(caseItem.updated_at).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                             <Link
                               href={`/cases/${caseItem.id}`}
                               className="text-primary-600 hover:text-primary-900"
                             >
                               View
                             </Link>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDelete(caseItem.id, caseItem.case_number)}
+                                disabled={deletingId === caseItem.id}
+                                className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                              >
+                                {deletingId === caseItem.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

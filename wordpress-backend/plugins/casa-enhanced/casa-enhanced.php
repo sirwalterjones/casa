@@ -703,6 +703,33 @@ function casa_create_tables() {
     ) $charset_collate;";
 
     $create_table_if_not_exists($table_name, $sql);
+
+    // Tasks table
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $sql = "CREATE TABLE $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        organization_id bigint(20) NOT NULL,
+        case_id bigint(20) NULL,
+        title varchar(255) NOT NULL,
+        description text,
+        due_date date NOT NULL,
+        due_time time NULL,
+        priority varchar(20) DEFAULT 'medium',
+        status varchar(20) DEFAULT 'pending',
+        assigned_to bigint(20) NULL,
+        created_by bigint(20) NOT NULL,
+        completed_at datetime NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY organization_id (organization_id),
+        KEY case_id (case_id),
+        KEY due_date (due_date),
+        KEY status (status),
+        KEY assigned_to (assigned_to)
+    ) $charset_collate;";
+
+    $create_table_if_not_exists($table_name, $sql);
 }
 
 // Set capabilities for existing roles
@@ -770,7 +797,13 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_update_case',
         'permission_callback' => '__return_true'
     ));
-    
+
+    register_rest_route('casa/v1', '/cases/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'casa_delete_case',
+        'permission_callback' => '__return_true'
+    ));
+
     // Organizations endpoint
     register_rest_route('casa/v1', '/organizations', array(
         'methods' => 'GET',
@@ -875,7 +908,50 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_court_hearing_action',
         'permission_callback' => '__return_true',
     ));
-    
+
+    // Tasks endpoints
+    register_rest_route('casa/v1', '/tasks', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_tasks',
+        'permission_callback' => '__return_true',
+    ));
+
+    register_rest_route('casa/v1', '/tasks', array(
+        'methods' => 'POST',
+        'callback' => 'casa_create_task',
+        'permission_callback' => '__return_true',
+    ));
+
+    register_rest_route('casa/v1', '/tasks/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_task',
+        'permission_callback' => '__return_true',
+    ));
+
+    register_rest_route('casa/v1', '/tasks/(?P<id>\d+)', array(
+        'methods' => 'PUT',
+        'callback' => 'casa_update_task',
+        'permission_callback' => '__return_true',
+    ));
+
+    register_rest_route('casa/v1', '/tasks/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'casa_delete_task',
+        'permission_callback' => '__return_true',
+    ));
+
+    register_rest_route('casa/v1', '/tasks/(?P<id>\d+)/complete', array(
+        'methods' => 'POST',
+        'callback' => 'casa_complete_task',
+        'permission_callback' => '__return_true',
+    ));
+
+    register_rest_route('casa/v1', '/tasks/upcoming', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_upcoming_tasks',
+        'permission_callback' => '__return_true',
+    ));
+
     // Documents endpoints
     register_rest_route('casa/v1', '/documents', array(
         'methods' => 'GET',
@@ -1556,14 +1632,14 @@ function casa_get_dashboard_stats($request) {
     
     // Get recent activity (last 10 case updates)
     $recent_activity = $wpdb->get_results($wpdb->prepare(
-        "SELECT case_number, child_first_name, child_last_name, updated_at, status 
-         FROM $cases_table 
-         WHERE organization_id = %d 
-         ORDER BY updated_at DESC 
+        "SELECT id, case_number, child_first_name, child_last_name, updated_at, status
+         FROM $cases_table
+         WHERE organization_id = %d
+         ORDER BY updated_at DESC
          LIMIT 5",
         $user_org
     ), ARRAY_A);
-    
+
     $formatted_activity = array();
     foreach ($recent_activity as $activity) {
         $formatted_activity[] = array(
@@ -1575,7 +1651,9 @@ function casa_get_dashboard_stats($request) {
                 $activity['child_first_name'],
                 $activity['child_last_name'],
                 $activity['status']
-            )
+            ),
+            'caseId' => (int) $activity['id'],
+            'link' => '/cases/' . $activity['id']
         );
     }
     
@@ -2411,6 +2489,90 @@ function casa_update_case($request) {
         'success' => true,
         'data' => $updated_case,
         'message' => 'Case updated successfully'
+    ), 200);
+}
+
+function casa_delete_case($request) {
+    if (!casa_check_authentication()) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Authentication required'
+        ), 401);
+    }
+
+    $current_user = wp_get_current_user();
+    $case_id = $request->get_param('id');
+
+    global $wpdb;
+    $cases_table = $wpdb->prefix . 'casa_cases';
+    $users_table = $wpdb->prefix . 'casa_user_organizations';
+    $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
+    $tasks_table = $wpdb->prefix . 'casa_tasks';
+    $documents_table = $wpdb->prefix . 'casa_documents';
+    $court_hearings_table = $wpdb->prefix . 'casa_court_hearings';
+
+    // For development, if no current user, use first admin user
+    if (!$current_user || $current_user->ID === 0) {
+        $admin_users = get_users(['role' => 'administrator']);
+        if (empty($admin_users)) {
+            $admin_users = get_users(['role' => 'casa_administrator']);
+        }
+        if (!empty($admin_users)) {
+            $current_user = $admin_users[0];
+        }
+    }
+
+    // Get user's organization
+    $user_org = $wpdb->get_var($wpdb->prepare(
+        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
+        $current_user->ID
+    ));
+
+    // If no organization found, try to get any organization (for development)
+    if (!$user_org) {
+        $user_org = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
+    }
+
+    // Verify the case exists and belongs to the user's organization
+    $existing_case = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $cases_table WHERE id = %d AND organization_id = %d LIMIT 1",
+        $case_id,
+        $user_org
+    ), ARRAY_A);
+
+    if (!$existing_case) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Case not found or access denied'
+        ), 404);
+    }
+
+    // Delete associated data first
+    // Delete contact logs
+    $wpdb->delete($contact_logs_table, array('case_id' => $case_id), array('%d'));
+
+    // Delete tasks
+    $wpdb->delete($tasks_table, array('case_id' => $case_id), array('%d'));
+
+    // Delete documents
+    $wpdb->delete($documents_table, array('case_id' => $case_id), array('%d'));
+
+    // Delete court hearings
+    $wpdb->delete($court_hearings_table, array('case_id' => $case_id), array('%d'));
+
+    // Delete the case
+    $result = $wpdb->delete($cases_table, array('id' => $case_id), array('%d'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Failed to delete case'
+        ), 500);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Case and associated data deleted successfully'
     ), 200);
 }
 
@@ -3653,11 +3815,329 @@ function casa_create_court_hearing($request) {
 function casa_court_hearing_action($request) {
     $hearing_id = $request['id'];
     $action = $request['action'];
-    
+
     // Update hearing status based on action
     return new WP_REST_Response(array(
         'success' => true,
         'message' => "Hearing {$action}d successfully"
+    ), 200);
+}
+
+// Tasks functions
+function casa_get_tasks($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $cases_table = $wpdb->prefix . 'casa_cases';
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => array()
+        ), 200);
+    }
+
+    // Get query parameters for filtering
+    $status = $request->get_param('status');
+    $case_id = $request->get_param('case_id');
+    $assigned_to = $request->get_param('assigned_to');
+
+    $where_clauses = array("t.organization_id = %d");
+    $where_values = array($organization_id);
+
+    if ($status) {
+        $where_clauses[] = "t.status = %s";
+        $where_values[] = $status;
+    }
+
+    if ($case_id) {
+        $where_clauses[] = "t.case_id = %d";
+        $where_values[] = $case_id;
+    }
+
+    if ($assigned_to) {
+        $where_clauses[] = "t.assigned_to = %d";
+        $where_values[] = $assigned_to;
+    }
+
+    $where_sql = implode(' AND ', $where_clauses);
+
+    $tasks = $wpdb->get_results($wpdb->prepare(
+        "SELECT t.*, c.case_number, c.child_first_name, c.child_last_name,
+                u.display_name as assigned_to_name
+         FROM $table_name t
+         LEFT JOIN $cases_table c ON t.case_id = c.id
+         LEFT JOIN {$wpdb->users} u ON t.assigned_to = u.ID
+         WHERE $where_sql
+         ORDER BY t.due_date ASC, t.priority DESC",
+        ...$where_values
+    ), ARRAY_A);
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $tasks
+    ), 200);
+}
+
+function casa_get_upcoming_tasks($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $cases_table = $wpdb->prefix . 'casa_cases';
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => array()
+        ), 200);
+    }
+
+    // Get upcoming tasks (due in next 7 days, not completed)
+    $tasks = $wpdb->get_results($wpdb->prepare(
+        "SELECT t.*, c.case_number, c.child_first_name, c.child_last_name,
+                u.display_name as assigned_to_name
+         FROM $table_name t
+         LEFT JOIN $cases_table c ON t.case_id = c.id
+         LEFT JOIN {$wpdb->users} u ON t.assigned_to = u.ID
+         WHERE t.organization_id = %d
+           AND t.status != 'completed'
+           AND t.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+         ORDER BY t.due_date ASC, t.priority DESC
+         LIMIT 10",
+        $organization_id
+    ), ARRAY_A);
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $tasks
+    ), 200);
+}
+
+function casa_get_task($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $task_id = $request['id'];
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $task = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE id = %d AND organization_id = %d",
+        $task_id, $organization_id
+    ), ARRAY_A);
+
+    if (!$task) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Task not found'
+        ), 404);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $task
+    ), 200);
+}
+
+function casa_create_task($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $params = $request->get_json_params();
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'User not associated with any organization'
+        ), 400);
+    }
+
+    if (empty($params['title']) || empty($params['due_date'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Title and due date are required'
+        ), 400);
+    }
+
+    $result = $wpdb->insert($table_name, array(
+        'organization_id' => $organization_id,
+        'case_id' => $params['case_id'] ?? null,
+        'title' => sanitize_text_field($params['title']),
+        'description' => sanitize_textarea_field($params['description'] ?? ''),
+        'due_date' => sanitize_text_field($params['due_date']),
+        'due_time' => $params['due_time'] ?? null,
+        'priority' => $params['priority'] ?? 'medium',
+        'status' => 'pending',
+        'assigned_to' => $params['assigned_to'] ?? null,
+        'created_by' => $current_user->ID,
+        'created_at' => current_time('mysql'),
+        'updated_at' => current_time('mysql')
+    ), array('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to create task: ' . $wpdb->last_error
+        ), 500);
+    }
+
+    $task_id = $wpdb->insert_id;
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => array(
+            'id' => $task_id,
+            'message' => 'Task created successfully'
+        )
+    ), 201);
+}
+
+function casa_update_task($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $task_id = $request['id'];
+    $params = $request->get_json_params();
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    // Verify task exists and belongs to organization
+    $task = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE id = %d AND organization_id = %d",
+        $task_id, $organization_id
+    ));
+
+    if (!$task) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Task not found'
+        ), 404);
+    }
+
+    $update_data = array('updated_at' => current_time('mysql'));
+    $format = array('%s');
+
+    if (isset($params['title'])) {
+        $update_data['title'] = sanitize_text_field($params['title']);
+        $format[] = '%s';
+    }
+    if (isset($params['description'])) {
+        $update_data['description'] = sanitize_textarea_field($params['description']);
+        $format[] = '%s';
+    }
+    if (isset($params['due_date'])) {
+        $update_data['due_date'] = sanitize_text_field($params['due_date']);
+        $format[] = '%s';
+    }
+    if (isset($params['due_time'])) {
+        $update_data['due_time'] = $params['due_time'];
+        $format[] = '%s';
+    }
+    if (isset($params['priority'])) {
+        $update_data['priority'] = sanitize_text_field($params['priority']);
+        $format[] = '%s';
+    }
+    if (isset($params['status'])) {
+        $update_data['status'] = sanitize_text_field($params['status']);
+        $format[] = '%s';
+        if ($params['status'] === 'completed') {
+            $update_data['completed_at'] = current_time('mysql');
+            $format[] = '%s';
+        }
+    }
+    if (isset($params['assigned_to'])) {
+        $update_data['assigned_to'] = $params['assigned_to'];
+        $format[] = '%d';
+    }
+    if (isset($params['case_id'])) {
+        $update_data['case_id'] = $params['case_id'];
+        $format[] = '%d';
+    }
+
+    $result = $wpdb->update($table_name, $update_data, array('id' => $task_id), $format, array('%d'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to update task: ' . $wpdb->last_error
+        ), 500);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Task updated successfully'
+    ), 200);
+}
+
+function casa_delete_task($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $task_id = $request['id'];
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $result = $wpdb->delete($table_name, array(
+        'id' => $task_id,
+        'organization_id' => $organization_id
+    ), array('%d', '%d'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to delete task'
+        ), 500);
+    }
+
+    if ($result === 0) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Task not found'
+        ), 404);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Task deleted successfully'
+    ), 200);
+}
+
+function casa_complete_task($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'casa_tasks';
+    $task_id = $request['id'];
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $result = $wpdb->update(
+        $table_name,
+        array(
+            'status' => 'completed',
+            'completed_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ),
+        array('id' => $task_id, 'organization_id' => $organization_id),
+        array('%s', '%s', '%s'),
+        array('%d', '%d')
+    );
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to complete task'
+        ), 500);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Task marked as completed'
     ), 200);
 }
 
