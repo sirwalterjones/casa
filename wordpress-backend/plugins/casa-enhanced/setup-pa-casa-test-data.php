@@ -1578,25 +1578,26 @@ function casa_setup_pa_casa_test_data($request) {
 function casa_reset_and_create_test_data($request) {
     global $wpdb;
 
-    $results = array();
-    $now = current_time('mysql');
-    $today = date('Y-m-d');
+    try {
+        $results = array();
+        $now = current_time('mysql');
+        $today = date('Y-m-d');
 
-    // ========================================
-    // 1. CLEAR FORMIDABLE TABLES
-    // ========================================
-    $frm_items = $wpdb->prefix . 'frm_items';
-    $frm_item_metas = $wpdb->prefix . 'frm_item_metas';
+        // ========================================
+        // 1. CLEAR FORMIDABLE TABLES
+        // ========================================
+        $frm_items = $wpdb->prefix . 'frm_items';
+        $frm_item_metas = $wpdb->prefix . 'frm_item_metas';
 
-    // Check if tables exist before clearing
-    if ($wpdb->get_var("SHOW TABLES LIKE '$frm_items'") === $frm_items) {
-        // Use DELETE instead of TRUNCATE for permission compatibility
-        $metas_deleted = $wpdb->query("DELETE FROM $frm_item_metas");
-        $items_deleted = $wpdb->query("DELETE FROM $frm_items");
-        $results['formidable'] = "Cleared $items_deleted items and $metas_deleted metas from Formidable tables";
-    } else {
-        $results['formidable'] = 'Formidable tables not found';
-    }
+        // Check if tables exist before clearing
+        if ($wpdb->get_var("SHOW TABLES LIKE '$frm_items'") === $frm_items) {
+            // Use DELETE instead of TRUNCATE for permission compatibility
+            $metas_deleted = $wpdb->query("DELETE FROM $frm_item_metas");
+            $items_deleted = $wpdb->query("DELETE FROM $frm_items");
+            $results['formidable'] = "Cleared $items_deleted items and $metas_deleted metas from Formidable tables";
+        } else {
+            $results['formidable'] = 'Formidable tables not found';
+        }
 
     // ========================================
     // 2. GET PA-CASA ORGANIZATION
@@ -2010,11 +2011,18 @@ function casa_reset_and_create_test_data($request) {
     }
     $results['tasks'] = "Created $task_count tasks";
 
-    return new WP_REST_Response(array(
-        'success' => true,
-        'message' => 'Test data reset complete. Created 10 cases with different phases.',
-        'organization_id' => $organization_id,
-        'case_ids' => $case_ids,
-        'data' => $results
-    ), 200);
+        return new WP_REST_Response(array(
+            'success' => true,
+            'message' => 'Test data reset complete. Created 10 cases with different phases.',
+            'organization_id' => $organization_id,
+            'case_ids' => $case_ids,
+            'data' => $results
+        ), 200);
+    } catch (Exception $e) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ), 500);
+    }
 }
