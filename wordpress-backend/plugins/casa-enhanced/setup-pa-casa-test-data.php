@@ -1336,7 +1336,7 @@ function casa_setup_pa_casa_test_data($request) {
             'visit_status' => 'Approved'
         ),
         array(
-            'case_id' => $case_ids['PA-CASA-2024-007'] ?? 7,
+            'case_number' => 'PA-CASA-2024-007' ?? 7,
             'volunteer_id' => $thompson_id,
             'visit_date' => date('Y-m-d', strtotime('-1 day')),
             'visit_duration' => 1.5,
@@ -1867,7 +1867,7 @@ function casa_reset_and_create_test_data($request) {
         foreach ($logs as $log) {
             $wpdb->insert($contact_logs_table, array(
                 'organization_id' => $organization_id,
-                'case_id' => $case_ids['PA-CASA-2025-002'],
+                'case_number' => 'PA-CASA-2025-002',
                 'contact_type' => $log['type'],
                 'contact_date' => $log['date'],
                 'contact_duration' => '60',
@@ -1890,7 +1890,7 @@ function casa_reset_and_create_test_data($request) {
         foreach ($logs as $log) {
             $wpdb->insert($contact_logs_table, array(
                 'organization_id' => $organization_id,
-                'case_id' => $case_ids['PA-CASA-2025-003'],
+                'case_number' => 'PA-CASA-2025-003',
                 'contact_type' => $log['type'],
                 'contact_date' => $log['date'],
                 'contact_duration' => '45',
@@ -1915,7 +1915,7 @@ function casa_reset_and_create_test_data($request) {
         foreach ($logs as $log) {
             $wpdb->insert($contact_logs_table, array(
                 'organization_id' => $organization_id,
-                'case_id' => $case_ids['PA-CASA-2024-007'],
+                'case_number' => 'PA-CASA-2024-007',
                 'contact_type' => $log['type'],
                 'contact_date' => $log['date'],
                 'contact_duration' => '60',
@@ -1951,20 +1951,18 @@ function casa_reset_and_create_test_data($request) {
     );
 
     foreach ($hearings as $hearing) {
-        if (isset($case_ids[$hearing['case']])) {
-            $wpdb->insert($court_hearings_table, array(
-                'organization_id' => $organization_id,
-                'case_id' => $case_ids[$hearing['case']],
-                'hearing_date' => $hearing['date'],
-                'hearing_time' => $hearing['time'],
-                'hearing_type' => $hearing['type'],
-                'status' => $hearing['status'],
-                'notes' => 'Scheduled hearing for case ' . $hearing['case'],
-                'created_by' => $admin_user ? $admin_user->ID : 1,
-                'created_at' => $now
-            ));
-            $hearing_count++;
-        }
+        $wpdb->insert($court_hearings_table, array(
+            'organization_id' => $organization_id,
+            'case_number' => $hearing['case'],
+            'hearing_date' => $hearing['date'],
+            'hearing_time' => $hearing['time'],
+            'hearing_type' => $hearing['type'],
+            'status' => $hearing['status'],
+            'notes' => 'Scheduled hearing for case ' . $hearing['case'],
+            'created_by' => $admin_user ? $admin_user->ID : 1,
+            'created_at' => $now
+        ));
+        $hearing_count++;
     }
     $results['court_hearings'] = "Created $hearing_count court hearings";
 
