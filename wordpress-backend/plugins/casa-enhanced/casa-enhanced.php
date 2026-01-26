@@ -909,6 +909,12 @@ function casa_register_enhanced_routes() {
         'permission_callback' => '__return_true',
     ));
 
+    register_rest_route('casa/v1', '/court-hearings/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'casa_delete_court_hearing',
+        'permission_callback' => '__return_true',
+    ));
+
     // Tasks endpoints
     register_rest_route('casa/v1', '/tasks', array(
         'methods' => 'GET',
@@ -1086,7 +1092,13 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_update_contact_log',
         'permission_callback' => 'casa_check_contact_log_permission'
     ));
-    
+
+    register_rest_route('casa/v1', '/contact-logs/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'casa_delete_contact_log',
+        'permission_callback' => 'casa_check_contact_log_permission'
+    ));
+
     // Home Visit Reports endpoints
     register_rest_route('casa/v1', '/home-visit-reports', array(
         'methods' => 'GET',
@@ -1863,6 +1875,69 @@ function casa_create_formidable_entry($form_id, $data, $user_id = 0) {
     return $entry_id;
 }
 
+/**
+ * Delete a Formidable Forms entry by finding it via field value
+ * This syncs deletions from CASA tables to FF
+ */
+function casa_delete_formidable_entry_by_field($form_id, $field_key, $value) {
+    global $wpdb;
+
+    $items_table = $wpdb->prefix . 'frm_items';
+    $metas_table = $wpdb->prefix . 'frm_item_metas';
+    $fields_table = $wpdb->prefix . 'frm_fields';
+
+    // Check if tables exist
+    if ($wpdb->get_var("SHOW TABLES LIKE '$items_table'") != $items_table) {
+        return false;
+    }
+
+    // Get field ID for the field_key
+    $field_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM $fields_table WHERE form_id = %d AND field_key = %s",
+        $form_id, $field_key
+    ));
+
+    if (!$field_id) {
+        return false;
+    }
+
+    // Find entry ID by matching field value
+    $entry_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT item_id FROM $metas_table WHERE field_id = %d AND meta_value = %s",
+        $field_id, $value
+    ));
+
+    if (!$entry_id) {
+        return false;
+    }
+
+    // Delete all metas for this entry
+    $wpdb->delete($metas_table, array('item_id' => $entry_id), array('%d'));
+
+    // Delete the entry
+    $wpdb->delete($items_table, array('id' => $entry_id), array('%d'));
+
+    return true;
+}
+
+/**
+ * Delete a Formidable Forms entry by entry ID
+ */
+function casa_delete_formidable_entry($entry_id) {
+    global $wpdb;
+
+    $items_table = $wpdb->prefix . 'frm_items';
+    $metas_table = $wpdb->prefix . 'frm_item_metas';
+
+    // Delete all metas for this entry
+    $wpdb->delete($metas_table, array('item_id' => $entry_id), array('%d'));
+
+    // Delete the entry
+    $wpdb->delete($items_table, array('id' => $entry_id), array('%d'));
+
+    return true;
+}
+
 // ================================
 // SECURE USER MANAGEMENT FUNCTIONS
 // ================================
@@ -2497,18 +2572,21 @@ function casa_delete_case($request) {
     $case_id = intval($request['id']);
     $cases_table = $wpdb->prefix . 'casa_cases';
 
-    // Check existence
-    $count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $cases_table WHERE id = %d", $case_id));
+    // Get case_number before deleting (needed for FF deletion)
+    $case_number = $wpdb->get_var($wpdb->prepare("SELECT case_number FROM $cases_table WHERE id = %d", $case_id));
 
-    if ($count == 0) {
+    if (!$case_number) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Case not found'
         ), 404);
     }
 
-    // Delete the case (skip related data for now to avoid foreign key issues)
+    // Delete the case from CASA table
     $deleted = $wpdb->query($wpdb->prepare("DELETE FROM $cases_table WHERE id = %d", $case_id));
+
+    // Also delete from Formidable Forms (Form 1 = Cases, field key 'case_number')
+    casa_delete_formidable_entry_by_field(1, 'case_number', $case_number);
 
     return new WP_REST_Response(array(
         'success' => ($deleted > 0),
@@ -3188,18 +3266,53 @@ function casa_create_contact_log($request) {
     );
     
     $post_id = wp_insert_post($post_data);
-    
+
     if (is_wp_error($post_id)) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Failed to create contact log: ' . $post_id->get_error_message()
         ), 500);
     }
-    
+
+    // Also insert into casa_contact_logs table for API access
+    global $wpdb;
+    $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
+
+    $wpdb->insert($contact_logs_table, array(
+        'organization_id' => $organization_id,
+        'case_number' => sanitize_text_field($params['case_number']),
+        'contact_type' => sanitize_text_field($params['contact_type']),
+        'contact_date' => sanitize_text_field($params['contact_date']),
+        'duration_minutes' => intval($params['duration_minutes'] ?? 0),
+        'participants' => sanitize_text_field($params['participants'] ?? ''),
+        'summary' => sanitize_textarea_field($params['summary']),
+        'follow_up_required' => filter_var($params['follow_up_required'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+        'follow_up_notes' => sanitize_textarea_field($params['follow_up_notes'] ?? ''),
+        'created_by' => $current_user->ID,
+        'created_at' => current_time('mysql')
+    ));
+    $db_log_id = $wpdb->insert_id;
+
+    // Create Formidable Forms entry (Form 3 = Contact Logs)
+    $ff_data = array(
+        'contact_case_id' => $params['case_number'],
+        'contact_type' => $params['contact_type'],
+        'contact_date' => $params['contact_date'],
+        'duration_minutes' => $params['duration_minutes'] ?? 0,
+        'participants' => $params['participants'] ?? '',
+        'summary' => $params['summary'],
+        'follow_up_required' => $params['follow_up_required'] ?? false,
+        'follow_up_notes' => $params['follow_up_notes'] ?? '',
+        'contact_organization_id' => $organization_id
+    );
+    $frm_entry_id = casa_create_formidable_entry(3, $ff_data, $current_user->ID);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
-            'id' => $post_id,
+            'id' => $db_log_id ?: $post_id,
+            'wp_post_id' => $post_id,
+            'frm_entry_id' => $frm_entry_id,
             'case_number' => $params['case_number'],
             'child_name' => $params['child_name'],
             'contact_type' => $params['contact_type'],
@@ -3262,6 +3375,61 @@ function casa_get_contact_logs($request) {
         'success' => true,
         'data' => $contact_logs,
         'total' => count($contact_logs)
+    ), 200);
+}
+
+function casa_delete_contact_log($request) {
+    global $wpdb;
+    $log_id = $request['id'];
+    $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    // Get case_number before deleting (needed for FF deletion)
+    $case_number = $wpdb->get_var($wpdb->prepare(
+        "SELECT case_number FROM $contact_logs_table WHERE id = %d AND organization_id = %d",
+        $log_id, $organization_id
+    ));
+
+    $result = $wpdb->delete($contact_logs_table, array(
+        'id' => $log_id,
+        'organization_id' => $organization_id
+    ), array('%d', '%d'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to delete contact log'
+        ), 500);
+    }
+
+    if ($result === 0) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Contact log not found'
+        ), 404);
+    }
+
+    // Also delete from Formidable Forms (Form 3 = Contact Logs, field key 'contact_case_id')
+    if ($case_number) {
+        casa_delete_formidable_entry_by_field(3, 'contact_case_id', $case_number);
+    }
+
+    // Also delete the WordPress post if it exists
+    $posts = get_posts(array(
+        'post_type' => 'casa_contact_log',
+        'meta_key' => 'case_number',
+        'meta_value' => $case_number,
+        'posts_per_page' => 1
+    ));
+    if (!empty($posts)) {
+        wp_delete_post($posts[0]->ID, true);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Contact log deleted successfully'
     ), 200);
 }
 
@@ -3730,27 +3898,77 @@ function casa_get_court_hearings($request) {
 }
 
 function casa_create_court_hearing($request) {
+    global $wpdb;
     $params = $request->get_json_params();
-    
+    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+
     // Get current user and organization
     $current_user = wp_get_current_user();
     $organization_id = casa_get_user_organization_id($current_user->ID);
-    
+
     if (!$organization_id) {
         return new WP_REST_Response(array(
             'success' => false,
             'error' => 'User not associated with any organization'
         ), 400);
     }
-    
-    // Create court hearing (mock response for now)
+
+    // Validate required fields
+    if (empty($params['case_number']) || empty($params['hearing_date']) || empty($params['hearing_type'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Case number, hearing date, and hearing type are required'
+        ), 400);
+    }
+
+    // Insert into casa_court_hearings table
+    $result = $wpdb->insert($hearings_table, array(
+        'organization_id' => $organization_id,
+        'case_number' => sanitize_text_field($params['case_number']),
+        'hearing_date' => sanitize_text_field($params['hearing_date']),
+        'hearing_time' => sanitize_text_field($params['hearing_time'] ?? ''),
+        'hearing_type' => sanitize_text_field($params['hearing_type']),
+        'court_room' => sanitize_text_field($params['court_room'] ?? ''),
+        'judge_name' => sanitize_text_field($params['judge_name'] ?? ''),
+        'status' => 'scheduled',
+        'notes' => sanitize_textarea_field($params['notes'] ?? ''),
+        'created_by' => $current_user->ID,
+        'created_at' => current_time('mysql')
+    ));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to create court hearing: ' . $wpdb->last_error
+        ), 500);
+    }
+
+    $hearing_id = $wpdb->insert_id;
+
+    // Create Formidable Forms entry (Form 7 = Court Hearings)
+    $ff_data = array(
+        'hearing_case_number' => $params['case_number'],
+        'hearing_child_name' => $params['child_name'] ?? '',
+        'hearing_date' => $params['hearing_date'],
+        'hearing_time' => $params['hearing_time'] ?? '',
+        'hearing_type' => $params['hearing_type'],
+        'hearing_court_room' => $params['court_room'] ?? '',
+        'hearing_judge_name' => $params['judge_name'] ?? '',
+        'hearing_status' => 'scheduled',
+        'hearing_volunteer_assigned' => $params['volunteer_assigned'] ?? '',
+        'hearing_notes' => $params['notes'] ?? '',
+        'hearing_organization_id' => $organization_id
+    );
+    $frm_entry_id = casa_create_formidable_entry(7, $ff_data, $current_user->ID);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
-            'id' => rand(100, 999),
+            'id' => $hearing_id,
+            'frm_entry_id' => $frm_entry_id,
             'message' => 'Court hearing scheduled successfully'
         )
-    ), 200);
+    ), 201);
 }
 
 function casa_court_hearing_action($request) {
@@ -3761,6 +3979,50 @@ function casa_court_hearing_action($request) {
     return new WP_REST_Response(array(
         'success' => true,
         'message' => "Hearing {$action}d successfully"
+    ), 200);
+}
+
+function casa_delete_court_hearing($request) {
+    global $wpdb;
+    $hearing_id = $request['id'];
+    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    // Get case_number before deleting (needed for FF deletion)
+    $case_number = $wpdb->get_var($wpdb->prepare(
+        "SELECT case_number FROM $hearings_table WHERE id = %d AND organization_id = %d",
+        $hearing_id, $organization_id
+    ));
+
+    $result = $wpdb->delete($hearings_table, array(
+        'id' => $hearing_id,
+        'organization_id' => $organization_id
+    ), array('%d', '%d'));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Failed to delete court hearing'
+        ), 500);
+    }
+
+    if ($result === 0) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Court hearing not found'
+        ), 404);
+    }
+
+    // Also delete from Formidable Forms (Form 7 = Court Hearings, field key 'hearing_case_number')
+    if ($case_number) {
+        casa_delete_formidable_entry_by_field(7, 'hearing_case_number', $case_number);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Court hearing deleted successfully'
     ), 200);
 }
 
@@ -3930,10 +4192,25 @@ function casa_create_task($request) {
 
     $task_id = $wpdb->insert_id;
 
+    // Create Formidable Forms entry (Form 6 = Tasks)
+    $ff_data = array(
+        'task_title' => $params['title'],
+        'task_description' => $params['description'] ?? '',
+        'task_due_date' => $params['due_date'],
+        'task_due_time' => $params['due_time'] ?? '',
+        'task_priority' => $params['priority'] ?? 'medium',
+        'task_status' => 'pending',
+        'task_case_id' => $params['case_id'] ?? '',
+        'task_assigned_to' => $params['assigned_to'] ?? '',
+        'task_organization_id' => $organization_id
+    );
+    $frm_entry_id = casa_create_formidable_entry(6, $ff_data, $current_user->ID);
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
             'id' => $task_id,
+            'frm_entry_id' => $frm_entry_id,
             'message' => 'Task created successfully'
         )
     ), 201);
@@ -4024,6 +4301,12 @@ function casa_delete_task($request) {
     $current_user = wp_get_current_user();
     $organization_id = casa_get_user_organization_id($current_user->ID);
 
+    // Get task title before deleting (needed for FF deletion)
+    $task_title = $wpdb->get_var($wpdb->prepare(
+        "SELECT title FROM $table_name WHERE id = %d AND organization_id = %d",
+        $task_id, $organization_id
+    ));
+
     $result = $wpdb->delete($table_name, array(
         'id' => $task_id,
         'organization_id' => $organization_id
@@ -4041,6 +4324,11 @@ function casa_delete_task($request) {
             'success' => false,
             'error' => 'Task not found'
         ), 404);
+    }
+
+    // Also delete from Formidable Forms (Form 6 = Tasks, field key 'task_title')
+    if ($task_title) {
+        casa_delete_formidable_entry_by_field(6, 'task_title', $task_title);
     }
 
     return new WP_REST_Response(array(
