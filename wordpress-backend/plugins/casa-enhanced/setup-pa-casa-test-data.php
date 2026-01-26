@@ -40,6 +40,13 @@ add_action('rest_api_init', function() {
         'callback' => 'casa_cleanup_orgs_keep_pacasa',
         'permission_callback' => '__return_true'
     ));
+
+    // Endpoint to reset all data and create 10 fresh test cases
+    register_rest_route('casa/v1', '/admin/reset-test-data', array(
+        'methods' => 'POST',
+        'callback' => 'casa_reset_and_create_test_data',
+        'permission_callback' => '__return_true'
+    ));
 });
 
 /**
@@ -1558,6 +1565,453 @@ function casa_setup_pa_casa_test_data($request) {
         'success' => true,
         'message' => 'PA-CASA test data setup complete',
         'organization_id' => $organization_id,
+        'data' => $results
+    ), 200);
+}
+
+/**
+ * Reset all data and create 10 fresh test cases with different phases
+ * Phases: New Intake, Investigation, Active Monitoring, Court Prep,
+ *         Hearing Scheduled, Post-Hearing, Reunification Track,
+ *         Adoption Pending, Case Closing, Closed Success
+ */
+function casa_reset_and_create_test_data($request) {
+    global $wpdb;
+
+    $results = array();
+    $now = current_time('mysql');
+    $today = date('Y-m-d');
+
+    // ========================================
+    // 1. CLEAR FORMIDABLE TABLES
+    // ========================================
+    $frm_items = $wpdb->prefix . 'frm_items';
+    $frm_item_metas = $wpdb->prefix . 'frm_item_metas';
+
+    // Check if tables exist before truncating
+    if ($wpdb->get_var("SHOW TABLES LIKE '$frm_items'") === $frm_items) {
+        $wpdb->query("TRUNCATE TABLE $frm_item_metas");
+        $wpdb->query("TRUNCATE TABLE $frm_items");
+        $results['formidable'] = 'Cleared frm_items and frm_item_metas tables';
+    } else {
+        $results['formidable'] = 'Formidable tables not found';
+    }
+
+    // ========================================
+    // 2. GET PA-CASA ORGANIZATION
+    // ========================================
+    $orgs_table = $wpdb->prefix . 'casa_organizations';
+    $pacasa = $wpdb->get_row("SELECT * FROM $orgs_table WHERE slug = 'pacasa'");
+
+    if (!$pacasa) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'PA-CASA organization not found. Run setup-pa-casa-data first.'
+        ), 404);
+    }
+    $organization_id = $pacasa->id;
+
+    // ========================================
+    // 3. CLEAR CASA DATA TABLES (for this org)
+    // ========================================
+    $tables_to_clear = array(
+        'casa_cases',
+        'casa_contact_logs',
+        'casa_court_hearings',
+        'casa_documents',
+        'casa_home_visit_reports',
+        'casa_tasks'
+    );
+
+    foreach ($tables_to_clear as $table_name) {
+        $full_table = $wpdb->prefix . $table_name;
+        if ($wpdb->get_var("SHOW TABLES LIKE '$full_table'") === $full_table) {
+            $deleted = $wpdb->delete($full_table, array('organization_id' => $organization_id));
+            $results[$table_name] = "Cleared $deleted rows";
+        }
+    }
+
+    // ========================================
+    // 4. GET ADMIN USER AND VOLUNTEERS
+    // ========================================
+    $admin_user = get_user_by('email', 'walter@joneswebdesigns.com');
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+
+    // Get volunteer IDs
+    $volunteers = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, user_id, first_name, last_name FROM $volunteers_table WHERE organization_id = %d AND status = 'active'",
+        $organization_id
+    ));
+
+    $volunteer_ids = array();
+    foreach ($volunteers as $v) {
+        $volunteer_ids[] = $v->user_id;
+    }
+
+    // ========================================
+    // 5. CREATE 10 TEST CASES WITH DIFFERENT PHASES
+    // ========================================
+    $cases_table = $wpdb->prefix . 'casa_cases';
+
+    $test_cases = array(
+        // Case 1: NEW INTAKE - Just received, no volunteer yet
+        array(
+            'case_number' => 'PA-CASA-2025-001',
+            'child_first_name' => 'Marcus',
+            'child_last_name' => 'Williams',
+            'child_dob' => '2017-06-15',
+            'case_type' => 'dependency',
+            'status' => 'pending',
+            'priority' => 'high',
+            'assigned_volunteer_id' => null,
+            'court_jurisdiction' => 'Dauphin County',
+            'assigned_judge' => 'Hon. Richard Palmer',
+            'placement_type' => 'emergency_shelter',
+            'placement_address' => '100 Emergency Care Center, Harrisburg, PA 17101',
+            'case_summary' => 'NEW INTAKE: Child removed yesterday due to parental substance abuse. Emergency shelter placement. Awaiting volunteer assignment and initial hearing.',
+            'referral_date' => date('Y-m-d', strtotime('-1 day')),
+            'assignment_date' => null
+        ),
+        // Case 2: INVESTIGATION PHASE - Volunteer assigned, gathering info
+        array(
+            'case_number' => 'PA-CASA-2025-002',
+            'child_first_name' => 'Aaliyah',
+            'child_last_name' => 'Johnson',
+            'child_dob' => '2015-03-22',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'high',
+            'assigned_volunteer_id' => $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'Dauphin County',
+            'assigned_judge' => 'Hon. Richard Palmer',
+            'placement_type' => 'foster_home',
+            'placement_address' => '222 Foster Family Lane, Harrisburg, PA 17102',
+            'case_summary' => 'INVESTIGATION: Volunteer conducting initial visits. Meeting with child, foster parents, teachers, and caseworker. Preparing first court report.',
+            'referral_date' => date('Y-m-d', strtotime('-14 days')),
+            'assignment_date' => date('Y-m-d', strtotime('-10 days'))
+        ),
+        // Case 3: ACTIVE MONITORING - Established case, regular visits
+        array(
+            'case_number' => 'PA-CASA-2025-003',
+            'child_first_name' => 'Jayden',
+            'child_last_name' => 'Martinez',
+            'child_dob' => '2013-11-08',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'medium',
+            'assigned_volunteer_id' => $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'Cumberland County',
+            'assigned_judge' => 'Hon. Maria Santos',
+            'placement_type' => 'foster_home',
+            'placement_address' => '333 Stable Home Court, Camp Hill, PA 17011',
+            'case_summary' => 'ACTIVE MONITORING: Case stable. Monthly visits ongoing. Child doing well in school. Parents completing services. Next review in 30 days.',
+            'referral_date' => date('Y-m-d', strtotime('-4 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-4 months'))
+        ),
+        // Case 4: COURT PREP - Hearing coming up, preparing report
+        array(
+            'case_number' => 'PA-CASA-2025-004',
+            'child_first_name' => 'Sophia',
+            'child_last_name' => 'Chen',
+            'child_dob' => '2016-07-30',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'high',
+            'assigned_volunteer_id' => $volunteer_ids[1] ?? $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'Cumberland County',
+            'assigned_judge' => 'Hon. Maria Santos',
+            'placement_type' => 'relative_placement',
+            'placement_address' => '444 Grandmother Circle, Mechanicsburg, PA 17055',
+            'case_summary' => 'COURT PREP: Permanency hearing scheduled for next week. Preparing comprehensive court report. Recommending continued relative placement.',
+            'referral_date' => date('Y-m-d', strtotime('-6 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-6 months'))
+        ),
+        // Case 5: HEARING SCHEDULED - Hearing this week
+        array(
+            'case_number' => 'PA-CASA-2025-005',
+            'child_first_name' => 'Ethan',
+            'child_last_name' => 'Brown',
+            'child_dob' => '2014-02-14',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'high',
+            'assigned_volunteer_id' => $volunteer_ids[1] ?? $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'York County',
+            'assigned_judge' => 'Hon. James Wilson',
+            'placement_type' => 'foster_home',
+            'placement_address' => '555 Foster Care Drive, York, PA 17401',
+            'case_summary' => 'HEARING THIS WEEK: Review hearing scheduled for ' . date('l', strtotime('+3 days')) . '. Court report submitted. CASA will testify on child\'s behalf.',
+            'referral_date' => date('Y-m-d', strtotime('-8 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-8 months'))
+        ),
+        // Case 6: POST-HEARING - Recent court decision, implementing orders
+        array(
+            'case_number' => 'PA-CASA-2025-006',
+            'child_first_name' => 'Mia',
+            'child_last_name' => 'Garcia',
+            'child_dob' => '2018-09-05',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'medium',
+            'assigned_volunteer_id' => $volunteer_ids[2] ?? $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'York County',
+            'assigned_judge' => 'Hon. James Wilson',
+            'placement_type' => 'foster_home',
+            'placement_address' => '666 New Orders Way, York, PA 17402',
+            'case_summary' => 'POST-HEARING: Court ordered increased visitation with mother. Monitoring implementation of new services. Next hearing in 90 days.',
+            'referral_date' => date('Y-m-d', strtotime('-10 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-10 months'))
+        ),
+        // Case 7: REUNIFICATION TRACK - Working toward family reunification
+        array(
+            'case_number' => 'PA-CASA-2024-007',
+            'child_first_name' => 'Noah',
+            'child_last_name' => 'Thompson',
+            'child_dob' => '2015-05-20',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'medium',
+            'assigned_volunteer_id' => $volunteer_ids[2] ?? $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'Lancaster County',
+            'assigned_judge' => 'Hon. Patricia Lee',
+            'placement_type' => 'foster_home',
+            'placement_address' => '777 Transition Lane, Lancaster, PA 17601',
+            'case_summary' => 'REUNIFICATION TRACK: Mother completed all services. Overnight visits approved. Trial home placement scheduled to begin next month.',
+            'referral_date' => date('Y-m-d', strtotime('-14 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-14 months'))
+        ),
+        // Case 8: ADOPTION PENDING - TPR complete, adoption in progress
+        array(
+            'case_number' => 'PA-CASA-2024-008',
+            'child_first_name' => 'Isabella',
+            'child_last_name' => 'Davis',
+            'child_dob' => '2016-12-12',
+            'case_type' => 'tpr',
+            'status' => 'active',
+            'priority' => 'medium',
+            'assigned_volunteer_id' => $volunteer_ids[3] ?? $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'Lancaster County',
+            'assigned_judge' => 'Hon. Patricia Lee',
+            'placement_type' => 'pre_adoptive_home',
+            'placement_address' => '888 Forever Family Street, Lancaster, PA 17602',
+            'case_summary' => 'ADOPTION PENDING: Parental rights terminated. Foster family proceeding with adoption. Finalization hearing scheduled in 60 days.',
+            'referral_date' => date('Y-m-d', strtotime('-20 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-20 months'))
+        ),
+        // Case 9: CASE CLOSING - Preparing to close successful case
+        array(
+            'case_number' => 'PA-CASA-2024-009',
+            'child_first_name' => 'Olivia',
+            'child_last_name' => 'Wilson',
+            'child_dob' => '2014-08-25',
+            'case_type' => 'dependency',
+            'status' => 'active',
+            'priority' => 'low',
+            'assigned_volunteer_id' => $volunteer_ids[3] ?? $volunteer_ids[0] ?? null,
+            'court_jurisdiction' => 'Dauphin County',
+            'assigned_judge' => 'Hon. Richard Palmer',
+            'placement_type' => 'reunified',
+            'placement_address' => '999 Home Sweet Home Ave, Harrisburg, PA 17104',
+            'case_summary' => 'CASE CLOSING: Successfully reunified with mother 6 months ago. Final monitoring period complete. Preparing closure summary for court.',
+            'referral_date' => date('Y-m-d', strtotime('-24 months')),
+            'assignment_date' => date('Y-m-d', strtotime('-24 months'))
+        ),
+        // Case 10: CLOSED SUCCESS - Example of completed case
+        array(
+            'case_number' => 'PA-CASA-2023-010',
+            'child_first_name' => 'Liam',
+            'child_last_name' => 'Anderson',
+            'child_dob' => '2012-04-10',
+            'case_type' => 'dependency',
+            'status' => 'closed',
+            'priority' => 'low',
+            'assigned_volunteer_id' => null,
+            'court_jurisdiction' => 'Cumberland County',
+            'assigned_judge' => 'Hon. Maria Santos',
+            'placement_type' => 'adopted',
+            'placement_address' => '1010 Permanent Home Blvd, Carlisle, PA 17013',
+            'case_summary' => 'CLOSED - SUCCESS: Case closed after successful adoption by foster family. Child thriving. CASA involvement made a difference.',
+            'referral_date' => '2022-06-01',
+            'assignment_date' => '2022-06-15'
+        )
+    );
+
+    $case_ids = array();
+    foreach ($test_cases as $case) {
+        $wpdb->insert($cases_table, array_merge($case, array(
+            'organization_id' => $organization_id,
+            'created_by' => $admin_user ? $admin_user->ID : 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        )));
+        $case_ids[$case['case_number']] = $wpdb->insert_id;
+    }
+    $results['cases'] = 'Created ' . count($test_cases) . ' test cases with varied phases';
+
+    // ========================================
+    // 6. CREATE CONTACT LOGS FOR EACH CASE (proportional to phase)
+    // ========================================
+    $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
+    $contact_log_count = 0;
+
+    // Case 2 (Investigation) - 2 contact logs
+    if (isset($case_ids['PA-CASA-2025-002'])) {
+        $logs = array(
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-7 days')), 'notes' => 'Initial home visit with foster family. Child appears healthy and adjusting.'),
+            array('type' => 'school_visit', 'date' => date('Y-m-d', strtotime('-3 days')), 'notes' => 'Met with teacher. Child is behind academically but making progress.')
+        );
+        foreach ($logs as $log) {
+            $wpdb->insert($contact_logs_table, array(
+                'organization_id' => $organization_id,
+                'case_id' => $case_ids['PA-CASA-2025-002'],
+                'contact_type' => $log['type'],
+                'contact_date' => $log['date'],
+                'contact_duration' => '60',
+                'contact_notes' => $log['notes'],
+                'created_by' => $volunteer_ids[0] ?? ($admin_user ? $admin_user->ID : 1),
+                'created_at' => $now
+            ));
+            $contact_log_count++;
+        }
+    }
+
+    // Case 3 (Active Monitoring) - 4 contact logs
+    if (isset($case_ids['PA-CASA-2025-003'])) {
+        $logs = array(
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-90 days')), 'notes' => 'Monthly check-in. Stable placement.'),
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-60 days')), 'notes' => 'Child excited about school activities.'),
+            array('type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-45 days')), 'notes' => 'Call with caseworker re: parent progress.'),
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-30 days')), 'notes' => 'Monthly visit. All is well.')
+        );
+        foreach ($logs as $log) {
+            $wpdb->insert($contact_logs_table, array(
+                'organization_id' => $organization_id,
+                'case_id' => $case_ids['PA-CASA-2025-003'],
+                'contact_type' => $log['type'],
+                'contact_date' => $log['date'],
+                'contact_duration' => '45',
+                'contact_notes' => $log['notes'],
+                'created_by' => $volunteer_ids[0] ?? ($admin_user ? $admin_user->ID : 1),
+                'created_at' => $now
+            ));
+            $contact_log_count++;
+        }
+    }
+
+    // Case 7 (Reunification) - 6 contact logs
+    if (isset($case_ids['PA-CASA-2024-007'])) {
+        $logs = array(
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-60 days')), 'notes' => 'Visit during supervised visit with mother.'),
+            array('type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-50 days')), 'notes' => 'Update from therapist - good progress.'),
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-40 days')), 'notes' => 'First unsupervised visit - went well.'),
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-30 days')), 'notes' => 'First overnight visit. Child happy.'),
+            array('type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-20 days')), 'notes' => 'Check-in with mother. Confident about reunification.'),
+            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-10 days')), 'notes' => 'Weekend visit. Strong mother-child bond observed.')
+        );
+        foreach ($logs as $log) {
+            $wpdb->insert($contact_logs_table, array(
+                'organization_id' => $organization_id,
+                'case_id' => $case_ids['PA-CASA-2024-007'],
+                'contact_type' => $log['type'],
+                'contact_date' => $log['date'],
+                'contact_duration' => '60',
+                'contact_notes' => $log['notes'],
+                'created_by' => $volunteer_ids[2] ?? ($admin_user ? $admin_user->ID : 1),
+                'created_at' => $now
+            ));
+            $contact_log_count++;
+        }
+    }
+
+    $results['contact_logs'] = "Created $contact_log_count contact logs";
+
+    // ========================================
+    // 7. CREATE COURT HEARINGS
+    // ========================================
+    $court_hearings_table = $wpdb->prefix . 'casa_court_hearings';
+    $hearing_count = 0;
+
+    $hearings = array(
+        // Case 1 - Upcoming initial hearing
+        array('case' => 'PA-CASA-2025-001', 'date' => date('Y-m-d', strtotime('+5 days')), 'time' => '09:00:00', 'type' => 'shelter_care', 'status' => 'scheduled'),
+        // Case 4 - Upcoming permanency hearing
+        array('case' => 'PA-CASA-2025-004', 'date' => date('Y-m-d', strtotime('+7 days')), 'time' => '10:30:00', 'type' => 'permanency_review', 'status' => 'scheduled'),
+        // Case 5 - Hearing this week
+        array('case' => 'PA-CASA-2025-005', 'date' => date('Y-m-d', strtotime('+3 days')), 'time' => '14:00:00', 'type' => 'review', 'status' => 'scheduled'),
+        // Case 6 - Past hearing
+        array('case' => 'PA-CASA-2025-006', 'date' => date('Y-m-d', strtotime('-14 days')), 'time' => '11:00:00', 'type' => 'permanency_review', 'status' => 'completed'),
+        // Case 8 - Upcoming adoption finalization
+        array('case' => 'PA-CASA-2024-008', 'date' => date('Y-m-d', strtotime('+60 days')), 'time' => '09:30:00', 'type' => 'adoption_finalization', 'status' => 'scheduled'),
+        // Case 9 - Closure hearing
+        array('case' => 'PA-CASA-2024-009', 'date' => date('Y-m-d', strtotime('+14 days')), 'time' => '13:00:00', 'type' => 'case_closure', 'status' => 'scheduled')
+    );
+
+    foreach ($hearings as $hearing) {
+        if (isset($case_ids[$hearing['case']])) {
+            $wpdb->insert($court_hearings_table, array(
+                'organization_id' => $organization_id,
+                'case_id' => $case_ids[$hearing['case']],
+                'hearing_date' => $hearing['date'],
+                'hearing_time' => $hearing['time'],
+                'hearing_type' => $hearing['type'],
+                'status' => $hearing['status'],
+                'notes' => 'Scheduled hearing for case ' . $hearing['case'],
+                'created_by' => $admin_user ? $admin_user->ID : 1,
+                'created_at' => $now
+            ));
+            $hearing_count++;
+        }
+    }
+    $results['court_hearings'] = "Created $hearing_count court hearings";
+
+    // ========================================
+    // 8. CREATE TASKS
+    // ========================================
+    $tasks_table = $wpdb->prefix . 'casa_tasks';
+    $task_count = 0;
+
+    $tasks = array(
+        // Case 1 - New intake tasks
+        array('case' => 'PA-CASA-2025-001', 'title' => 'Assign volunteer to new case', 'due' => '+1 day', 'priority' => 'high', 'status' => 'pending'),
+        array('case' => 'PA-CASA-2025-001', 'title' => 'Prepare for shelter care hearing', 'due' => '+4 days', 'priority' => 'high', 'status' => 'pending'),
+        // Case 2 - Investigation tasks
+        array('case' => 'PA-CASA-2025-002', 'title' => 'Complete initial assessment', 'due' => '+7 days', 'priority' => 'high', 'status' => 'in_progress'),
+        array('case' => 'PA-CASA-2025-002', 'title' => 'Meet with biological parents', 'due' => '+10 days', 'priority' => 'medium', 'status' => 'pending'),
+        // Case 4 - Court prep tasks
+        array('case' => 'PA-CASA-2025-004', 'title' => 'Submit court report', 'due' => '+5 days', 'priority' => 'high', 'status' => 'in_progress'),
+        array('case' => 'PA-CASA-2025-004', 'title' => 'Review report with supervisor', 'due' => '+4 days', 'priority' => 'medium', 'status' => 'pending'),
+        // Case 5 - Hearing this week
+        array('case' => 'PA-CASA-2025-005', 'title' => 'Attend court hearing', 'due' => '+3 days', 'priority' => 'high', 'status' => 'pending'),
+        // Case 7 - Reunification tasks
+        array('case' => 'PA-CASA-2024-007', 'title' => 'Monitor trial home placement', 'due' => '+30 days', 'priority' => 'medium', 'status' => 'pending'),
+        // Case 9 - Closing tasks
+        array('case' => 'PA-CASA-2024-009', 'title' => 'Complete case closure summary', 'due' => '+10 days', 'priority' => 'medium', 'status' => 'pending')
+    );
+
+    foreach ($tasks as $task) {
+        if (isset($case_ids[$task['case']])) {
+            $wpdb->insert($tasks_table, array(
+                'organization_id' => $organization_id,
+                'case_id' => $case_ids[$task['case']],
+                'title' => $task['title'],
+                'due_date' => date('Y-m-d', strtotime($task['due'])),
+                'priority' => $task['priority'],
+                'status' => $task['status'],
+                'assigned_to' => $volunteer_ids[0] ?? null,
+                'created_by' => $admin_user ? $admin_user->ID : 1,
+                'created_at' => $now,
+                'updated_at' => $now
+            ));
+            $task_count++;
+        }
+    }
+    $results['tasks'] = "Created $task_count tasks";
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Test data reset complete. Created 10 cases with different phases.',
+        'organization_id' => $organization_id,
+        'case_ids' => $case_ids,
         'data' => $results
     ), 200);
 }
