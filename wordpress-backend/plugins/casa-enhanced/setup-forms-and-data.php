@@ -469,6 +469,125 @@ function casa_create_formidable_forms() {
     }
     $results[] = 'Created Form 5: Document Upload with 7 fields';
 
+    // ========================================
+    // FORM 6: Tasks Form
+    // ========================================
+    $wpdb->insert($forms_table, array(
+        'id' => 6,
+        'form_key' => 'tasks',
+        'name' => 'Tasks Form',
+        'description' => 'Form for creating and managing tasks',
+        'status' => 'published',
+        'created_at' => $now
+    ));
+
+    $task_fields = array(
+        array('id' => 120, 'field_key' => 'task_title', 'name' => 'Task Title', 'type' => 'text', 'required' => 1, 'field_order' => 1),
+        array('id' => 121, 'field_key' => 'task_description', 'name' => 'Description', 'type' => 'textarea', 'required' => 0, 'field_order' => 2),
+        array('id' => 122, 'field_key' => 'task_due_date', 'name' => 'Due Date', 'type' => 'date', 'required' => 1, 'field_order' => 3),
+        array('id' => 123, 'field_key' => 'task_due_time', 'name' => 'Due Time', 'type' => 'time', 'required' => 0, 'field_order' => 4),
+        array('id' => 124, 'field_key' => 'task_priority', 'name' => 'Priority', 'type' => 'select', 'required' => 1, 'field_order' => 5, 'options' => 'Low,Medium,High'),
+        array('id' => 125, 'field_key' => 'task_status', 'name' => 'Status', 'type' => 'select', 'required' => 1, 'field_order' => 6, 'options' => 'Pending,In Progress,Completed'),
+        array('id' => 126, 'field_key' => 'task_case_id', 'name' => 'Related Case ID', 'type' => 'number', 'required' => 0, 'field_order' => 7),
+        array('id' => 127, 'field_key' => 'task_assigned_to', 'name' => 'Assigned To (User ID)', 'type' => 'number', 'required' => 0, 'field_order' => 8),
+        array('id' => 128, 'field_key' => 'task_organization_id', 'name' => 'Organization ID', 'type' => 'hidden', 'required' => 1, 'field_order' => 9),
+    );
+
+    foreach ($task_fields as $field) {
+        $wpdb->insert($fields_table, array(
+            'id' => $field['id'],
+            'field_key' => $field['field_key'],
+            'name' => $field['name'],
+            'type' => $field['type'],
+            'required' => $field['required'],
+            'field_order' => $field['field_order'],
+            'form_id' => 6,
+            'options' => isset($field['options']) ? $field['options'] : null,
+            'created_at' => $now
+        ));
+    }
+    $results[] = 'Created Form 6: Tasks with 9 fields';
+
+    // ========================================
+    // FORM 7: Court Hearings Form
+    // ========================================
+    $wpdb->insert($forms_table, array(
+        'id' => 7,
+        'form_key' => 'court_hearings',
+        'name' => 'Court Hearings Form',
+        'description' => 'Form for scheduling and tracking court hearings',
+        'status' => 'published',
+        'created_at' => $now
+    ));
+
+    $hearing_fields = array(
+        array('id' => 130, 'field_key' => 'hearing_case_number', 'name' => 'Case Number', 'type' => 'text', 'required' => 1, 'field_order' => 1),
+        array('id' => 131, 'field_key' => 'hearing_child_name', 'name' => 'Child Name', 'type' => 'text', 'required' => 1, 'field_order' => 2),
+        array('id' => 132, 'field_key' => 'hearing_date', 'name' => 'Hearing Date', 'type' => 'date', 'required' => 1, 'field_order' => 3),
+        array('id' => 133, 'field_key' => 'hearing_time', 'name' => 'Hearing Time', 'type' => 'time', 'required' => 0, 'field_order' => 4),
+        array('id' => 134, 'field_key' => 'hearing_type', 'name' => 'Hearing Type', 'type' => 'select', 'required' => 1, 'field_order' => 5, 'options' => 'Review,Permanency,Disposition,Termination,Other'),
+        array('id' => 135, 'field_key' => 'hearing_court_room', 'name' => 'Court Room', 'type' => 'text', 'required' => 0, 'field_order' => 6),
+        array('id' => 136, 'field_key' => 'hearing_judge_name', 'name' => 'Judge Name', 'type' => 'text', 'required' => 0, 'field_order' => 7),
+        array('id' => 137, 'field_key' => 'hearing_status', 'name' => 'Status', 'type' => 'select', 'required' => 1, 'field_order' => 8, 'options' => 'Scheduled,Completed,Continued,Cancelled'),
+        array('id' => 138, 'field_key' => 'hearing_volunteer_assigned', 'name' => 'CASA Volunteer Assigned', 'type' => 'text', 'required' => 0, 'field_order' => 9),
+        array('id' => 139, 'field_key' => 'hearing_notes', 'name' => 'Notes', 'type' => 'textarea', 'required' => 0, 'field_order' => 10),
+        array('id' => 140, 'field_key' => 'hearing_organization_id', 'name' => 'Organization ID', 'type' => 'hidden', 'required' => 1, 'field_order' => 11),
+    );
+
+    foreach ($hearing_fields as $field) {
+        $wpdb->insert($fields_table, array(
+            'id' => $field['id'],
+            'field_key' => $field['field_key'],
+            'name' => $field['name'],
+            'type' => $field['type'],
+            'required' => $field['required'],
+            'field_order' => $field['field_order'],
+            'form_id' => 7,
+            'options' => isset($field['options']) ? $field['options'] : null,
+            'created_at' => $now
+        ));
+    }
+    $results[] = 'Created Form 7: Court Hearings with 11 fields';
+
+    // ========================================
+    // FORM 8: Reports Form
+    // ========================================
+    $wpdb->insert($forms_table, array(
+        'id' => 8,
+        'form_key' => 'reports',
+        'name' => 'Reports Form',
+        'description' => 'Form for CASA reports',
+        'status' => 'published',
+        'created_at' => $now
+    ));
+
+    $report_fields = array(
+        array('id' => 150, 'field_key' => 'report_case_id', 'name' => 'Case ID', 'type' => 'number', 'required' => 1, 'field_order' => 1),
+        array('id' => 151, 'field_key' => 'report_type', 'name' => 'Report Type', 'type' => 'select', 'required' => 1, 'field_order' => 2, 'options' => 'Court Report,Home Visit,Monthly Summary,Quarterly Review,Initial Assessment,Final Report'),
+        array('id' => 152, 'field_key' => 'report_title', 'name' => 'Report Title', 'type' => 'text', 'required' => 1, 'field_order' => 3),
+        array('id' => 153, 'field_key' => 'report_date', 'name' => 'Report Date', 'type' => 'date', 'required' => 1, 'field_order' => 4),
+        array('id' => 154, 'field_key' => 'report_content', 'name' => 'Report Content', 'type' => 'textarea', 'required' => 1, 'field_order' => 5),
+        array('id' => 155, 'field_key' => 'report_recommendations', 'name' => 'Recommendations', 'type' => 'textarea', 'required' => 0, 'field_order' => 6),
+        array('id' => 156, 'field_key' => 'report_status', 'name' => 'Status', 'type' => 'select', 'required' => 1, 'field_order' => 7, 'options' => 'Draft,Submitted,Approved,Needs Revision'),
+        array('id' => 157, 'field_key' => 'report_volunteer_id', 'name' => 'Volunteer ID', 'type' => 'number', 'required' => 1, 'field_order' => 8),
+        array('id' => 158, 'field_key' => 'report_organization_id', 'name' => 'Organization ID', 'type' => 'hidden', 'required' => 1, 'field_order' => 9),
+    );
+
+    foreach ($report_fields as $field) {
+        $wpdb->insert($fields_table, array(
+            'id' => $field['id'],
+            'field_key' => $field['field_key'],
+            'name' => $field['name'],
+            'type' => $field['type'],
+            'required' => $field['required'],
+            'field_order' => $field['field_order'],
+            'form_id' => 8,
+            'options' => isset($field['options']) ? $field['options'] : null,
+            'created_at' => $now
+        ));
+    }
+    $results[] = 'Created Form 8: Reports with 9 fields';
+
     return $results;
 }
 
@@ -933,6 +1052,177 @@ function casa_add_sample_data() {
         ));
     }
     $results[] = 'Added 4 sample contact logs via Formidable Forms';
+
+    // ========================================
+    // Sample Tasks (direct to CASA table)
+    // ========================================
+    $tasks_table = $wpdb->prefix . 'casa_tasks';
+
+    // Create tasks table if it doesn't exist
+    if ($wpdb->get_var("SHOW TABLES LIKE '$tasks_table'") !== $tasks_table) {
+        $charset_collate = $wpdb->get_charset_collate();
+        $sql = "CREATE TABLE IF NOT EXISTS $tasks_table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            organization_id bigint(20) NOT NULL,
+            case_id bigint(20) NULL,
+            title varchar(255) NOT NULL,
+            description text,
+            due_date date NOT NULL,
+            due_time time NULL,
+            priority varchar(20) DEFAULT 'medium',
+            status varchar(20) DEFAULT 'pending',
+            assigned_to bigint(20) NULL,
+            created_by bigint(20) NOT NULL,
+            completed_at datetime NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY organization_id (organization_id),
+            KEY case_id (case_id),
+            KEY due_date (due_date),
+            KEY status (status),
+            KEY assigned_to (assigned_to)
+        ) $charset_collate;";
+        $wpdb->query($sql);
+        $results[] = 'Created casa_tasks table';
+    }
+
+    // Clear existing tasks
+    $wpdb->query("DELETE FROM $tasks_table");
+
+    $sample_tasks = array(
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 1, // Emma Davis case
+            'title' => 'Schedule home visit with Emma Davis',
+            'description' => 'Monthly home visit to assess placement stability and child wellbeing.',
+            'due_date' => date('Y-m-d', strtotime('+3 days')),
+            'due_time' => '14:00:00',
+            'priority' => 'high',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[0]) ? $volunteer_ids[0] : 1,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 1, // Emma Davis case
+            'title' => 'Submit court report for Emma Davis review hearing',
+            'description' => 'Prepare and submit CASA report 5 days before scheduled review hearing.',
+            'due_date' => date('Y-m-d', strtotime('+2 days')),
+            'due_time' => '17:00:00',
+            'priority' => 'high',
+            'status' => 'in_progress',
+            'assigned_to' => isset($volunteer_ids[0]) ? $volunteer_ids[0] : 1,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 2, // James Miller case
+            'title' => 'Contact school counselor for James Miller',
+            'description' => 'Follow up on academic progress and any concerns from teachers.',
+            'due_date' => date('Y-m-d', strtotime('+5 days')),
+            'due_time' => '10:00:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[0]) ? $volunteer_ids[0] : 1,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 2, // James Miller case
+            'title' => 'Prepare permanency hearing report for James Miller',
+            'description' => 'Document recommendation for long-term placement with grandmother.',
+            'due_date' => date('Y-m-d', strtotime('+9 days')),
+            'due_time' => NULL,
+            'priority' => 'high',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[0]) ? $volunteer_ids[0] : 1,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 3, // Sophia Garcia case
+            'title' => 'Visit Sophia Garcia before adoption hearing',
+            'description' => 'Final home visit before adoption finalization.',
+            'due_date' => date('Y-m-d', strtotime('+14 days')),
+            'due_time' => '15:00:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[1]) ? $volunteer_ids[1] : 2,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 3, // Sophia Garcia case
+            'title' => 'Complete final adoption report for Sophia Garcia',
+            'description' => 'Submit final CASA recommendation supporting adoption by foster family.',
+            'due_date' => date('Y-m-d', strtotime('+16 days')),
+            'due_time' => '12:00:00',
+            'priority' => 'high',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[1]) ? $volunteer_ids[1] : 2,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => 4, // Liam Anderson case
+            'title' => 'Review IEP documents for Liam Anderson',
+            'description' => 'Ensure special educational needs are being met at group home.',
+            'due_date' => date('Y-m-d', strtotime('+7 days')),
+            'due_time' => NULL,
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => NULL, // Unassigned - case pending volunteer
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => NULL, // Not case-specific
+            'title' => 'Complete monthly volunteer hours report',
+            'description' => 'Submit hours and mileage for the month.',
+            'due_date' => date('Y-m-d', strtotime('+10 days')),
+            'due_time' => NULL,
+            'priority' => 'low',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[0]) ? $volunteer_ids[0] : 1,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+        array(
+            'organization_id' => $organization_id,
+            'case_id' => NULL, // Not case-specific
+            'title' => 'Attend CASA training session',
+            'description' => 'Quarterly in-service training on trauma-informed care.',
+            'due_date' => date('Y-m-d', strtotime('+20 days')),
+            'due_time' => '09:00:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => isset($volunteer_ids[2]) ? $volunteer_ids[2] : 3,
+            'created_by' => 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ),
+    );
+
+    foreach ($sample_tasks as $task) {
+        $wpdb->insert($tasks_table, $task);
+    }
+    $results[] = 'Added 9 sample tasks';
 
     // ========================================
     // Sample Court Hearings (direct to CASA table)

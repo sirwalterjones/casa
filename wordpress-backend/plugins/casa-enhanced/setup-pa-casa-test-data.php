@@ -1429,6 +1429,131 @@ function casa_setup_pa_casa_test_data($request) {
     }
     $results['home_visits'] = 'Created ' . count($home_visits_data) . ' home visit reports';
 
+    // ========================================
+    // 9. CREATE SAMPLE TASKS
+    // ========================================
+    $tasks_table = $wpdb->prefix . 'casa_tasks';
+
+    // Clear existing tasks for this organization
+    $wpdb->delete($tasks_table, array('organization_id' => $organization_id));
+
+    $tasks_data = array(
+        // Aiden Brooks tasks
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-001'] ?? 1,
+            'title' => 'Schedule home visit with Aiden Brooks',
+            'description' => 'Monthly check-in visit at foster home. Review school progress and upcoming court date.',
+            'due_date' => date('Y-m-d', strtotime('+2 days')),
+            'due_time' => '14:00:00',
+            'priority' => 'high',
+            'status' => 'pending',
+            'assigned_to' => $sullivan_id
+        ),
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-001'] ?? 1,
+            'title' => 'Prepare court report for Aiden Brooks review hearing',
+            'description' => 'Complete CASA report with recommendations for the upcoming review hearing.',
+            'due_date' => date('Y-m-d', strtotime('+5 days')),
+            'due_time' => null,
+            'priority' => 'high',
+            'status' => 'pending',
+            'assigned_to' => $sullivan_id
+        ),
+        // Sophia Rivera tasks
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-002'] ?? 2,
+            'title' => 'Follow up on guardianship petition status',
+            'description' => 'Contact attorney to check on guardianship petition filing status.',
+            'due_date' => date('Y-m-d', strtotime('+3 days')),
+            'due_time' => '10:00:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => $sullivan_id
+        ),
+        // Ethan Kowalski tasks
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-003'] ?? 3,
+            'title' => 'Review TPR hearing documents',
+            'description' => 'Review all documents submitted for the termination of parental rights hearing.',
+            'due_date' => date('Y-m-d', strtotime('+1 day')),
+            'due_time' => null,
+            'priority' => 'high',
+            'status' => 'in_progress',
+            'assigned_to' => $martinez_id
+        ),
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-003'] ?? 3,
+            'title' => 'Meet with prospective adoptive family',
+            'description' => 'Pre-adoption visit with Sarah and Mark Davis to discuss finalization timeline.',
+            'due_date' => date('Y-m-d', strtotime('+7 days')),
+            'due_time' => '15:30:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => $martinez_id
+        ),
+        // Olivia Miller tasks
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-004'] ?? 4,
+            'title' => 'Contact school counselor about Olivia',
+            'description' => 'Check on academic progress and any behavioral concerns following trauma.',
+            'due_date' => date('Y-m-d', strtotime('+4 days')),
+            'due_time' => '11:00:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => $martinez_id
+        ),
+        // Noah Patel tasks
+        array(
+            'case_id' => $case_ids['PA-CASA-2024-005'] ?? 5,
+            'title' => 'Submit monthly contact log',
+            'description' => 'Complete and submit monthly contact log for Noah Patel case.',
+            'due_date' => date('Y-m-d', strtotime('+6 days')),
+            'due_time' => null,
+            'priority' => 'low',
+            'status' => 'pending',
+            'assigned_to' => $martinez_id
+        ),
+        // General tasks (not case-specific)
+        array(
+            'case_id' => null,
+            'title' => 'Complete annual training refresher',
+            'description' => 'Complete the required annual CASA volunteer training modules online.',
+            'due_date' => date('Y-m-d', strtotime('+10 days')),
+            'due_time' => null,
+            'priority' => 'low',
+            'status' => 'pending',
+            'assigned_to' => $sullivan_id
+        ),
+        array(
+            'case_id' => null,
+            'title' => 'Attend volunteer meeting',
+            'description' => 'Monthly CASA volunteer meeting at the main office.',
+            'due_date' => date('Y-m-d', strtotime('+14 days')),
+            'due_time' => '18:00:00',
+            'priority' => 'medium',
+            'status' => 'pending',
+            'assigned_to' => null
+        ),
+    );
+
+    foreach ($tasks_data as $task) {
+        $wpdb->insert($tasks_table, array(
+            'organization_id' => $organization_id,
+            'case_id' => $task['case_id'],
+            'title' => $task['title'],
+            'description' => $task['description'],
+            'due_date' => $task['due_date'],
+            'due_time' => $task['due_time'],
+            'priority' => $task['priority'],
+            'status' => $task['status'],
+            'assigned_to' => $task['assigned_to'],
+            'created_by' => $admin_user ? $admin_user->ID : 1,
+            'created_at' => $now,
+            'updated_at' => $now
+        ));
+    }
+    $results['tasks'] = 'Created ' . count($tasks_data) . ' sample tasks';
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => 'PA-CASA test data setup complete',
