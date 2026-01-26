@@ -1837,13 +1837,6 @@ function casa_reset_and_create_test_data($request) {
     );
 
     $case_ids = array();
-    $case_field_map = array(
-        'child_first_name' => 1, 'child_last_name' => 2, 'child_dob' => 3,
-        'case_number' => 6, 'case_type' => 7, 'case_priority' => 8, 'case_status' => 9,
-        'referral_date' => 10, 'case_summary' => 11, 'court_jurisdiction' => 12,
-        'assigned_judge' => 13, 'current_placement' => 15, 'organization_id' => 23
-    );
-
     foreach ($test_cases as $case) {
         $wpdb->insert($cases_table, array_merge($case, array(
             'organization_id' => $organization_id,
@@ -1853,28 +1846,9 @@ function casa_reset_and_create_test_data($request) {
         )));
         $case_ids[$case['case_number']] = $wpdb->insert_id;
 
-        // Also create Formidable Forms entry
-        if (function_exists('casa_create_ff_entry')) {
-            $ff_data = array(
-                'child_first_name' => $case['child_first_name'],
-                'child_last_name' => $case['child_last_name'],
-                'child_dob' => $case['child_dob'],
-                'case_number' => $case['case_number'],
-                'case_type' => ucfirst($case['case_type']),
-                'case_priority' => ucfirst($case['priority']),
-                'case_status' => ucfirst($case['status']),
-                'referral_date' => $case['referral_date'],
-                'case_summary' => $case['case_summary'],
-                'court_jurisdiction' => $case['court_jurisdiction'],
-                'assigned_judge' => $case['assigned_judge'],
-                'current_placement' => ucfirst(str_replace('_', ' ', $case['placement_type'])),
-                'organization_id' => $organization_id
-            );
-            casa_create_ff_entry(1, $ff_data, $case_field_map, $now);
-        }
+        // TODO: Add Formidable Forms entry creation later
     }
     $results['cases'] = 'Created ' . count($test_cases) . ' test cases with varied phases';
-    $results['formidable_cases'] = 'Created ' . count($test_cases) . ' Formidable Forms entries';
 
     // ========================================
     // 6. CREATE CONTACT LOGS FOR EACH CASE (proportional to phase)
