@@ -1588,11 +1588,12 @@ function casa_reset_and_create_test_data($request) {
     $frm_items = $wpdb->prefix . 'frm_items';
     $frm_item_metas = $wpdb->prefix . 'frm_item_metas';
 
-    // Check if tables exist before truncating
+    // Check if tables exist before clearing
     if ($wpdb->get_var("SHOW TABLES LIKE '$frm_items'") === $frm_items) {
-        $wpdb->query("TRUNCATE TABLE $frm_item_metas");
-        $wpdb->query("TRUNCATE TABLE $frm_items");
-        $results['formidable'] = 'Cleared frm_items and frm_item_metas tables';
+        // Use DELETE instead of TRUNCATE for permission compatibility
+        $metas_deleted = $wpdb->query("DELETE FROM $frm_item_metas");
+        $items_deleted = $wpdb->query("DELETE FROM $frm_items");
+        $results['formidable'] = "Cleared $items_deleted items and $metas_deleted metas from Formidable tables";
     } else {
         $results['formidable'] = 'Formidable tables not found';
     }
