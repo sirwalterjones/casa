@@ -491,37 +491,54 @@ function casa_setup_pa_casa_test_data($request) {
         )));
         $volunteer_ids[$volunteer['email']] = $wpdb->insert_id;
 
-        // Also create FF entry for Form 2
-        if (function_exists('casa_create_ff_entry')) {
-            $volunteer_field_map = array(
-                'vol_first_name' => 30, 'vol_last_name' => 31, 'vol_email' => 32, 'vol_phone' => 33,
-                'vol_dob' => 34, 'vol_address' => 35, 'vol_city' => 36, 'vol_state' => 37, 'vol_zip' => 38,
-                'emergency_name' => 39, 'emergency_phone' => 40, 'emergency_relationship' => 41,
-                'employer' => 42, 'occupation' => 43, 'education_level' => 44, 'languages' => 45,
-                'max_cases' => 48, 'vol_organization_id' => 62
-            );
+        // Also create FF entry for Form 2 - direct insert
+        $frm_items_table = $wpdb->prefix . 'frm_items';
+        $frm_metas_table = $wpdb->prefix . 'frm_item_metas';
 
-            $ff_data = array(
-                'vol_first_name' => $volunteer['first_name'],
-                'vol_last_name' => $volunteer['last_name'],
-                'vol_email' => $volunteer['email'],
-                'vol_phone' => $volunteer['phone'],
-                'vol_dob' => $volunteer['date_of_birth'],
-                'vol_address' => $volunteer['address'],
-                'vol_city' => $volunteer['city'],
-                'vol_state' => $volunteer['state'],
-                'vol_zip' => $volunteer['zip_code'],
-                'emergency_name' => $volunteer['emergency_contact_name'],
-                'emergency_phone' => $volunteer['emergency_contact_phone'],
-                'emergency_relationship' => $volunteer['emergency_contact_relationship'],
-                'employer' => $volunteer['employer'],
-                'occupation' => $volunteer['occupation'],
-                'education_level' => $volunteer['education_level'],
-                'languages' => $volunteer['languages_spoken'],
-                'max_cases' => $volunteer['max_cases'],
-                'vol_organization_id' => $organization_id
-            );
-            casa_create_ff_entry(2, $ff_data, $volunteer_field_map, $now);
+        if ($wpdb->get_var("SHOW TABLES LIKE '$frm_items_table'") === $frm_items_table) {
+            $wpdb->insert($frm_items_table, array(
+                'form_id' => 2,
+                'user_id' => $admin_user ? $admin_user->ID : 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'is_draft' => 0,
+                'ip' => '127.0.0.1',
+                'name' => $volunteer['first_name'] . ' ' . $volunteer['last_name'],
+                'item_key' => 'volunteer-' . sanitize_title($volunteer['first_name'] . '-' . $volunteer['last_name'])
+            ));
+            $ff_entry_id = $wpdb->insert_id;
+
+            if ($ff_entry_id) {
+                $vol_field_map = array(
+                    30 => $volunteer['first_name'],
+                    31 => $volunteer['last_name'],
+                    32 => $volunteer['email'],
+                    33 => $volunteer['phone'],
+                    34 => $volunteer['date_of_birth'],
+                    35 => $volunteer['address'],
+                    36 => $volunteer['city'],
+                    37 => $volunteer['state'],
+                    38 => $volunteer['zip_code'],
+                    39 => $volunteer['emergency_contact_name'],
+                    40 => $volunteer['emergency_contact_phone'],
+                    41 => $volunteer['emergency_contact_relationship'],
+                    42 => $volunteer['employer'],
+                    43 => $volunteer['occupation'],
+                    48 => $volunteer['max_cases'],
+                    62 => $organization_id
+                );
+
+                foreach ($vol_field_map as $field_id => $value) {
+                    if (!empty($value) || $value === 0 || $value === '0') {
+                        $wpdb->insert($frm_metas_table, array(
+                            'meta_value' => $value,
+                            'field_id' => $field_id,
+                            'item_id' => $ff_entry_id,
+                            'created_at' => $now
+                        ));
+                    }
+                }
+            }
         }
     }
     $results['volunteers'] = 'Created/verified ' . count($volunteers_data) . ' volunteers';
@@ -1646,9 +1663,66 @@ function casa_reset_and_create_test_data($request) {
     ));
 
     $volunteer_ids = array();
+    $ff_volunteer_count = 0;
     foreach ($volunteers as $v) {
         $volunteer_ids[] = $v->user_id;
+
+        // Get full volunteer data for FF entry
+        $vol_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $volunteers_table WHERE id = %d",
+            $v->id
+        ));
+
+        if ($vol_data) {
+            // Create Formidable Forms entry for volunteer (Form 2)
+            $wpdb->insert($frm_items, array(
+                'form_id' => 2,
+                'user_id' => $admin_user ? $admin_user->ID : 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'is_draft' => 0,
+                'ip' => '127.0.0.1',
+                'name' => $vol_data->first_name . ' ' . $vol_data->last_name,
+                'item_key' => 'volunteer-' . strtolower(str_replace(' ', '-', $vol_data->first_name . '-' . $vol_data->last_name)) . '-' . ($ff_volunteer_count + 1)
+            ));
+            $ff_entry_id = $wpdb->insert_id;
+
+            if ($ff_entry_id) {
+                // Volunteer Form 2 field IDs: 30-62
+                $vol_field_map = array(
+                    30 => $vol_data->first_name,                     // vol_first_name
+                    31 => $vol_data->last_name,                      // vol_last_name
+                    32 => $vol_data->email,                          // vol_email
+                    33 => $vol_data->phone,                          // vol_phone
+                    34 => $vol_data->date_of_birth,                  // vol_dob
+                    35 => $vol_data->address,                        // vol_address
+                    36 => $vol_data->city,                           // vol_city
+                    37 => $vol_data->state,                          // vol_state
+                    38 => $vol_data->zip_code,                       // vol_zip
+                    39 => $vol_data->emergency_contact_name,         // emergency_name
+                    40 => $vol_data->emergency_contact_phone,        // emergency_phone
+                    41 => $vol_data->emergency_contact_relationship, // emergency_relationship
+                    42 => $vol_data->employer,                       // employer
+                    43 => $vol_data->occupation,                     // occupation
+                    48 => $vol_data->max_cases,                      // max_cases
+                    62 => $organization_id                           // vol_organization_id
+                );
+
+                foreach ($vol_field_map as $field_id => $value) {
+                    if (!empty($value) || $value === 0 || $value === '0') {
+                        $wpdb->insert($frm_item_metas, array(
+                            'meta_value' => $value,
+                            'field_id' => $field_id,
+                            'item_id' => $ff_entry_id,
+                            'created_at' => $now
+                        ));
+                    }
+                }
+                $ff_volunteer_count++;
+            }
+        }
     }
+    $results['volunteers'] = "Found " . count($volunteers) . " volunteers + created $ff_volunteer_count FF entries";
 
     // ========================================
     // 5. CREATE 10 TEST CASES WITH DIFFERENT PHASES
