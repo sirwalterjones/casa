@@ -15,7 +15,24 @@ interface DashboardStats {
     date: string;
     type: string;
     description: string;
+    caseId?: number;
+    link?: string;
   }>;
+}
+
+interface Task {
+  id: number;
+  title: string;
+  description?: string;
+  due_date: string;
+  due_time?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed';
+  case_id?: number;
+  case_number?: string;
+  child_first_name?: string;
+  child_last_name?: string;
+  assigned_to_name?: string;
 }
 
 export default function Dashboard() {
@@ -28,22 +45,9 @@ export default function Dashboard() {
     courtHearings: 0,
     recentActivity: []
   });
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (user) {
-      fetchDashboardStats();
-    }
-  }, [user]);
-
-  // Show loading state while auth is initializing
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+  const [tasksLoading, setTasksLoading] = useState(true);
 
   const fetchDashboardStats = async () => {
     try {
@@ -89,6 +93,83 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  const fetchUpcomingTasks = async () => {
+    try {
+      console.log('Fetching upcoming tasks...');
+      const response = await apiClient.casaGet('tasks/upcoming');
+      console.log('Upcoming tasks response:', response);
+
+      if (response.success && response.data) {
+        const apiData = response.data as any;
+        let tasksData: Task[] = [];
+
+        if (apiData.success && apiData.data) {
+          tasksData = apiData.data;
+        } else if (Array.isArray(apiData)) {
+          tasksData = apiData;
+        }
+
+        setTasks(tasksData);
+      }
+    } catch (error) {
+      console.error('Error fetching upcoming tasks:', error);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
+  const completeTask = async (taskId: number) => {
+    try {
+      const response = await apiClient.casaPost(`tasks/${taskId}/complete`, {});
+      if (response.success) {
+        // Remove the completed task from the list
+        setTasks(tasks.filter(t => t.id !== taskId));
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+      case 'medium': return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30';
+      case 'low': return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30';
+      default: return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-900/30';
+    }
+  };
+
+  const formatDueDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow';
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardStats();
+      fetchUpcomingTasks();
+    }
+  }, [user]);
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -226,7 +307,11 @@ export default function Dashboard() {
                       </div>
                     ) : stats.recentActivity.length > 0 ? (
                       stats.recentActivity.map((activity, index) => (
-                        <div key={index} className="px-6 py-4">
+                        <Link
+                          key={index}
+                          href={activity.link || '#'}
+                          className="block px-6 py-4 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors duration-150 cursor-pointer"
+                        >
                           <div className="flex items-start">
                             <div className="flex-shrink-0">
                               <div className="w-8 h-8 bg-blue-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center">
@@ -242,8 +327,13 @@ export default function Dashboard() {
                               </div>
                               <p className="text-sm text-gray-600 dark:text-fintech-text-secondary">{activity.description}</p>
                             </div>
+                            <div className="flex-shrink-0 ml-2">
+                              <svg className="w-5 h-5 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
                           </div>
-                        </div>
+                        </Link>
                       ))
                     ) : (
                       <div className="px-6 py-8 text-center">
@@ -261,15 +351,49 @@ export default function Dashboard() {
               {/* Upcoming Tasks */}
               <div className="lg:col-span-1">
                 <div className="bg-white dark:bg-fintech-bg-secondary shadow-xl dark:shadow-fintech rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+                  <div className="px-6 py-4 border-b border-gray-200 dark:border-fintech-border-subtle flex justify-between items-center">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-fintech-text-primary">Upcoming Tasks</h3>
+                    <Link href="/tasks/new" className="text-sm text-indigo-600 dark:text-fintech-accent-blue hover:text-indigo-500">
+                      + Add
+                    </Link>
                   </div>
-                  <div className="p-6">
-                    {loading ? (
+                  <div className="divide-y divide-gray-200 dark:divide-fintech-border-subtle">
+                    {tasksLoading ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-fintech-accent-blue mx-auto"></div>
                         <p className="mt-2 text-sm text-gray-500 dark:text-fintech-text-secondary">Loading tasks...</p>
                       </div>
+                    ) : tasks.length > 0 ? (
+                      tasks.slice(0, 5).map((task) => (
+                        <div key={task.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary">
+                          <div className="flex items-start gap-3">
+                            <button
+                              onClick={() => completeTask(task.id)}
+                              className="mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300 dark:border-fintech-border-subtle hover:border-green-500 dark:hover:border-fintech-gain transition-colors"
+                              title="Mark as complete"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary truncate">
+                                  {task.title}
+                                </p>
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                  {task.priority}
+                                </span>
+                              </div>
+                              {task.case_number && (
+                                <p className="text-xs text-gray-500 dark:text-fintech-text-tertiary">
+                                  Case: {task.case_number}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-500 dark:text-fintech-text-tertiary mt-1">
+                                Due: {formatDueDate(task.due_date)}
+                                {task.due_time && ` at ${task.due_time}`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
                     ) : (
                       <div className="text-center py-8">
                         <svg className="w-12 h-12 mx-auto text-gray-400 dark:text-fintech-text-tertiary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,6 +404,13 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
+                  {tasks.length > 0 && (
+                    <div className="px-6 py-3 bg-gray-50 dark:bg-fintech-bg-tertiary">
+                      <Link href="/tasks" className="text-sm font-medium text-indigo-600 dark:text-fintech-accent-blue hover:text-indigo-500">
+                        View all tasks →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
