@@ -1839,6 +1839,16 @@ function casa_reset_and_create_test_data($request) {
     );
 
     $case_ids = array();
+    $ff_case_count = 0;
+
+    // Field map for Cases (Form 1)
+    $case_field_map = array(
+        'child_first_name' => 1, 'child_last_name' => 2, 'child_dob' => 3,
+        'case_number' => 6, 'case_type' => 7, 'case_priority' => 8, 'case_status' => 9,
+        'referral_date' => 10, 'case_summary' => 11, 'court_jurisdiction' => 12,
+        'assigned_judge' => 13, 'current_placement' => 15, 'organization_id' => 23
+    );
+
     foreach ($test_cases as $case) {
         $wpdb->insert($cases_table, array_merge($case, array(
             'organization_id' => $organization_id,
@@ -1848,86 +1858,99 @@ function casa_reset_and_create_test_data($request) {
         )));
         $case_ids[$case['case_number']] = $wpdb->insert_id;
 
-        // TODO: Add Formidable Forms entry creation later
+        // Create Formidable Forms entry for this case
+        if (function_exists('casa_create_ff_entry')) {
+            $ff_data = array(
+                'child_first_name' => $case['child_first_name'],
+                'child_last_name' => $case['child_last_name'],
+                'child_dob' => $case['child_dob'],
+                'case_number' => $case['case_number'],
+                'case_type' => ucfirst($case['case_type']),
+                'case_priority' => ucfirst($case['priority']),
+                'case_status' => ucfirst($case['status']),
+                'referral_date' => $case['referral_date'],
+                'case_summary' => $case['case_summary'],
+                'court_jurisdiction' => $case['court_jurisdiction'],
+                'assigned_judge' => $case['assigned_judge'],
+                'current_placement' => ucfirst(str_replace('_', ' ', $case['placement_type'])),
+                'organization_id' => $organization_id
+            );
+            casa_create_ff_entry(1, $ff_data, $case_field_map, $now);
+            $ff_case_count++;
+        }
     }
     $results['cases'] = 'Created ' . count($test_cases) . ' test cases with varied phases';
+    $results['formidable_cases'] = "Created $ff_case_count Formidable Forms entries for cases";
 
     // ========================================
     // 6. CREATE CONTACT LOGS FOR EACH CASE (proportional to phase)
     // ========================================
     $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
     $contact_log_count = 0;
+    $ff_contact_count = 0;
 
-    // Case 2 (Investigation) - 2 contact logs
-    if (isset($case_ids['PA-CASA-2025-002'])) {
-        $logs = array(
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-7 days')), 'notes' => 'Initial home visit with foster family. Child appears healthy and adjusting.'),
-            array('type' => 'school_visit', 'date' => date('Y-m-d', strtotime('-3 days')), 'notes' => 'Met with teacher. Child is behind academically but making progress.')
-        );
-        foreach ($logs as $log) {
-            $wpdb->insert($contact_logs_table, array(
-                'organization_id' => $organization_id,
-                'case_number' => 'PA-CASA-2025-002',
-                'contact_type' => $log['type'],
-                'contact_date' => $log['date'],
-                'contact_duration' => '60',
-                'contact_notes' => $log['notes'],
-                'created_by' => $volunteer_ids[0] ?? ($admin_user ? $admin_user->ID : 1),
-                'created_at' => $now
-            ));
-            $contact_log_count++;
-        }
-    }
+    // Field map for Contact Logs (Form 3)
+    $contact_field_map = array(
+        'contact_case_id' => 70, 'contact_type' => 71, 'contact_date' => 72,
+        'duration_minutes' => 74, 'participants' => 76, 'summary' => 78,
+        'follow_up_required' => 81, 'follow_up_notes' => 82, 'contact_organization_id' => 87
+    );
 
-    // Case 3 (Active Monitoring) - 4 contact logs
-    if (isset($case_ids['PA-CASA-2025-003'])) {
-        $logs = array(
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-90 days')), 'notes' => 'Monthly check-in. Stable placement.'),
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-60 days')), 'notes' => 'Child excited about school activities.'),
-            array('type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-45 days')), 'notes' => 'Call with caseworker re: parent progress.'),
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-30 days')), 'notes' => 'Monthly visit. All is well.')
-        );
-        foreach ($logs as $log) {
-            $wpdb->insert($contact_logs_table, array(
-                'organization_id' => $organization_id,
-                'case_number' => 'PA-CASA-2025-003',
-                'contact_type' => $log['type'],
-                'contact_date' => $log['date'],
-                'contact_duration' => '45',
-                'contact_notes' => $log['notes'],
-                'created_by' => $volunteer_ids[0] ?? ($admin_user ? $admin_user->ID : 1),
-                'created_at' => $now
-            ));
-            $contact_log_count++;
-        }
-    }
+    // All contact logs data
+    $all_contact_logs = array(
+        // Case 2 (Investigation) - 2 contact logs
+        array('case_number' => 'PA-CASA-2025-002', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-7 days')), 'duration' => 60, 'notes' => 'Initial home visit with foster family. Child appears healthy and adjusting.', 'person' => 'Foster Parents, Aaliyah'),
+        array('case_number' => 'PA-CASA-2025-002', 'type' => 'school_visit', 'date' => date('Y-m-d', strtotime('-3 days')), 'duration' => 45, 'notes' => 'Met with teacher. Child is behind academically but making progress.', 'person' => 'Teacher Mrs. Johnson'),
+        // Case 3 (Active Monitoring) - 4 contact logs
+        array('case_number' => 'PA-CASA-2025-003', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-90 days')), 'duration' => 45, 'notes' => 'Monthly check-in. Stable placement.', 'person' => 'Foster Family, Jayden'),
+        array('case_number' => 'PA-CASA-2025-003', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-60 days')), 'duration' => 45, 'notes' => 'Child excited about school activities.', 'person' => 'Foster Family, Jayden'),
+        array('case_number' => 'PA-CASA-2025-003', 'type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-45 days')), 'duration' => 20, 'notes' => 'Call with caseworker re: parent progress.', 'person' => 'DHS Caseworker'),
+        array('case_number' => 'PA-CASA-2025-003', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-30 days')), 'duration' => 45, 'notes' => 'Monthly visit. All is well.', 'person' => 'Foster Family, Jayden'),
+        // Case 7 (Reunification) - 6 contact logs
+        array('case_number' => 'PA-CASA-2024-007', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-60 days')), 'duration' => 60, 'notes' => 'Visit during supervised visit with mother.', 'person' => 'Noah, Mother, Supervisor'),
+        array('case_number' => 'PA-CASA-2024-007', 'type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-50 days')), 'duration' => 25, 'notes' => 'Update from therapist - good progress.', 'person' => 'Family Therapist'),
+        array('case_number' => 'PA-CASA-2024-007', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-40 days')), 'duration' => 60, 'notes' => 'First unsupervised visit - went well.', 'person' => 'Noah, Mother'),
+        array('case_number' => 'PA-CASA-2024-007', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-30 days')), 'duration' => 90, 'notes' => 'First overnight visit. Child happy.', 'person' => 'Noah, Mother'),
+        array('case_number' => 'PA-CASA-2024-007', 'type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-20 days')), 'duration' => 30, 'notes' => 'Check-in with mother. Confident about reunification.', 'person' => 'Mother'),
+        array('case_number' => 'PA-CASA-2024-007', 'type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-10 days')), 'duration' => 75, 'notes' => 'Weekend visit. Strong mother-child bond observed.', 'person' => 'Noah, Mother'),
+    );
 
-    // Case 7 (Reunification) - 6 contact logs
-    if (isset($case_ids['PA-CASA-2024-007'])) {
-        $logs = array(
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-60 days')), 'notes' => 'Visit during supervised visit with mother.'),
-            array('type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-50 days')), 'notes' => 'Update from therapist - good progress.'),
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-40 days')), 'notes' => 'First unsupervised visit - went well.'),
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-30 days')), 'notes' => 'First overnight visit. Child happy.'),
-            array('type' => 'phone_call', 'date' => date('Y-m-d', strtotime('-20 days')), 'notes' => 'Check-in with mother. Confident about reunification.'),
-            array('type' => 'home_visit', 'date' => date('Y-m-d', strtotime('-10 days')), 'notes' => 'Weekend visit. Strong mother-child bond observed.')
-        );
-        foreach ($logs as $log) {
-            $wpdb->insert($contact_logs_table, array(
-                'organization_id' => $organization_id,
-                'case_number' => 'PA-CASA-2024-007',
-                'contact_type' => $log['type'],
+    foreach ($all_contact_logs as $log) {
+        // Insert into CASA table
+        $wpdb->insert($contact_logs_table, array(
+            'organization_id' => $organization_id,
+            'case_number' => $log['case_number'],
+            'contact_type' => $log['type'],
+            'contact_date' => $log['date'],
+            'contact_duration' => $log['duration'],
+            'contact_person' => $log['person'],
+            'contact_notes' => $log['notes'],
+            'follow_up_required' => 0,
+            'created_by' => $admin_user ? $admin_user->ID : 1,
+            'created_at' => $now
+        ));
+        $contact_log_count++;
+
+        // Create Formidable Forms entry
+        if (function_exists('casa_create_ff_entry')) {
+            $ff_data = array(
+                'contact_case_id' => $case_ids[$log['case_number']] ?? 0,
+                'contact_type' => ucfirst(str_replace('_', ' ', $log['type'])),
                 'contact_date' => $log['date'],
-                'contact_duration' => '60',
-                'contact_notes' => $log['notes'],
-                'created_by' => $volunteer_ids[2] ?? ($admin_user ? $admin_user->ID : 1),
-                'created_at' => $now
-            ));
-            $contact_log_count++;
+                'duration_minutes' => $log['duration'],
+                'participants' => $log['person'],
+                'summary' => $log['notes'],
+                'follow_up_required' => '0',
+                'follow_up_notes' => '',
+                'contact_organization_id' => $organization_id
+            );
+            casa_create_ff_entry(3, $ff_data, $contact_field_map, $now);
+            $ff_contact_count++;
         }
     }
 
     $results['contact_logs'] = "Created $contact_log_count contact logs";
+    $results['formidable_contacts'] = "Created $ff_contact_count Formidable Forms contact entries";
 
     // ========================================
     // 7. CREATE COURT HEARINGS
