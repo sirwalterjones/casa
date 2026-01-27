@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CASA Enhanced User Management
  * Description: Complete CASA case management with WordPress user integration
- * Version: 2.0.57
+ * Version: 2.0.58
  * Author: CASA System
  *
  * Last Updated: 2025-08-07 - Fixed Formidable Forms integration
@@ -39,6 +39,73 @@ require_once plugin_dir_path(__FILE__) . 'setup-forms-and-data.php';
 
 // Include PA-CASA Test Data Setup
 require_once plugin_dir_path(__FILE__) . 'setup-pa-casa-test-data.php';
+
+/**
+ * Send email via Brevo API
+ * All system emails should use this function
+ *
+ * @param string $to_email Recipient email address
+ * @param string $to_name Recipient name
+ * @param string $subject Email subject
+ * @param string $html_content HTML email body
+ * @return bool Success status
+ */
+function casa_send_brevo_email($to_email, $to_name, $subject, $html_content) {
+    $brevo_api_key = defined('BREVO_API_KEY') ? BREVO_API_KEY : getenv('BREVO_API_KEY');
+    $sender_email = defined('BREVO_SENDER_EMAIL') ? BREVO_SENDER_EMAIL : (getenv('BREVO_SENDER_EMAIL') ?: 'notify@notifyplus.org');
+    $sender_name = defined('BREVO_SENDER_NAME') ? BREVO_SENDER_NAME : (getenv('BREVO_SENDER_NAME') ?: 'PA-CASA');
+
+    if (empty($brevo_api_key)) {
+        error_log('CASA Email Error: BREVO_API_KEY not configured');
+        return false;
+    }
+
+    $url = 'https://api.brevo.com/v3/smtp/email';
+
+    $payload = array(
+        'sender' => array(
+            'name' => $sender_name,
+            'email' => $sender_email
+        ),
+        'to' => array(
+            array(
+                'email' => $to_email,
+                'name' => $to_name
+            )
+        ),
+        'subject' => $subject,
+        'htmlContent' => $html_content
+    );
+
+    $args = array(
+        'method' => 'POST',
+        'headers' => array(
+            'accept' => 'application/json',
+            'api-key' => $brevo_api_key,
+            'content-type' => 'application/json'
+        ),
+        'body' => json_encode($payload),
+        'timeout' => 30
+    );
+
+    $response = wp_remote_post($url, $args);
+
+    if (is_wp_error($response)) {
+        error_log('CASA Brevo Email Error: ' . $response->get_error_message());
+        return false;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code >= 200 && $response_code < 300) {
+        error_log('CASA Email: Sent successfully to ' . $to_email . ' - Subject: ' . $subject);
+        return true;
+    } else {
+        error_log('CASA Brevo Email Error: HTTP ' . $response_code . ' - ' . $response_body);
+        return false;
+    }
+}
 
 /**
  * JWT Authentication Filter
@@ -4188,7 +4255,7 @@ function casa_invite_user($request) {
 }
 
 /**
- * Send professional invitation email to new user
+ * Send professional invitation email to new user via Brevo API
  */
 function casa_send_invitation_email($email, $first_name, $last_name, $role, $org_name, $set_password_url, $invited_by) {
     $subject = "You've been invited to join $org_name on CASA";
@@ -4203,16 +4270,11 @@ function casa_send_invitation_email($email, $first_name, $last_name, $role, $org
         'year' => date('Y')
     ));
 
-    $headers = array(
-        'Content-Type: text/html; charset=UTF-8',
-        'From: CASA Case Management <noreply@casa.joneswebdesigns.com>'
-    );
-
-    return wp_mail($email, $subject, $html_body, $headers);
+    return casa_send_brevo_email($email, $first_name . ' ' . $last_name, $subject, $html_body);
 }
 
 /**
- * Send password reset email
+ * Send password reset email via Brevo API
  */
 function casa_send_password_reset_email($email, $first_name, $reset_url, $org_name) {
     $subject = "Password Reset Request - $org_name CASA";
@@ -4224,12 +4286,7 @@ function casa_send_password_reset_email($email, $first_name, $reset_url, $org_na
         'year' => date('Y')
     ));
 
-    $headers = array(
-        'Content-Type: text/html; charset=UTF-8',
-        'From: CASA Case Management <noreply@casa.joneswebdesigns.com>'
-    );
-
-    return wp_mail($email, $subject, $html_body, $headers);
+    return casa_send_brevo_email($email, $first_name, $subject, $html_body);
 }
 
 /**
