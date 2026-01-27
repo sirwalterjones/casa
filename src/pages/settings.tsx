@@ -157,23 +157,8 @@ const mockUsers: UserManagementData[] = [
 export default function Settings() {
   const { user, loading } = useRequireAuth();
   const { hasRole } = usePermissions();
-  
-  // Only allow administrators to access settings
-  if (!hasRole(['administrator', 'casa_administrator'])) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <div className="bg-white shadow rounded-lg p-6">
-              <h1 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h1>
-              <p className="text-gray-600">You do not have permission to access the settings page. Only administrators can manage organization settings.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
+  // All hooks must be called before any conditional returns
   const [activeTab, setActiveTab] = useState('organization');
   const [users, setUsers] = useState<UserManagementData[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -539,6 +524,23 @@ export default function Settings() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  // Only allow administrators to access settings
+  if (!hasRole(['administrator', 'casa_administrator'])) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h1 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h1>
+              <p className="text-gray-600">You do not have permission to access the settings page. Only administrators can manage organization settings.</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

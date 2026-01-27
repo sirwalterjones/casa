@@ -387,110 +387,105 @@ export default function VolunteerList() {
               </h2>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-fintech-border-subtle">
-                <thead className="bg-gray-50 dark:bg-fintech-bg-tertiary">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Volunteer
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Background Check
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Training
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Cases
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Last Contact
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-fintech-text-secondary uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-fintech-bg-secondary divide-y divide-gray-200 dark:divide-fintech-border-subtle">
-                  {filteredVolunteers.map((volunteer) => (
-                    <tr key={volunteer.id} className="hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-fintech-bg-tertiary flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-700 dark:text-fintech-accent-blue">
-                                {volunteer.first_name[0]}{volunteer.last_name[0]}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
-                              {volunteer.first_name} {volunteer.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-fintech-text-secondary">{volunteer.email}</div>
-                            <div className="text-sm text-gray-500 dark:text-fintech-text-secondary">{volunteer.phone}</div>
+            <div className="p-4">
+              <div className="space-y-4">
+                {filteredVolunteers.map((volunteer) => (
+                  <div key={volunteer.id} className="border border-gray-200 dark:border-fintech-border-subtle rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary">
+                    {/* Volunteer Info Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3">
+                      <div className="flex items-center mb-2 sm:mb-0">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-fintech-bg-tertiary flex items-center justify-center">
+                            <span className="text-sm font-medium text-blue-700 dark:text-fintech-accent-blue">
+                              {volunteer.first_name[0]}{volunteer.last_name[0]}
+                            </span>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(volunteer.status)}`}>
-                          {volunteer.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getBackgroundCheckColor(volunteer.background_check_status)}`}>
+                        <div className="ml-3">
+                          <div className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">
+                            {volunteer.first_name} {volunteer.last_name}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-fintech-text-secondary">{volunteer.email}</div>
+                          <div className="text-sm text-gray-500 dark:text-fintech-text-secondary">{volunteer.phone}</div>
+                        </div>
+                      </div>
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full self-start ${getStatusColor(volunteer.status)}`}>
+                        {volunteer.status}
+                      </span>
+                    </div>
+
+                    {/* Status Badges Row */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex items-center">
+                        <span className="text-xs text-gray-500 mr-1">Background:</span>
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${getBackgroundCheckColor(volunteer.background_check_status)}`}>
                           {volunteer.background_check_status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTrainingColor(volunteer.training_status)}`}>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs text-gray-500 mr-1">Training:</span>
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${getTrainingColor(volunteer.training_status)}`}>
                           {volunteer.training_status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-fintech-text-primary">
-                        {volunteer.cases_assigned}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-fintech-text-secondary">
-                        {volunteer.last_contact}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => openVolunteerModal(volunteer)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            View
-                          </button>
-                          {volunteer.status === 'active' ? (
-                            <button
-                              onClick={() => handleVolunteerAction(volunteer.id, 'deactivate')}
-                              className="text-yellow-600 hover:text-yellow-900"
-                            >
-                              Deactivate
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleVolunteerAction(volunteer.id, 'activate')}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              Activate
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteVolunteer(volunteer.id, `${volunteer.first_name} ${volunteer.last_name}`)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+
+                    {/* Details Row */}
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-fintech-text-secondary mb-4">
+                      <div>
+                        <span className="font-medium">Cases:</span> {volunteer.cases_assigned}
+                      </div>
+                      <div>
+                        <span className="font-medium">Last Contact:</span> {volunteer.last_contact}
+                      </div>
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => openVolunteerModal(volunteer)}
+                        className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View
+                      </button>
+                      {volunteer.status === 'active' ? (
+                        <button
+                          onClick={() => handleVolunteerAction(volunteer.id, 'deactivate')}
+                          className="inline-flex items-center px-3 py-1.5 border border-yellow-300 text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                          Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleVolunteerAction(volunteer.id, 'activate')}
+                          className="inline-flex items-center px-3 py-1.5 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Activate
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteVolunteer(volunteer.id, `${volunteer.first_name} ${volunteer.last_name}`)}
+                        className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
