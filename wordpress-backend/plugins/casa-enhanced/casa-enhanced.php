@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CASA Enhanced User Management
  * Description: Complete CASA case management with WordPress user integration
- * Version: 2.0.56
+ * Version: 2.0.57
  * Author: CASA System
  *
  * Last Updated: 2025-08-07 - Fixed Formidable Forms integration
@@ -758,7 +758,14 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_enhanced_login_with_2fa',
         'permission_callback' => '__return_true'
     ));
-    
+
+    // Set password endpoint (for new users from invitation)
+    register_rest_route('casa/v1', '/auth/set-password', array(
+        'methods' => 'POST',
+        'callback' => 'casa_set_password_from_invitation',
+        'permission_callback' => '__return_true'
+    ));
+
     // User profile endpoint
     register_rest_route('casa/v1', '/user/profile', array(
         'methods' => 'GET',
@@ -4134,11 +4141,43 @@ function casa_invite_user($request) {
     
     // Send invitation email if requested
     if ($params['send_invitation']) {
-        // In a real implementation, you'd send an email here
-        // For now, just log it
-        error_log("Invitation email would be sent to: " . $params['email']);
+        // Generate password reset key for the new user
+        $reset_key = get_password_reset_key(get_user_by('ID', $user_id));
+
+        if (!is_wp_error($reset_key)) {
+            // Build the password set URL
+            $reset_url = network_site_url("wp-login.php?action=rp&key=$reset_key&login=" . rawurlencode($username), 'login');
+
+            // Or use our custom frontend URL
+            $frontend_url = 'https://casa.joneswebdesigns.com';
+            $set_password_url = $frontend_url . '/auth/set-password?key=' . $reset_key . '&login=' . rawurlencode($username);
+
+            // Get organization name
+            global $wpdb;
+            $org_table = $wpdb->prefix . 'casa_organizations';
+            $org = $wpdb->get_row($wpdb->prepare(
+                "SELECT name FROM $org_table WHERE id = %d",
+                $organization_id
+            ));
+            $org_name = $org ? $org->name : 'CASA';
+
+            // Send professional invitation email
+            $email_sent = casa_send_invitation_email(
+                $params['email'],
+                $params['first_name'],
+                $params['last_name'],
+                $params['role'],
+                $org_name,
+                $set_password_url,
+                $current_user->display_name
+            );
+
+            if (!$email_sent) {
+                error_log("Failed to send invitation email to: " . $params['email']);
+            }
+        }
     }
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
@@ -4148,10 +4187,270 @@ function casa_invite_user($request) {
     ), 200);
 }
 
+/**
+ * Send professional invitation email to new user
+ */
+function casa_send_invitation_email($email, $first_name, $last_name, $role, $org_name, $set_password_url, $invited_by) {
+    $subject = "You've been invited to join $org_name on CASA";
+
+    $html_body = casa_get_email_template('invitation', array(
+        'first_name' => $first_name,
+        'last_name' => $last_name,
+        'role' => ucfirst($role),
+        'org_name' => $org_name,
+        'set_password_url' => $set_password_url,
+        'invited_by' => $invited_by,
+        'year' => date('Y')
+    ));
+
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: CASA Case Management <noreply@casa.joneswebdesigns.com>'
+    );
+
+    return wp_mail($email, $subject, $html_body, $headers);
+}
+
+/**
+ * Send password reset email
+ */
+function casa_send_password_reset_email($email, $first_name, $reset_url, $org_name) {
+    $subject = "Password Reset Request - $org_name CASA";
+
+    $html_body = casa_get_email_template('password_reset', array(
+        'first_name' => $first_name,
+        'reset_url' => $reset_url,
+        'org_name' => $org_name,
+        'year' => date('Y')
+    ));
+
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: CASA Case Management <noreply@casa.joneswebdesigns.com>'
+    );
+
+    return wp_mail($email, $subject, $html_body, $headers);
+}
+
+/**
+ * Get professional email template
+ */
+function casa_get_email_template($template_name, $vars) {
+    // Base styles
+    $styles = '
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .email-wrapper { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 30px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; }
+        .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #1f2937; font-size: 22px; margin: 0 0 20px; }
+        .content p { color: #4b5563; margin: 0 0 15px; }
+        .button { display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+        .button:hover { opacity: 0.9; }
+        .info-box { background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 20px 0; }
+        .info-box p { margin: 5px 0; color: #374151; }
+        .info-box strong { color: #1f2937; }
+        .footer { background-color: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer p { color: #6b7280; font-size: 13px; margin: 5px 0; }
+        .footer a { color: #7c3aed; text-decoration: none; }
+        .divider { height: 1px; background-color: #e5e7eb; margin: 25px 0; }
+    ';
+
+    $templates = array(
+        'invitation' => '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>CASA Invitation</title>
+                <style>' . $styles . '</style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="email-wrapper">
+                        <div class="header">
+                            <h1>CASA</h1>
+                            <p>Court Appointed Special Advocates</p>
+                        </div>
+                        <div class="content">
+                            <h2>Welcome to ' . esc_html($vars['org_name']) . '!</h2>
+                            <p>Hello ' . esc_html($vars['first_name']) . ',</p>
+                            <p>You have been invited by <strong>' . esc_html($vars['invited_by']) . '</strong> to join the CASA Case Management System as a <strong>' . esc_html($vars['role']) . '</strong>.</p>
+
+                            <div class="info-box">
+                                <p><strong>Organization:</strong> ' . esc_html($vars['org_name']) . '</p>
+                                <p><strong>Your Role:</strong> ' . esc_html($vars['role']) . '</p>
+                            </div>
+
+                            <p>To get started, please set up your password by clicking the button below:</p>
+
+                            <p style="text-align: center;">
+                                <a href="' . esc_url($vars['set_password_url']) . '" class="button">Set Your Password</a>
+                            </p>
+
+                            <p style="font-size: 13px; color: #6b7280;">If the button above does not work, copy and paste this link into your browser:</p>
+                            <p style="font-size: 12px; word-break: break-all; color: #7c3aed;">' . esc_url($vars['set_password_url']) . '</p>
+
+                            <div class="divider"></div>
+
+                            <p style="font-size: 13px; color: #6b7280;">This invitation link will expire in 24 hours. If you did not expect this invitation, please ignore this email.</p>
+                        </div>
+                        <div class="footer">
+                            <p><strong>' . esc_html($vars['org_name']) . '</strong></p>
+                            <p>CASA Case Management System</p>
+                            <p>&copy; ' . esc_html($vars['year']) . ' All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        ',
+        'password_reset' => '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Password Reset</title>
+                <style>' . $styles . '</style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="email-wrapper">
+                        <div class="header">
+                            <h1>CASA</h1>
+                            <p>Court Appointed Special Advocates</p>
+                        </div>
+                        <div class="content">
+                            <h2>Password Reset Request</h2>
+                            <p>Hello ' . esc_html($vars['first_name']) . ',</p>
+                            <p>We received a request to reset your password for your CASA account at <strong>' . esc_html($vars['org_name']) . '</strong>.</p>
+
+                            <p>Click the button below to reset your password:</p>
+
+                            <p style="text-align: center;">
+                                <a href="' . esc_url($vars['reset_url']) . '" class="button">Reset Password</a>
+                            </p>
+
+                            <p style="font-size: 13px; color: #6b7280;">If the button above does not work, copy and paste this link into your browser:</p>
+                            <p style="font-size: 12px; word-break: break-all; color: #7c3aed;">' . esc_url($vars['reset_url']) . '</p>
+
+                            <div class="divider"></div>
+
+                            <p style="font-size: 13px; color: #6b7280;">This link will expire in 24 hours. If you did not request a password reset, please ignore this email or contact your administrator if you have concerns.</p>
+                        </div>
+                        <div class="footer">
+                            <p><strong>' . esc_html($vars['org_name']) . '</strong></p>
+                            <p>CASA Case Management System</p>
+                            <p>&copy; ' . esc_html($vars['year']) . ' All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        ',
+        'notification' => '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>CASA Notification</title>
+                <style>' . $styles . '</style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="email-wrapper">
+                        <div class="header">
+                            <h1>CASA</h1>
+                            <p>Court Appointed Special Advocates</p>
+                        </div>
+                        <div class="content">
+                            <h2>' . esc_html($vars['title']) . '</h2>
+                            <p>Hello ' . esc_html($vars['first_name']) . ',</p>
+                            <p>' . wp_kses_post($vars['message']) . '</p>
+
+                            ' . (isset($vars['action_url']) ? '
+                            <p style="text-align: center;">
+                                <a href="' . esc_url($vars['action_url']) . '" class="button">' . esc_html($vars['action_text'] ?? 'View Details') . '</a>
+                            </p>
+                            ' : '') . '
+
+                        </div>
+                        <div class="footer">
+                            <p><strong>' . esc_html($vars['org_name']) . '</strong></p>
+                            <p>CASA Case Management System</p>
+                            <p>&copy; ' . esc_html($vars['year']) . ' All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        '
+    );
+
+    return isset($templates[$template_name]) ? $templates[$template_name] : '';
+}
+
+/**
+ * Set password from invitation link
+ */
+function casa_set_password_from_invitation($request) {
+    $params = $request->get_json_params();
+
+    $key = sanitize_text_field($params['key'] ?? '');
+    $login = sanitize_user($params['login'] ?? '');
+    $password = $params['password'] ?? '';
+
+    if (empty($key) || empty($login) || empty($password)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Missing required parameters'
+        ), 400);
+    }
+
+    // Validate password strength
+    if (strlen($password) < 8) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Password must be at least 8 characters'
+        ), 400);
+    }
+
+    // Get user by login
+    $user = get_user_by('login', $login);
+    if (!$user) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Invalid user'
+        ), 400);
+    }
+
+    // Verify the reset key
+    $check = check_password_reset_key($key, $login);
+    if (is_wp_error($check)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Invalid or expired reset key. Please request a new invitation.'
+        ), 400);
+    }
+
+    // Set the new password
+    reset_password($user, $password);
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Password set successfully'
+    ), 200);
+}
+
 // Organization update handler
 function casa_update_organization($request) {
     $params = $request->get_json_params();
-    
+
     // Get current user and organization for tenant isolation
     $current_user = wp_get_current_user();
     $organization_id = casa_get_user_organization_id($current_user->ID);
