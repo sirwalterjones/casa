@@ -98,6 +98,77 @@ module.exports = {
             green: 'rgba(16, 185, 129, 0.15)',
           },
         },
+        // Theme 1 Colors (Workspace aesthetic with purple accent)
+        theme1: {
+          bg: {
+            primary: '#f8f8f8',
+            secondary: '#ffffff',
+            tertiary: '#f0f0f0',
+            nav: '#3f0e40',
+          },
+          text: {
+            primary: '#1d1c1d',
+            secondary: '#616061',
+            tertiary: '#868686',
+          },
+          accent: {
+            primary: '#611f69',
+            secondary: '#1264a3',
+            purple: '#9b59b6',
+            cyan: '#36c5f0',
+            green: '#2eb67d',
+            pink: '#e01e5a',
+            yellow: '#ecb22e',
+          },
+          dark: {
+            bg: {
+              primary: '#1a1d21',
+              secondary: '#222529',
+              tertiary: '#2c2d31',
+              nav: '#19171d',
+            },
+            text: {
+              primary: '#d1d2d3',
+              secondary: '#ababad',
+            },
+          },
+        },
+        // Theme 2 Colors (Project management aesthetic with blue accent)
+        theme2: {
+          bg: {
+            primary: '#f6f7fb',
+            secondary: '#ffffff',
+            tertiary: '#edeef2',
+            nav: '#292f4c',
+          },
+          text: {
+            primary: '#323338',
+            secondary: '#676879',
+            tertiary: '#9699a6',
+          },
+          accent: {
+            primary: '#0073ea',
+            secondary: '#5034ff',
+            green: '#00c875',
+            red: '#e2445c',
+            orange: '#fdab3d',
+            purple: '#a25ddc',
+            pink: '#ff158a',
+            blue: '#579bfc',
+          },
+          dark: {
+            bg: {
+              primary: '#181b34',
+              secondary: '#1c1f3a',
+              tertiary: '#242847',
+              nav: '#12142b',
+            },
+            text: {
+              primary: '#f5f6f8',
+              secondary: '#c5c7d0',
+            },
+          },
+        },
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

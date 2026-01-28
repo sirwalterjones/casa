@@ -70,7 +70,7 @@
     --transition-slow: 300ms;
   }
 
-  /* Dark Fintech Theme */
+  /* Dark Fintech Theme (Default Dark) */
   .dark {
     /* Deep charcoal backgrounds (not pure black for premium feel) */
     --color-bg-primary: #0f1419;
@@ -118,6 +118,238 @@
     /* Component-specific */
     --nav-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  /* ==========================================================================
+     THEME 1 - Clean workspace aesthetic with purple accent
+     ========================================================================== */
+
+  /* Theme 1 Light */
+  [data-theme="theme-1"] {
+    /* Background colors - clean whites and soft grays */
+    --color-bg-primary: #f8f8f8;
+    --color-bg-secondary: #ffffff;
+    --color-bg-tertiary: #f0f0f0;
+    --color-bg-elevated: #ffffff;
+    --color-bg-nav: #3f0e40;
+
+    /* Text colors */
+    --color-text-primary: #1d1c1d;
+    --color-text-secondary: #616061;
+    --color-text-tertiary: #868686;
+    --color-text-inverse: #ffffff;
+
+    /* Accent colors - purple/aubergine tones */
+    --color-accent-primary: #611f69;
+    --color-accent-primary-hover: #4a154b;
+    --color-accent-secondary: #1264a3;
+
+    /* Semantic colors */
+    --color-success: #007a5a;
+    --color-success-bg: #e8f5e9;
+    --color-success-text: #007a5a;
+    --color-danger: #e01e5a;
+    --color-danger-bg: #fce4ec;
+    --color-danger-text: #e01e5a;
+    --color-warning: #ecb22e;
+    --color-warning-bg: #fff8e1;
+    --color-warning-text: #b8860b;
+    --color-info: #1264a3;
+    --color-info-bg: #e3f2fd;
+    --color-info-text: #1264a3;
+
+    /* Border colors */
+    --color-border-subtle: #f0f0f0;
+    --color-border-default: #dddddd;
+    --color-border-strong: #bbbbbb;
+
+    /* Shadow colors */
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --shadow-sm: 0 1px 2px 0 var(--shadow-color);
+    --shadow-md: 0 4px 8px -2px var(--shadow-color);
+    --shadow-lg: 0 12px 24px -4px var(--shadow-color);
+
+    /* Component-specific */
+    --nav-shadow: none;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    /* Border radius - slightly rounder */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+  }
+
+  /* Theme 1 Dark */
+  [data-theme="theme-1"].dark,
+  .dark[data-theme="theme-1"] {
+    /* Deep purple-gray backgrounds */
+    --color-bg-primary: #1a1d21;
+    --color-bg-secondary: #222529;
+    --color-bg-tertiary: #2c2d31;
+    --color-bg-elevated: #36373d;
+    --color-bg-nav: #19171d;
+
+    /* Text colors */
+    --color-text-primary: #d1d2d3;
+    --color-text-secondary: #ababad;
+    --color-text-tertiary: #797a7c;
+    --color-text-inverse: #1a1d21;
+
+    /* Accent colors - brighter purple for dark mode */
+    --color-accent-primary: #9b59b6;
+    --color-accent-primary-hover: #8e44ad;
+    --color-accent-secondary: #36c5f0;
+
+    /* Semantic colors - adjusted for dark backgrounds */
+    --color-success: #2eb67d;
+    --color-success-bg: rgba(46, 182, 125, 0.15);
+    --color-success-text: #2eb67d;
+    --color-danger: #e01e5a;
+    --color-danger-bg: rgba(224, 30, 90, 0.15);
+    --color-danger-text: #e85d8a;
+    --color-warning: #ecb22e;
+    --color-warning-bg: rgba(236, 178, 46, 0.15);
+    --color-warning-text: #ecb22e;
+    --color-info: #36c5f0;
+    --color-info-bg: rgba(54, 197, 240, 0.15);
+    --color-info-text: #36c5f0;
+
+    /* Border colors */
+    --color-border-subtle: #2c2d31;
+    --color-border-default: #3c3d42;
+    --color-border-strong: #4c4d52;
+
+    /* Shadow colors */
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    /* Component-specific */
+    --nav-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* ==========================================================================
+     THEME 2 - Vibrant project management aesthetic with blue accent
+     ========================================================================== */
+
+  /* Theme 2 Light */
+  [data-theme="theme-2"] {
+    /* Background colors - crisp white with soft grays */
+    --color-bg-primary: #f6f7fb;
+    --color-bg-secondary: #ffffff;
+    --color-bg-tertiary: #edeef2;
+    --color-bg-elevated: #ffffff;
+    --color-bg-nav: #292f4c;
+
+    /* Text colors */
+    --color-text-primary: #323338;
+    --color-text-secondary: #676879;
+    --color-text-tertiary: #9699a6;
+    --color-text-inverse: #ffffff;
+
+    /* Accent colors - vibrant blue */
+    --color-accent-primary: #0073ea;
+    --color-accent-primary-hover: #0060c2;
+    --color-accent-secondary: #5034ff;
+
+    /* Semantic colors - Monday.com-style vibrant palette */
+    --color-success: #00c875;
+    --color-success-bg: #e6fff3;
+    --color-success-text: #00a65a;
+    --color-danger: #e2445c;
+    --color-danger-bg: #ffebee;
+    --color-danger-text: #d32f2f;
+    --color-warning: #fdab3d;
+    --color-warning-bg: #fff8e6;
+    --color-warning-text: #e09100;
+    --color-info: #0073ea;
+    --color-info-bg: #e6f4ff;
+    --color-info-text: #0060c2;
+
+    /* Additional status colors for this theme */
+    --color-purple: #a25ddc;
+    --color-purple-bg: #f3e8ff;
+    --color-pink: #ff158a;
+    --color-pink-bg: #ffe6f2;
+
+    /* Border colors */
+    --color-border-subtle: #edeef2;
+    --color-border-default: #d0d4e4;
+    --color-border-strong: #c3c6d4;
+
+    /* Shadow colors */
+    --shadow-color: rgba(0, 0, 0, 0.06);
+    --shadow-sm: 0 1px 3px var(--shadow-color);
+    --shadow-md: 0 4px 8px var(--shadow-color);
+    --shadow-lg: 0 8px 16px var(--shadow-color);
+
+    /* Component-specific */
+    --nav-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+
+    /* Border radius - modern rounded */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  /* Theme 2 Dark */
+  [data-theme="theme-2"].dark,
+  .dark[data-theme="theme-2"] {
+    /* Deep blue-gray backgrounds */
+    --color-bg-primary: #181b34;
+    --color-bg-secondary: #1c1f3a;
+    --color-bg-tertiary: #242847;
+    --color-bg-elevated: #2c3052;
+    --color-bg-nav: #12142b;
+
+    /* Text colors */
+    --color-text-primary: #f5f6f8;
+    --color-text-secondary: #c5c7d0;
+    --color-text-tertiary: #9699a6;
+    --color-text-inverse: #181b34;
+
+    /* Accent colors - bright blue for dark mode */
+    --color-accent-primary: #579bfc;
+    --color-accent-primary-hover: #3a89fc;
+    --color-accent-secondary: #7c4dff;
+
+    /* Semantic colors - vibrant on dark backgrounds */
+    --color-success: #00d68f;
+    --color-success-bg: rgba(0, 214, 143, 0.15);
+    --color-success-text: #00d68f;
+    --color-danger: #ff5c72;
+    --color-danger-bg: rgba(255, 92, 114, 0.15);
+    --color-danger-text: #ff5c72;
+    --color-warning: #ffcb00;
+    --color-warning-bg: rgba(255, 203, 0, 0.15);
+    --color-warning-text: #ffcb00;
+    --color-info: #579bfc;
+    --color-info-bg: rgba(87, 155, 252, 0.15);
+    --color-info-text: #579bfc;
+
+    /* Additional status colors for this theme */
+    --color-purple: #bb6bd9;
+    --color-purple-bg: rgba(187, 107, 217, 0.15);
+    --color-pink: #ff5dac;
+    --color-pink-bg: rgba(255, 93, 172, 0.15);
+
+    /* Border colors */
+    --color-border-subtle: #242847;
+    --color-border-default: #363b5e;
+    --color-border-strong: #484d73;
+
+    /* Shadow colors */
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+    /* Component-specific */
+    --nav-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   html {
@@ -436,6 +668,175 @@
 
   .dark .avatar-btn {
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  /* ==========================================================================
+     THEME 1 SPECIFIC COMPONENT STYLES
+     ========================================================================== */
+
+  /* Theme 1 - Navigation with workspace feel */
+  [data-theme="theme-1"] .nav-bar {
+    background-color: var(--color-bg-nav);
+    border-bottom: none;
+  }
+
+  [data-theme="theme-1"] .nav-bar .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  [data-theme="theme-1"] .nav-bar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  [data-theme="theme-1"] .nav-bar .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+
+  /* Theme 1 - Buttons with purple accent */
+  [data-theme="theme-1"] .btn-primary {
+    background-color: var(--color-accent-primary);
+    font-weight: 600;
+  }
+
+  [data-theme="theme-1"] .btn-primary:hover {
+    background-color: var(--color-accent-primary-hover);
+  }
+
+  [data-theme="theme-1"].dark .btn-primary,
+  .dark[data-theme="theme-1"] .btn-primary {
+    background: var(--color-accent-primary);
+    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+  }
+
+  [data-theme="theme-1"].dark .btn-primary:hover,
+  .dark[data-theme="theme-1"] .btn-primary:hover {
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4);
+  }
+
+  /* Theme 1 - Cards with minimal shadows */
+  [data-theme="theme-1"] .card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border-default);
+  }
+
+  [data-theme="theme-1"].dark .card,
+  .dark[data-theme="theme-1"] .card {
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border-subtle);
+  }
+
+  /* Theme 1 - Sidebar with workspace feel */
+  [data-theme="theme-1"] .sidebar-nav a.active {
+    background-color: rgba(97, 31, 105, 0.1);
+    color: var(--color-accent-primary);
+    border-right: 3px solid var(--color-accent-primary);
+  }
+
+  [data-theme="theme-1"].dark .sidebar-nav a.active,
+  .dark[data-theme="theme-1"] .sidebar-nav a.active {
+    background-color: rgba(155, 89, 182, 0.15);
+    color: var(--color-accent-primary);
+  }
+
+  /* ==========================================================================
+     THEME 2 SPECIFIC COMPONENT STYLES
+     ========================================================================== */
+
+  /* Theme 2 - Navigation with project board feel */
+  [data-theme="theme-2"] .nav-bar {
+    background-color: var(--color-bg-nav);
+    border-bottom: none;
+  }
+
+  [data-theme="theme-2"] .nav-bar .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  [data-theme="theme-2"] .nav-bar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  [data-theme="theme-2"] .nav-bar .nav-link.active {
+    background-color: var(--color-accent-primary);
+    color: #ffffff;
+  }
+
+  /* Theme 2 - Buttons with vibrant blue */
+  [data-theme="theme-2"] .btn-primary {
+    background-color: var(--color-accent-primary);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+  }
+
+  [data-theme="theme-2"] .btn-primary:hover {
+    background-color: var(--color-accent-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  [data-theme="theme-2"].dark .btn-primary,
+  .dark[data-theme="theme-2"] .btn-primary {
+    background: var(--color-accent-primary);
+    box-shadow: 0 4px 16px rgba(87, 155, 252, 0.3);
+  }
+
+  [data-theme="theme-2"].dark .btn-primary:hover,
+  .dark[data-theme="theme-2"] .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(87, 155, 252, 0.4);
+  }
+
+  /* Theme 2 - Cards with subtle elevation */
+  [data-theme="theme-2"] .card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  [data-theme="theme-2"] .card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-border-default);
+  }
+
+  [data-theme="theme-2"].dark .card,
+  .dark[data-theme="theme-2"] .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%),
+                var(--color-bg-secondary);
+    border-color: var(--color-border-subtle);
+  }
+
+  /* Theme 2 - Colorful status badges */
+  [data-theme="theme-2"] .badge-purple {
+    background-color: var(--color-purple-bg);
+    color: var(--color-purple);
+  }
+
+  [data-theme="theme-2"] .badge-pink {
+    background-color: var(--color-pink-bg);
+    color: var(--color-pink);
+  }
+
+  /* Theme 2 - Sidebar with project feel */
+  [data-theme="theme-2"] .sidebar-nav a.active {
+    background-color: rgba(0, 115, 234, 0.1);
+    color: var(--color-accent-primary);
+    border-right: 3px solid var(--color-accent-primary);
+  }
+
+  [data-theme="theme-2"].dark .sidebar-nav a.active,
+  .dark[data-theme="theme-2"] .sidebar-nav a.active {
+    background-color: rgba(87, 155, 252, 0.15);
+    color: var(--color-accent-primary);
+  }
+
+  /* Theme 2 - Table rows with subtle color accents */
+  [data-theme="theme-2"] .table tbody tr:hover {
+    background-color: rgba(0, 115, 234, 0.04);
+  }
+
+  [data-theme="theme-2"].dark .table tbody tr:hover,
+  .dark[data-theme="theme-2"] .table tbody tr:hover {
+    background-color: rgba(87, 155, 252, 0.08);
   }
 
   /* Dropdown Menus */
