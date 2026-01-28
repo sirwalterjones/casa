@@ -100,7 +100,9 @@ const ComprehensiveReports: React.FC = () => {
         throw new Error(casesResponse.error || 'Failed to fetch cases');
       }
 
-      const cases = casesResponse.data.cases || [];
+      // Handle both direct response and wrapped response formats
+      const responseData = casesResponse.data as any;
+      const cases = responseData.data?.cases || responseData.cases || [];
 
       // Calculate statistics from real data
       const activeCases = cases.filter((c: any) => c.status === 'active').length;
