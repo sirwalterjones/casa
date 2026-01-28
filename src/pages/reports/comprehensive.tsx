@@ -143,7 +143,7 @@ const ComprehensiveReports: React.FC = () => {
       let totalVolunteers = volunteerMap.size;
       let activeVolunteers = volunteerMap.size;
       try {
-        const volunteersResponse = await apiClient.get('casa/v1/volunteers');
+        const volunteersResponse = await apiClient.get('/wp-json/casa/v1/volunteers');
         if (volunteersResponse.success && volunteersResponse.data) {
           const volunteers = volunteersResponse.data.volunteers || volunteersResponse.data || [];
           totalVolunteers = volunteers.length;

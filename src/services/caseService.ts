@@ -19,7 +19,7 @@ export class CaseService {
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.limit) params.append('per_page', filters.limit.toString());
 
-      const response = await apiClient.get(`casa/v1/cases?${params.toString()}`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases?${params.toString()}`);
       return response as ApiResponse<CasesAPIResponse>;
     } catch (error: any) {
       return {
@@ -32,7 +32,7 @@ export class CaseService {
   // Get single case by ID
   async getCase(caseId: string): Promise<ApiResponse<CasaCase>> {
     try {
-      const response = await apiClient.get(`casa/v1/cases/${caseId}`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases/${caseId}`);
       return response as ApiResponse<CasaCase>;
     } catch (error: any) {
       return {
@@ -91,7 +91,7 @@ export class CaseService {
   // Update existing case
   async updateCase(caseId: string, updates: Partial<CasaCase>): Promise<ApiResponse<CasaCase>> {
     try {
-      const response = await apiClient.put(`casa/v1/cases/${caseId}`, updates);
+      const response = await apiClient.put(`/wp-json/casa/v1/cases/${caseId}`, updates);
       return response as ApiResponse<CasaCase>;
     } catch (error: any) {
       return {
@@ -104,7 +104,7 @@ export class CaseService {
   // Delete case
   async deleteCase(caseId: string): Promise<ApiResponse<{ message: string }>> {
     try {
-      const response = await apiClient.delete(`casa/v1/cases/${caseId}`);
+      const response = await apiClient.delete(`/wp-json/casa/v1/cases/${caseId}`);
       return response as ApiResponse<{ message: string }>;
     } catch (error: any) {
       return {
@@ -117,7 +117,7 @@ export class CaseService {
   // Assign volunteer to case
   async assignVolunteer(caseId: string, volunteerId: string): Promise<ApiResponse<CasaCase>> {
     try {
-      const response = await apiClient.post(`casa/v1/cases/${caseId}/assign-volunteer`, {
+      const response = await apiClient.post(`/wp-json/casa/v1/cases/${caseId}/assign-volunteer`, {
         volunteer_id: volunteerId,
         assignment_date: new Date().toISOString().split('T')[0],
       });
@@ -137,7 +137,7 @@ export class CaseService {
     notes?: string
   ): Promise<ApiResponse<CasaCase>> {
     try {
-      const response = await apiClient.put(`casa/v1/cases/${caseId}/status`, {
+      const response = await apiClient.put(`/wp-json/casa/v1/cases/${caseId}/status`, {
         status,
         status_notes: notes,
         status_date: new Date().toISOString(),
@@ -163,7 +163,7 @@ export class CaseService {
         per_page: limit.toString(),
       });
 
-      const response = await apiClient.get(`casa/v1/cases/${caseId}/contact-logs?${params.toString()}`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases/${caseId}/contact-logs?${params.toString()}`);
       return response as ApiResponse<ContactLogsAPIResponse>;
     } catch (error: any) {
       return {
@@ -209,7 +209,7 @@ export class CaseService {
         per_page: limit.toString(),
       });
 
-      const response = await apiClient.get(`casa/v1/cases/${caseId}/documents?${params.toString()}`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases/${caseId}/documents?${params.toString()}`);
       return response as ApiResponse<DocumentsAPIResponse>;
     } catch (error: any) {
       return {
@@ -252,7 +252,7 @@ export class CaseService {
   // Get case timeline/history
   async getCaseTimeline(caseId: string): Promise<ApiResponse<any[]>> {
     try {
-      const response = await apiClient.get(`casa/v1/cases/${caseId}/timeline`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases/${caseId}/timeline`);
       return response as ApiResponse<any[]>;
     } catch (error: any) {
       return {
@@ -274,7 +274,7 @@ export class CaseService {
         ...(dateRange && { start_date: dateRange.start, end_date: dateRange.end }),
       };
 
-      const response = await apiClient.post(`casa/v1/cases/${caseId}/reports`, params);
+      const response = await apiClient.post(`/wp-json/casa/v1/cases/${caseId}/reports`, params);
       return response as ApiResponse<{ reportUrl: string }>;
     } catch (error: any) {
       return {
@@ -292,7 +292,7 @@ export class CaseService {
     notes?: string
   ): Promise<ApiResponse<CasaCase>> {
     try {
-      const response = await apiClient.post(`casa/v1/cases/${caseId}/close`, {
+      const response = await apiClient.post(`/wp-json/casa/v1/cases/${caseId}/close`, {
         closure_reason: closureReason,
         outcome,
         closure_notes: notes,
@@ -315,7 +315,7 @@ export class CaseService {
     reason: string
   ): Promise<ApiResponse<CasaCase>> {
     try {
-      const response = await apiClient.post(`casa/v1/cases/${caseId}/transfer`, {
+      const response = await apiClient.post(`/wp-json/casa/v1/cases/${caseId}/transfer`, {
         from_volunteer_id: fromVolunteerId,
         to_volunteer_id: toVolunteerId,
         transfer_reason: reason,
@@ -341,7 +341,7 @@ export class CaseService {
         include_inactive: includeInactive.toString(),
       });
 
-      const response = await apiClient.get(`casa/v1/cases/by-volunteer?${params.toString()}`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases/by-volunteer?${params.toString()}`);
       return response as ApiResponse<CasaCase[]>;
     } catch (error: any) {
       return {
@@ -368,7 +368,7 @@ export class CaseService {
         ...(filters?.priority && { priority: filters.priority }),
       });
 
-      const response = await apiClient.get(`casa/v1/cases/search?${params.toString()}`);
+      const response = await apiClient.get(`/wp-json/casa/v1/cases/search?${params.toString()}`);
       return response as ApiResponse<CasaCase[]>;
     } catch (error: any) {
       return {
