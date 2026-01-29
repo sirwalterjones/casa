@@ -2384,17 +2384,16 @@ function casa_get_cases($request) {
     }
     
     // Get cases from database table with volunteer names
-    $query = "SELECT c.*, 
-                     CASE 
-                         WHEN c.assigned_volunteer_id IS NOT NULL 
-                         THEN CONCAT(um_first.meta_value, ' ', um_last.meta_value)
-                         ELSE NULL 
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+    $query = "SELECT c.*,
+                     CASE
+                         WHEN c.assigned_volunteer_id IS NOT NULL
+                         THEN CONCAT(v.first_name, ' ', v.last_name)
+                         ELSE NULL
                      END as assigned_volunteer_name
               FROM $cases_table c
-              LEFT JOIN {$wpdb->users} u ON c.assigned_volunteer_id = u.ID
-              LEFT JOIN {$wpdb->usermeta} um_first ON (u.ID = um_first.user_id AND um_first.meta_key = 'first_name')
-              LEFT JOIN {$wpdb->usermeta} um_last ON (u.ID = um_last.user_id AND um_last.meta_key = 'last_name')
-              $where_clause 
+              LEFT JOIN $volunteers_table v ON c.assigned_volunteer_id = v.id
+              $where_clause
               ORDER BY c.updated_at DESC";
     $cases = $wpdb->get_results($wpdb->prepare($query, ...$params), ARRAY_A);
     
@@ -2497,18 +2496,17 @@ function casa_get_case_by_id($request) {
     }
     
     // Get the specific case with volunteer name
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
     $case = $wpdb->get_row($wpdb->prepare(
-        "SELECT c.*, 
-                CASE 
-                    WHEN c.assigned_volunteer_id IS NOT NULL 
-                    THEN CONCAT(um_first.meta_value, ' ', um_last.meta_value)
-                    ELSE NULL 
+        "SELECT c.*,
+                CASE
+                    WHEN c.assigned_volunteer_id IS NOT NULL
+                    THEN CONCAT(v.first_name, ' ', v.last_name)
+                    ELSE NULL
                 END as assigned_volunteer_name
          FROM $cases_table c
-         LEFT JOIN {$wpdb->users} u ON c.assigned_volunteer_id = u.ID
-         LEFT JOIN {$wpdb->usermeta} um_first ON (u.ID = um_first.user_id AND um_first.meta_key = 'first_name')
-         LEFT JOIN {$wpdb->usermeta} um_last ON (u.ID = um_last.user_id AND um_last.meta_key = 'last_name')
-         WHERE c.id = %d AND c.organization_id = %d 
+         LEFT JOIN $volunteers_table v ON c.assigned_volunteer_id = v.id
+         WHERE c.id = %d AND c.organization_id = %d
          LIMIT 1",
         $case_id,
         $user_org

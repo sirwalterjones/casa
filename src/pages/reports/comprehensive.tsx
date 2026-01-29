@@ -112,8 +112,9 @@ const ComprehensiveReports: React.FC = () => {
       // Get unique volunteers with cases assigned
       const volunteerMap = new Map<string, number>();
       cases.forEach((c: any) => {
-        if (c.assigned_volunteer && c.assigned_volunteer !== 'Unassigned') {
-          volunteerMap.set(c.assigned_volunteer, (volunteerMap.get(c.assigned_volunteer) || 0) + 1);
+        const volunteerName = c.assigned_volunteer_name || c.assigned_volunteer;
+        if (volunteerName && volunteerName !== 'Unassigned' && c.assigned_volunteer_id) {
+          volunteerMap.set(volunteerName, (volunteerMap.get(volunteerName) || 0) + 1);
         }
       });
 
