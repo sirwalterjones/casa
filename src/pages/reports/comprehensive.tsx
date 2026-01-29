@@ -344,10 +344,11 @@ const ComprehensiveReports: React.FC = () => {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ status, percent }) => `${status} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="count"
+                        nameKey="status"
                       >
                         {reportData.casesByStatus.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -408,10 +409,11 @@ const ComprehensiveReports: React.FC = () => {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="count"
+                        nameKey="type"
                       >
                         {reportData.contactTypes.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -458,7 +460,9 @@ const ComprehensiveReports: React.FC = () => {
                         <td className="py-2">Active Volunteers</td>
                         <td className="text-right">{reportData.activeVolunteers}</td>
                         <td className="text-right">
-                          {((reportData.activeVolunteers / reportData.totalVolunteers) * 100).toFixed(1)}%
+                          {reportData.totalVolunteers > 0
+                            ? ((reportData.activeVolunteers / reportData.totalVolunteers) * 100).toFixed(1) + '%'
+                            : '-'}
                         </td>
                       </tr>
                       <tr>

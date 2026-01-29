@@ -2599,9 +2599,10 @@ function casa_update_case($request) {
     
     // Prepare update data
     $allowed_fields = [
-        'case_number', 'child_first_name', 'child_last_name', 'child_dob', 'case_type', 
-        'priority', 'status', 'referral_date', 'case_summary', 
-        'court_jurisdiction', 'assigned_judge', 'placement_type', 'placement_address'
+        'case_number', 'child_first_name', 'child_last_name', 'child_dob', 'case_type',
+        'priority', 'status', 'referral_date', 'case_summary',
+        'court_jurisdiction', 'assigned_judge', 'placement_type', 'placement_address',
+        'assigned_volunteer_id', 'assignment_date'
     ];
     
     $update_fields = [];
