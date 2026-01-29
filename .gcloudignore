@@ -1,5 +1,4 @@
-# Ignore wordpress backend for frontend deployment
-wordpress-backend/
+# Note: wordpress-backend is now included for full deployments
 
 # Ignore git
 .git/
