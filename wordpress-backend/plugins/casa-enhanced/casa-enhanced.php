@@ -5281,10 +5281,11 @@ function casa_send_invitation_email($email, $first_name, $last_name, $role, $org
     $response_body = wp_remote_retrieve_body($response);
 
     if ($response_code >= 200 && $response_code < 300) {
-        error_log('CASA Invitation: Email sent successfully to ' . $email);
+        error_log('CASA Invitation: Email sent successfully to ' . $email . ' - Brevo response: ' . $response_body);
         return true;
     } else {
         error_log('CASA Invitation Brevo Error: HTTP ' . $response_code . ' - ' . $response_body);
+        error_log('CASA Invitation: Sender was ' . $sender_email . ' (' . $sender_name . ')');
         return false;
     }
 }

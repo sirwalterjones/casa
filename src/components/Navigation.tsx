@@ -25,6 +25,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
     { name: 'Dashboard', href: '/dashboard', key: 'dashboard', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
     { name: 'Cases', href: '/cases', key: 'cases', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
     { name: 'Volunteers', href: '/volunteers/list', key: 'volunteers', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor'] },
+    { name: 'Pipeline', href: '/volunteers/pipeline', key: 'pipeline', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor'] },
     { name: 'Reports', href: '/reports/comprehensive', key: 'reports', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
     { name: 'Documents', href: '/documents', key: 'documents', roles: ['administrator', 'casa_administrator', 'casa_super_admin', 'supervisor', 'casa_supervisor', 'volunteer', 'casa_volunteer'] },
     { name: 'Settings', href: '/settings', key: 'settings', roles: ['administrator', 'casa_administrator', 'casa_super_admin'] },
