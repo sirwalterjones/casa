@@ -136,6 +136,31 @@ export default function Navigation({ currentPage }: NavigationProps) {
                         Settings
                       </Link>
                     )}
+                    {isAdmin && (
+                      <Link
+                        href="/admin/audit"
+                        className="dropdown-item"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Audit Log
+                      </Link>
+                    )}
+                    {isAdmin && (
+                      <Link
+                        href="/admin/feedback"
+                        className="dropdown-item"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Feedback Admin
+                      </Link>
+                    )}
+                    <Link
+                      href="/feedback"
+                      className="dropdown-item"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      My Feedback
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="dropdown-item w-full text-left"
@@ -229,6 +254,24 @@ export default function Navigation({ currentPage }: NavigationProps) {
                       Super Admin
                     </Link>
                   )}
+                  {isAdmin && (
+                    <Link
+                      href="/admin/feedback"
+                      className="block px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Feedback Admin
+                    </Link>
+                  )}
+                  <Link
+                    href="/feedback"
+                    className="block px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    My Feedback
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200"

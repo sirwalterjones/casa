@@ -532,6 +532,19 @@ function casa_api_create_organization($request) {
 
     $org_id = $wpdb->insert_id;
 
+    // Log organization (tenant) creation
+    casa_log_audit('tenant', 'create', array(
+        'organization_id' => null, // Super admin action, no org context
+        'resource_type' => 'organization',
+        'resource_id' => $org_id,
+        'resource_identifier' => $slug,
+        'new_values' => array(
+            'name' => $name,
+            'slug' => $slug,
+            'contact_email' => $contact_email
+        )
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => 'Organization created successfully',
@@ -822,6 +835,206 @@ function casa_log_security_event($event_type, $details = array()) {
 }
 
 /**
+ * Get client IP address, handling proxies and load balancers
+ *
+ * @return string The client IP address
+ */
+function casa_get_client_ip() {
+    $ip_keys = array(
+        'HTTP_CF_CONNECTING_IP',  // Cloudflare
+        'HTTP_X_FORWARDED_FOR',   // Load balancer/proxy
+        'HTTP_X_REAL_IP',         // Nginx proxy
+        'REMOTE_ADDR'             // Direct connection
+    );
+
+    foreach ($ip_keys as $key) {
+        if (!empty($_SERVER[$key])) {
+            $ip = $_SERVER[$key];
+            // Handle comma-separated IPs (X-Forwarded-For can have multiple)
+            if (strpos($ip, ',') !== false) {
+                $ips = explode(',', $ip);
+                $ip = trim($ips[0]);
+            }
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+
+    return '0.0.0.0';
+}
+
+/**
+ * Get the user's role within their organization
+ *
+ * @param int|null $user_id User ID (defaults to current user)
+ * @return string The user's CASA role
+ */
+function casa_get_user_role($user_id = null) {
+    global $wpdb;
+
+    if ($user_id === null) {
+        $user_id = get_current_user_id();
+    }
+
+    if (!$user_id) {
+        return 'anonymous';
+    }
+
+    // Check if super admin first
+    if (casa_is_super_admin($user_id)) {
+        return 'super_admin';
+    }
+
+    $org_id = casa_get_organization_filter($user_id);
+    if (!$org_id) {
+        return 'unknown';
+    }
+
+    $role = $wpdb->get_var($wpdb->prepare(
+        "SELECT casa_role FROM {$wpdb->prefix}casa_user_organizations WHERE user_id = %d AND organization_id = %d",
+        $user_id, $org_id
+    ));
+
+    return $role ?: 'unknown';
+}
+
+/**
+ * Log an audit event to the database
+ *
+ * Comprehensive audit logging for all system actions.
+ *
+ * @param string $action_type Category of action (auth, case, volunteer, document, etc.)
+ * @param string $action Specific action (create, update, delete, login_success, etc.)
+ * @param array $options Additional options:
+ *   - organization_id: Override the organization (defaults to user's org)
+ *   - user_id: Override the user (defaults to current user)
+ *   - user_email: Override email (used for failed logins)
+ *   - user_role: Override role
+ *   - resource_type: Type of resource being acted upon
+ *   - resource_id: ID of the resource
+ *   - resource_identifier: Human-readable identifier (case number, email, etc.)
+ *   - old_values: Previous values (for updates/deletes)
+ *   - new_values: New values (for creates/updates)
+ *   - metadata: Additional context
+ *   - status: success, failure, or denied
+ *   - severity: info, warning, or critical
+ *
+ * @return int|false Insert ID on success, false on failure
+ */
+function casa_log_audit($action_type, $action, $options = array()) {
+    global $wpdb;
+
+    // Check if audit table exists - fail silently if not
+    $table_name = $wpdb->prefix . 'casa_audit_logs';
+    $table_exists = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s",
+        DB_NAME,
+        $table_name
+    ));
+
+    if (!$table_exists) {
+        // Table doesn't exist yet - try to create it
+        casa_ensure_audit_table_exists();
+
+        // Check again after creation attempt
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s",
+            DB_NAME,
+            $table_name
+        ));
+
+        if (!$table_exists) {
+            // Still doesn't exist - log to error_log and return silently
+            error_log("CASA AUDIT: Table {$table_name} does not exist - audit log skipped for {$action_type}/{$action}");
+            return false;
+        }
+    }
+
+    $user_id = isset($options['user_id']) ? intval($options['user_id']) : get_current_user_id();
+    $user = $user_id ? get_userdata($user_id) : null;
+
+    // Get organization ID - use provided, or user's org, or null for super admin actions
+    $org_id = null;
+    if (isset($options['organization_id'])) {
+        $org_id = $options['organization_id'] ? intval($options['organization_id']) : null;
+    } else {
+        $org_id = casa_get_organization_filter($user_id);
+    }
+
+    $data = array(
+        'organization_id' => $org_id,
+        'user_id' => $user_id,
+        'user_email' => $user ? $user->user_email : ($options['user_email'] ?? 'anonymous'),
+        'user_role' => $options['user_role'] ?? casa_get_user_role($user_id),
+        'action_type' => sanitize_text_field($action_type),
+        'action' => sanitize_text_field($action),
+        'resource_type' => isset($options['resource_type']) ? sanitize_text_field($options['resource_type']) : null,
+        'resource_id' => isset($options['resource_id']) ? intval($options['resource_id']) : null,
+        'resource_identifier' => isset($options['resource_identifier']) ? sanitize_text_field($options['resource_identifier']) : null,
+        'old_values' => isset($options['old_values']) ? wp_json_encode($options['old_values']) : null,
+        'new_values' => isset($options['new_values']) ? wp_json_encode($options['new_values']) : null,
+        'metadata' => isset($options['metadata']) ? wp_json_encode($options['metadata']) : null,
+        'ip_address' => casa_get_client_ip(),
+        'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'], 0, 500) : null,
+        'request_uri' => isset($_SERVER['REQUEST_URI']) ? substr($_SERVER['REQUEST_URI'], 0, 500) : null,
+        'status' => $options['status'] ?? 'success',
+        'severity' => $options['severity'] ?? 'info',
+    );
+
+    $result = $wpdb->insert($table_name, $data);
+
+    // For critical events, also log to error_log for immediate visibility
+    if ($data['severity'] === 'critical') {
+        error_log("CASA AUDIT CRITICAL: {$action_type}/{$action} - User: {$data['user_email']} - " . wp_json_encode($options['metadata'] ?? []));
+    }
+
+    return $result ? $wpdb->insert_id : false;
+}
+
+/**
+ * Ensure the audit logs table exists - create if it doesn't
+ */
+function casa_ensure_audit_table_exists() {
+    global $wpdb;
+
+    $table_name = $wpdb->prefix . 'casa_audit_logs';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    // Use direct SQL query instead of dbDelta for CREATE TABLE IF NOT EXISTS
+    $sql = "CREATE TABLE IF NOT EXISTS `$table_name` (
+        `id` bigint(20) NOT NULL AUTO_INCREMENT,
+        `organization_id` bigint(20) NULL,
+        `user_id` bigint(20) NOT NULL,
+        `user_email` varchar(255) NOT NULL,
+        `user_role` varchar(50) NOT NULL,
+        `action_type` varchar(50) NOT NULL,
+        `action` varchar(100) NOT NULL,
+        `resource_type` varchar(50) NULL,
+        `resource_id` bigint(20) NULL,
+        `resource_identifier` varchar(255) NULL,
+        `old_values` longtext NULL,
+        `new_values` longtext NULL,
+        `metadata` longtext NULL,
+        `ip_address` varchar(45) NOT NULL,
+        `user_agent` text NULL,
+        `request_uri` varchar(500) NULL,
+        `status` varchar(20) DEFAULT 'success',
+        `severity` varchar(20) DEFAULT 'info',
+        `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`),
+        KEY `idx_org_created` (`organization_id`, `created_at`),
+        KEY `idx_user_created` (`user_id`, `created_at`),
+        KEY `idx_action_type` (`action_type`, `created_at`),
+        KEY `idx_resource` (`resource_type`, `resource_id`),
+        KEY `idx_severity` (`severity`, `created_at`)
+    ) $charset_collate;";
+
+    // Execute directly - suppress errors as this is a best-effort table creation
+    $wpdb->query($sql);
+}
+
+/**
  * Wrap database queries with organization filter validation
  * Use this for SELECT queries to ensure org filtering is applied
  */
@@ -1052,5 +1265,433 @@ function casa_register_safeguard_endpoints() {
             return casa_is_super_admin();
         }
     ));
+
+    // Tenant audit logs - organization users can view their own org's logs
+    register_rest_route('casa/v1', '/audit-logs', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_tenant_audit_logs',
+        'permission_callback' => function() {
+            return is_user_logged_in();
+        }
+    ));
+
+    // Super admin audit logs - all organizations
+    register_rest_route('casa/v1', '/super-admin/audit-logs', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_super_admin_audit_logs',
+        'permission_callback' => function() {
+            return casa_is_super_admin();
+        }
+    ));
+
+    // Audit log export endpoints
+    register_rest_route('casa/v1', '/audit-logs/export', array(
+        'methods' => 'GET',
+        'callback' => 'casa_export_tenant_audit_logs',
+        'permission_callback' => function() {
+            return is_user_logged_in();
+        }
+    ));
+
+    register_rest_route('casa/v1', '/super-admin/audit-logs/export', array(
+        'methods' => 'GET',
+        'callback' => 'casa_export_super_admin_audit_logs',
+        'permission_callback' => function() {
+            return casa_is_super_admin();
+        }
+    ));
 }
 add_action('rest_api_init', 'casa_register_safeguard_endpoints');
+
+/**
+ * Get audit logs for the current user's organization (tenant view)
+ *
+ * @param WP_REST_Request $request
+ * @return WP_REST_Response
+ */
+function casa_get_tenant_audit_logs($request) {
+    global $wpdb;
+
+    $user_id = get_current_user_id();
+
+    // For super admins, try to get their organization from the user_organizations table
+    // (they may be associated with an org even as super admin)
+    $org_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT organization_id FROM {$wpdb->prefix}casa_user_organizations
+         WHERE user_id = %d AND status = 'active' ORDER BY id LIMIT 1",
+        $user_id
+    ));
+
+    // If no org found and user is super admin, redirect them to use super-admin endpoint
+    if (!$org_id && casa_is_super_admin($user_id)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Super admins without org association should use /super-admin/audit-logs endpoint'
+        ), 400);
+    }
+
+    if (!$org_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with an organization'
+        ), 403);
+    }
+
+    // Check if user has permission to view audit logs (admin or supervisor only)
+    $user_role = casa_get_user_role($user_id);
+    if (!in_array($user_role, array('admin', 'supervisor', 'super_admin'))) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'You do not have permission to view audit logs'
+        ), 403);
+    }
+
+    $params = $request->get_params();
+    $page = max(1, intval($params['page'] ?? 1));
+    $per_page = min(max(1, intval($params['per_page'] ?? 50)), 100);
+    $offset = ($page - 1) * $per_page;
+
+    $where = array("organization_id = %d");
+    $values = array($org_id);
+
+    // Apply filters
+    if (!empty($params['action_type'])) {
+        $where[] = "action_type = %s";
+        $values[] = sanitize_text_field($params['action_type']);
+    }
+    if (!empty($params['user_id'])) {
+        $where[] = "user_id = %d";
+        $values[] = intval($params['user_id']);
+    }
+    if (!empty($params['resource_type'])) {
+        $where[] = "resource_type = %s";
+        $values[] = sanitize_text_field($params['resource_type']);
+    }
+    if (!empty($params['date_from'])) {
+        $where[] = "created_at >= %s";
+        $values[] = sanitize_text_field($params['date_from']) . ' 00:00:00';
+    }
+    if (!empty($params['date_to'])) {
+        $where[] = "created_at <= %s";
+        $values[] = sanitize_text_field($params['date_to']) . ' 23:59:59';
+    }
+    if (!empty($params['severity'])) {
+        $where[] = "severity = %s";
+        $values[] = sanitize_text_field($params['severity']);
+    }
+    if (!empty($params['status'])) {
+        $where[] = "status = %s";
+        $values[] = sanitize_text_field($params['status']);
+    }
+    if (!empty($params['search'])) {
+        $search = '%' . $wpdb->esc_like(sanitize_text_field($params['search'])) . '%';
+        $where[] = "(user_email LIKE %s OR resource_identifier LIKE %s OR action LIKE %s)";
+        $values[] = $search;
+        $values[] = $search;
+        $values[] = $search;
+    }
+
+    $where_sql = implode(' AND ', $where);
+    $table = $wpdb->prefix . 'casa_audit_logs';
+
+    // Get total count
+    $count_query = $wpdb->prepare("SELECT COUNT(*) FROM $table WHERE $where_sql", ...$values);
+    $total = intval($wpdb->get_var($count_query));
+
+    // Get logs
+    $values[] = $per_page;
+    $values[] = $offset;
+    $logs = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $table WHERE $where_sql ORDER BY created_at DESC LIMIT %d OFFSET %d",
+        ...$values
+    ), ARRAY_A);
+
+    // Decode JSON fields
+    foreach ($logs as &$log) {
+        $log['old_values'] = $log['old_values'] ? json_decode($log['old_values'], true) : null;
+        $log['new_values'] = $log['new_values'] ? json_decode($log['new_values'], true) : null;
+        $log['metadata'] = $log['metadata'] ? json_decode($log['metadata'], true) : null;
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => array(
+            'logs' => $logs,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $per_page,
+            'total_pages' => ceil($total / $per_page)
+        )
+    ), 200);
+}
+
+/**
+ * Get audit logs for all organizations (super admin view)
+ *
+ * @param WP_REST_Request $request
+ * @return WP_REST_Response
+ */
+function casa_get_super_admin_audit_logs($request) {
+    global $wpdb;
+
+    if (!casa_is_super_admin()) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Super admin access required'
+        ), 403);
+    }
+
+    $params = $request->get_params();
+    $page = max(1, intval($params['page'] ?? 1));
+    $per_page = min(max(1, intval($params['per_page'] ?? 50)), 100);
+    $offset = ($page - 1) * $per_page;
+
+    $where = array("1=1");
+    $values = array();
+
+    // Apply filters
+    if (!empty($params['organization_id'])) {
+        if ($params['organization_id'] === 'null' || $params['organization_id'] === '0') {
+            $where[] = "al.organization_id IS NULL";
+        } else {
+            $where[] = "al.organization_id = %d";
+            $values[] = intval($params['organization_id']);
+        }
+    }
+    if (!empty($params['action_type'])) {
+        $where[] = "al.action_type = %s";
+        $values[] = sanitize_text_field($params['action_type']);
+    }
+    if (!empty($params['user_id'])) {
+        $where[] = "al.user_id = %d";
+        $values[] = intval($params['user_id']);
+    }
+    if (!empty($params['resource_type'])) {
+        $where[] = "al.resource_type = %s";
+        $values[] = sanitize_text_field($params['resource_type']);
+    }
+    if (!empty($params['date_from'])) {
+        $where[] = "al.created_at >= %s";
+        $values[] = sanitize_text_field($params['date_from']) . ' 00:00:00';
+    }
+    if (!empty($params['date_to'])) {
+        $where[] = "al.created_at <= %s";
+        $values[] = sanitize_text_field($params['date_to']) . ' 23:59:59';
+    }
+    if (!empty($params['severity'])) {
+        $where[] = "al.severity = %s";
+        $values[] = sanitize_text_field($params['severity']);
+    }
+    if (!empty($params['status'])) {
+        $where[] = "al.status = %s";
+        $values[] = sanitize_text_field($params['status']);
+    }
+    if (!empty($params['search'])) {
+        $search = '%' . $wpdb->esc_like(sanitize_text_field($params['search'])) . '%';
+        $where[] = "(al.user_email LIKE %s OR al.resource_identifier LIKE %s OR al.action LIKE %s OR o.name LIKE %s)";
+        $values[] = $search;
+        $values[] = $search;
+        $values[] = $search;
+        $values[] = $search;
+    }
+
+    $where_sql = implode(' AND ', $where);
+    $audit_table = $wpdb->prefix . 'casa_audit_logs';
+    $org_table = $wpdb->prefix . 'casa_organizations';
+
+    // Get total count
+    $count_sql = "SELECT COUNT(*) FROM $audit_table al LEFT JOIN $org_table o ON al.organization_id = o.id WHERE $where_sql";
+    if (!empty($values)) {
+        $total = intval($wpdb->get_var($wpdb->prepare($count_sql, ...$values)));
+    } else {
+        $total = intval($wpdb->get_var($count_sql));
+    }
+
+    // Get logs with organization name
+    $values[] = $per_page;
+    $values[] = $offset;
+    $select_sql = "SELECT al.*, o.name as organization_name
+                   FROM $audit_table al
+                   LEFT JOIN $org_table o ON al.organization_id = o.id
+                   WHERE $where_sql
+                   ORDER BY al.created_at DESC
+                   LIMIT %d OFFSET %d";
+
+    $logs = $wpdb->get_results($wpdb->prepare($select_sql, ...$values), ARRAY_A);
+
+    // Decode JSON fields
+    foreach ($logs as &$log) {
+        $log['old_values'] = $log['old_values'] ? json_decode($log['old_values'], true) : null;
+        $log['new_values'] = $log['new_values'] ? json_decode($log['new_values'], true) : null;
+        $log['metadata'] = $log['metadata'] ? json_decode($log['metadata'], true) : null;
+    }
+
+    // Log this super admin access
+    casa_log_audit('security', 'view_audit_logs', array(
+        'metadata' => array(
+            'filters' => $params,
+            'result_count' => count($logs)
+        )
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => array(
+            'logs' => $logs,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $per_page,
+            'total_pages' => ceil($total / $per_page)
+        )
+    ), 200);
+}
+
+/**
+ * Export tenant audit logs as CSV
+ */
+function casa_export_tenant_audit_logs($request) {
+    global $wpdb;
+
+    $user_id = get_current_user_id();
+    $org_id = casa_get_organization_filter($user_id);
+
+    if (!$org_id) {
+        return new WP_REST_Response(array('success' => false, 'message' => 'No organization'), 403);
+    }
+
+    $user_role = casa_get_user_role($user_id);
+    if (!in_array($user_role, array('admin', 'supervisor', 'super_admin'))) {
+        return new WP_REST_Response(array('success' => false, 'message' => 'Permission denied'), 403);
+    }
+
+    $params = $request->get_params();
+    $where = array("organization_id = %d");
+    $values = array($org_id);
+
+    // Apply same filters as list endpoint
+    if (!empty($params['action_type'])) {
+        $where[] = "action_type = %s";
+        $values[] = sanitize_text_field($params['action_type']);
+    }
+    if (!empty($params['date_from'])) {
+        $where[] = "created_at >= %s";
+        $values[] = sanitize_text_field($params['date_from']) . ' 00:00:00';
+    }
+    if (!empty($params['date_to'])) {
+        $where[] = "created_at <= %s";
+        $values[] = sanitize_text_field($params['date_to']) . ' 23:59:59';
+    }
+
+    $where_sql = implode(' AND ', $where);
+    $table = $wpdb->prefix . 'casa_audit_logs';
+
+    $logs = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $table WHERE $where_sql ORDER BY created_at DESC LIMIT 10000",
+        ...$values
+    ), ARRAY_A);
+
+    casa_log_audit('security', 'export_audit_logs', array(
+        'metadata' => array('count' => count($logs), 'filters' => $params)
+    ));
+
+    return casa_generate_audit_csv_response($logs);
+}
+
+/**
+ * Export super admin audit logs as CSV
+ */
+function casa_export_super_admin_audit_logs($request) {
+    global $wpdb;
+
+    if (!casa_is_super_admin()) {
+        return new WP_REST_Response(array('success' => false, 'message' => 'Access denied'), 403);
+    }
+
+    $params = $request->get_params();
+    $where = array("1=1");
+    $values = array();
+
+    if (!empty($params['organization_id'])) {
+        $where[] = "al.organization_id = %d";
+        $values[] = intval($params['organization_id']);
+    }
+    if (!empty($params['action_type'])) {
+        $where[] = "al.action_type = %s";
+        $values[] = sanitize_text_field($params['action_type']);
+    }
+    if (!empty($params['date_from'])) {
+        $where[] = "al.created_at >= %s";
+        $values[] = sanitize_text_field($params['date_from']) . ' 00:00:00';
+    }
+    if (!empty($params['date_to'])) {
+        $where[] = "al.created_at <= %s";
+        $values[] = sanitize_text_field($params['date_to']) . ' 23:59:59';
+    }
+
+    $where_sql = implode(' AND ', $where);
+    $audit_table = $wpdb->prefix . 'casa_audit_logs';
+    $org_table = $wpdb->prefix . 'casa_organizations';
+
+    $sql = "SELECT al.*, o.name as organization_name
+            FROM $audit_table al
+            LEFT JOIN $org_table o ON al.organization_id = o.id
+            WHERE $where_sql
+            ORDER BY al.created_at DESC
+            LIMIT 50000";
+
+    if (!empty($values)) {
+        $logs = $wpdb->get_results($wpdb->prepare($sql, ...$values), ARRAY_A);
+    } else {
+        $logs = $wpdb->get_results($sql, ARRAY_A);
+    }
+
+    casa_log_audit('security', 'export_all_audit_logs', array(
+        'metadata' => array('count' => count($logs), 'filters' => $params)
+    ));
+
+    return casa_generate_audit_csv_response($logs, true);
+}
+
+/**
+ * Generate CSV response for audit log export
+ */
+function casa_generate_audit_csv_response($logs, $include_org = false) {
+    $csv_lines = array();
+
+    // Header row
+    $headers = array('ID', 'Timestamp', 'User Email', 'User Role', 'Action Type', 'Action',
+                     'Resource Type', 'Resource ID', 'Resource Identifier', 'Status', 'Severity', 'IP Address');
+    if ($include_org) {
+        array_splice($headers, 2, 0, array('Organization'));
+    }
+    $csv_lines[] = implode(',', $headers);
+
+    // Data rows
+    foreach ($logs as $log) {
+        $row = array(
+            $log['id'],
+            $log['created_at'],
+            '"' . str_replace('"', '""', $log['user_email']) . '"',
+            $log['user_role'],
+            $log['action_type'],
+            $log['action'],
+            $log['resource_type'] ?? '',
+            $log['resource_id'] ?? '',
+            '"' . str_replace('"', '""', $log['resource_identifier'] ?? '') . '"',
+            $log['status'],
+            $log['severity'],
+            $log['ip_address']
+        );
+        if ($include_org) {
+            array_splice($row, 2, 0, array('"' . str_replace('"', '""', $log['organization_name'] ?? 'System') . '"'));
+        }
+        $csv_lines[] = implode(',', $row);
+    }
+
+    $csv_content = implode("\n", $csv_lines);
+
+    return new WP_REST_Response($csv_content, 200, array(
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => 'attachment; filename="audit_logs_' . date('Y-m-d_H-i-s') . '.csv"'
+    ));
+}

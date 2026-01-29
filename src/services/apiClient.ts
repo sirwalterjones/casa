@@ -212,6 +212,17 @@ class ApiClient {
     return this.delete(`/wp-json/casa/v1/${endpoint}`, config);
   }
 
+  async casaUpload<T>(endpoint: string, formData: FormData, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const uploadConfig: AxiosRequestConfig = {
+      ...config,
+      headers: {
+        ...config?.headers,
+        'Content-Type': 'multipart/form-data',
+      },
+    };
+    return this.post(`/wp-json/casa/v1/${endpoint}`, formData, uploadConfig);
+  }
+
   // Legacy SaaS endpoints (keeping for backward compatibility)
   async saasGet<T>(endpoint: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     return this.casaGet(endpoint, config);

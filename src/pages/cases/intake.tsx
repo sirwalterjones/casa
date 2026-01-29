@@ -256,10 +256,10 @@ export default function CaseIntake() {
         <meta name="description" content="Create a new CASA case intake record" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-primary">
         <Navigation currentPage="/cases/intake" />
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-700 dark:to-purple-800 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-8">
               <h1 className="text-3xl font-light mb-2">CASA Case Management System</h1>
@@ -269,18 +269,18 @@ export default function CaseIntake() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="bg-white dark:bg-fintech-bg-secondary shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <nav className="flex space-x-8">
               <Link
                 href="/dashboard"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Dashboard
               </Link>
               <Link
                 href="/cases"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300 font-medium text-sm"
               >
                 All Cases
               </Link>
@@ -292,19 +292,19 @@ export default function CaseIntake() {
               </Link>
               <Link
                 href="/contacts/log"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Contact Log
               </Link>
               <Link
                 href="/court-hearings"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Court Hearings
               </Link>
               <Link
                 href="/documents"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Documents
               </Link>
@@ -338,20 +338,20 @@ export default function CaseIntake() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Child Information */}
             <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 📋 Child Information
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register('child_first_name', { required: 'First name is required' })}
                     type="text"
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.child_first_name ? 'border-red-300' : 'border-gray-300'
+                      errors.child_first_name ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                     }`}
                   />
                   {errors.child_first_name && (
@@ -360,14 +360,14 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register('child_last_name', { required: 'Last name is required' })}
                     type="text"
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.child_last_name ? 'border-red-300' : 'border-gray-300'
+                      errors.child_last_name ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                     }`}
                   />
                   {errors.child_last_name && (
@@ -376,14 +376,14 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Date of Birth <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register('child_dob', { required: 'Date of birth is required' })}
                     type="date"
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.child_dob ? 'border-red-300' : 'border-gray-300'
+                      errors.child_dob ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                     }`}
                   />
                   {errors.child_dob && (
@@ -394,12 +394,12 @@ export default function CaseIntake() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Gender
                   </label>
                   <select
                     {...register('child_gender')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Gender</option>
                     <option value="male">Male</option>
@@ -410,13 +410,13 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Ethnicity
                   </label>
                   <input
                     {...register('child_ethnicity')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Optional"
                   />
                 </div>
@@ -425,20 +425,20 @@ export default function CaseIntake() {
 
             {/* Case Details */}
             <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 📋 Case Details
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Case Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register('case_number', { required: 'Case number is required' })}
                     type="text"
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.case_number ? 'border-red-300' : 'border-gray-300'
+                      errors.case_number ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                     }`}
                     placeholder="e.g., 2024-001"
                   />
@@ -448,13 +448,13 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Case Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     {...register('case_type', { required: 'Case type is required' })}
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.case_type ? 'border-red-300' : 'border-gray-300'
+                      errors.case_type ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                     }`}
                   >
                     <option value="">Select Case Type</option>
@@ -468,12 +468,12 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Priority Level
                   </label>
                   <select
                     {...register('case_priority')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     defaultValue="medium"
                   >
                     {Object.entries(CASE_PRIORITY_LABELS).map(([key, label]) => (
@@ -485,25 +485,25 @@ export default function CaseIntake() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Referral Date
                   </label>
                   <input
                     {...register('referral_date')}
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Case Summary
                 </label>
                 <textarea
                   {...register('case_summary')}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Provide a brief summary of the case circumstances..."
                 />
               </div>
@@ -511,18 +511,18 @@ export default function CaseIntake() {
 
             {/* Court Information */}
             <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 ⚖️ Court Information
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Court Jurisdiction
                   </label>
                   <select
                     {...register('court_jurisdiction')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Jurisdiction</option>
                     <option value="family-court">Family Court</option>
@@ -533,25 +533,25 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Assigned Judge
                   </label>
                   <input
                     {...register('assigned_judge')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Judge Name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Courtroom
                   </label>
                   <input
                     {...register('courtroom')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Courtroom Number"
                   />
                 </div>
@@ -560,18 +560,18 @@ export default function CaseIntake() {
 
             {/* Placement Information */}
             <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 🏠 Placement Information
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Current Placement
                   </label>
                   <select
                     {...register('current_placement')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Placement</option>
                     {Object.entries(PLACEMENT_TYPE_LABELS).map(([key, label]) => (
@@ -581,51 +581,51 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Placement Date
                   </label>
                   <input
                     {...register('placement_date')}
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Contact Person
                   </label>
                   <input
                     {...register('placement_contact_person')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Foster parent, guardian, etc."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Contact Phone
                   </label>
                   <input
                     {...register('placement_phone')}
                     type="tel"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="(555) 123-4567"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Placement Address
                 </label>
                 <textarea
                   {...register('placement_address')}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Current placement address..."
                 />
               </div>
@@ -633,18 +633,18 @@ export default function CaseIntake() {
 
             {/* Volunteer Assignment */}
             <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 👥 Volunteer Assignment
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Assigned Volunteer
                   </label>
                   <select
                     {...register('assigned_volunteer')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={isLoadingVolunteers}
                   >
                     <option value="">
@@ -657,13 +657,13 @@ export default function CaseIntake() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Assignment Date
                   </label>
                   <input
                     {...register('assignment_date')}
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -671,18 +671,18 @@ export default function CaseIntake() {
 
             {/* Case Goals */}
             <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 🎯 Case Goals
               </h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Initial Case Goals
                 </label>
                 <textarea
                   {...register('case_goals')}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="What are the primary goals for this case? (e.g., permanency planning, family reunification, safety assessment)"
                 />
               </div>

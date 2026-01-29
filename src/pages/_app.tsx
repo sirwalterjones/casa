@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/components/common/Toast';
 import { ThemeProvider } from '@/hooks/useTheme';
+import FeedbackWidget from '@/components/FeedbackWidget';
 import '@/styles/globals.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -36,6 +37,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         <AuthProvider>
           <ToastProvider>
             <Component {...pageProps} />
+            <FeedbackWidget />
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

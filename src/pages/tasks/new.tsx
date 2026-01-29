@@ -44,10 +44,19 @@ export default function NewTaskPage() {
         const casesResponse = await apiClient.casaGet('cases');
         if (casesResponse.success && casesResponse.data) {
           const casesData = casesResponse.data as any;
-          if (casesData.success && casesData.data) {
+          // Handle nested API response: { success: true, data: { cases: [...], pagination: {...} } }
+          if (casesData.success && casesData.data?.cases) {
+            setCases(casesData.data.cases);
+          } else if (casesData.data?.cases) {
+            setCases(casesData.data.cases);
+          } else if (casesData.cases) {
+            setCases(casesData.cases);
+          } else if (Array.isArray(casesData.data)) {
             setCases(casesData.data);
           } else if (Array.isArray(casesData)) {
             setCases(casesData);
+          } else {
+            setCases([]);
           }
         }
 
@@ -55,19 +64,25 @@ export default function NewTaskPage() {
         const usersResponse = await apiClient.casaGet('volunteers');
         if (usersResponse.success && usersResponse.data) {
           const usersData = usersResponse.data as any;
-          if (usersData.success && usersData.data) {
-            setUsers(usersData.data.map((v: any) => ({
-              id: v.user_id || v.id,
-              display_name: `${v.first_name} ${v.last_name}`,
-              email: v.email
-            })));
+          // Handle nested API response: { success: true, data: { volunteers: [...] } }
+          let volunteersList: any[] = [];
+          if (usersData.success && usersData.data?.volunteers) {
+            volunteersList = usersData.data.volunteers;
+          } else if (usersData.data?.volunteers) {
+            volunteersList = usersData.data.volunteers;
+          } else if (usersData.volunteers) {
+            volunteersList = usersData.volunteers;
+          } else if (Array.isArray(usersData.data)) {
+            volunteersList = usersData.data;
           } else if (Array.isArray(usersData)) {
-            setUsers(usersData.map((v: any) => ({
-              id: v.user_id || v.id,
-              display_name: `${v.first_name} ${v.last_name}`,
-              email: v.email
-            })));
+            volunteersList = usersData;
           }
+
+          setUsers(volunteersList.map((v: any) => ({
+            id: v.user_id || v.id,
+            display_name: `${v.first_name || ''} ${v.last_name || ''}`.trim() || 'Unknown',
+            email: v.email || ''
+          })));
         }
       } catch (error) {
         console.error('Failed to load data:', error);

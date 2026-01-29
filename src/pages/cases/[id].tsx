@@ -97,145 +97,7 @@ interface CourtReport {
   created_at: string;
 }
 
-// Mock data - in production, this would come from API
-const mockCaseDetails: CaseDetails = {
-  id: '1',
-  case_number: '2024-001',
-  child_first_name: 'Emily',
-  child_last_name: 'Johnson',
-  child_dob: '2014-03-15',
-  child_gender: 'female',
-  child_ethnicity: 'white',
-  case_type: 'abuse',
-  case_status: 'active',
-  case_priority: 'high',
-  referral_date: '2024-01-15',
-  case_summary: 'Child removed from home due to physical abuse. Currently in foster care.',
-  court_jurisdiction: 'family-court',
-  assigned_judge: 'Judge Smith',
-  current_placement: 'foster_care',
-  placement_address: '123 Foster Lane, Canton GA 30115',
-  assigned_volunteer: 'Jane Smith',
-  assignment_date: '2024-01-20',
-  case_goals: 'Ensure child safety, provide stability, work toward permanency plan',
-  created_by: 'Walter Jones',
-  created_at: '2024-01-15T10:00:00Z',
-  organization_id: 'org-placeholder',
-};
-
-const mockContactLogs: ContactLog[] = [
-  {
-    id: '1',
-    case_number: '2024-001',
-    contact_type: 'home-visit',
-    contact_date: '2024-12-10',
-    contact_time: '14:00',
-    contact_duration: '90',
-    child_present: true,
-    location: 'Foster home',
-    people_present: 'Emily, Foster mother Sarah, Foster father Mike',
-    summary: 'Emily appears well-adjusted to foster home. She is doing well in school and has made friends.',
-    action_items: 'Follow up on therapy sessions, check school records',
-    created_by: 'Jane Smith',
-    created_at: '2024-12-10T14:00:00Z',
-  },
-  {
-    id: '2',
-    case_number: '2024-001',
-    contact_type: 'phone-call',
-    contact_date: '2024-12-05',
-    contact_time: '10:30',
-    contact_duration: '30',
-    child_present: false,
-    location: 'N/A',
-    people_present: 'Foster mother Sarah',
-    summary: 'Discussed Emily\'s progress in therapy and upcoming parent-teacher conference.',
-    action_items: 'Attend parent-teacher conference on 12/15',
-    created_by: 'Jane Smith',
-    created_at: '2024-12-05T10:30:00Z',
-  },
-];
-
-const mockDocuments: CaseDocument[] = [
-  {
-    id: '1',
-    case_number: '2024-001',
-    document_type: 'court-order',
-    document_name: 'Initial Removal Order',
-    file_name: 'removal_order_2024001.pdf',
-    upload_date: '2024-01-15',
-    uploaded_by: 'Court Clerk',
-    description: 'Court order authorizing removal and CASA appointment',
-    is_confidential: true,
-  },
-  {
-    id: '2',
-    case_number: '2024-001',
-    document_type: 'medical-record',
-    document_name: 'Medical Evaluation',
-    file_name: 'medical_eval_emily.pdf',
-    upload_date: '2024-02-01',
-    uploaded_by: 'Dr. Wilson',
-    description: 'Comprehensive medical evaluation post-removal',
-    is_confidential: true,
-  },
-];
-
-const mockCourtHearings: CourtHearing[] = [
-  {
-    id: '1',
-    case_number: '2024-001',
-    hearing_date: '2024-12-20',
-    hearing_time: '09:00',
-    hearing_type: 'Review Hearing',
-    court_room: 'Courtroom A',
-    judge_name: 'Judge Smith',
-    status: 'scheduled',
-    notes: 'Review placement stability and case progress',
-  },
-  {
-    id: '2',
-    case_number: '2024-001',
-    hearing_date: '2024-09-15',
-    hearing_time: '10:30',
-    hearing_type: 'Initial Hearing',
-    court_room: 'Courtroom A',
-    judge_name: 'Judge Smith',
-    status: 'completed',
-    notes: 'Initial hearing for case establishment',
-  },
-];
-
-const mockHomeVisitReports: HomeVisitReport[] = [
-  {
-    id: '1',
-    case_number: '2024-001',
-    visit_date: '2024-12-10',
-    visit_summary: 'Emily is thriving in her foster placement. Home environment is safe and nurturing.',
-    child_physical_appearance: 'excellent',
-    child_mood: 'happy',
-    home_condition: 'excellent',
-    concerns_identified: 'None at this time',
-    recommendations: 'Continue current placement, monitor therapy progress',
-    created_by: 'Jane Smith',
-    created_at: '2024-12-10T16:00:00Z',
-  },
-];
-
-const mockCourtReports: CourtReport[] = [
-  {
-    id: '1',
-    case_number: '2024-001',
-    hearing_date: '2024-09-15',
-    hearing_type: 'Initial Hearing',
-    hearing_summary: 'Court established CASA involvement and approved current placement.',
-    court_orders: 'CASA volunteer appointed, therapy ordered for child',
-    casa_recommendations: 'Continue foster placement, regular therapy sessions',
-    next_hearing_date: '2024-12-20',
-    created_by: 'Jane Smith',
-    created_at: '2024-09-15T11:00:00Z',
-  },
-];
+// Note: Mock data removed - all data now comes from the API
 
 export default function CaseDetail() {
   const { user, loading } = useRequireAuth();
@@ -376,11 +238,32 @@ export default function CaseDetail() {
         }
 
         // Process court hearings
+        console.log('Court hearings API response:', hearingsResponse);
         if (hearingsResponse.success && hearingsResponse.data) {
           const hearingsData = hearingsResponse.data as any;
-          if (hearingsData.success && hearingsData.data) {
-            setCourtHearings(hearingsData.data || []);
+          console.log('Court hearings data structure:', hearingsData);
+
+          let hearingsArray: CourtHearing[] = [];
+
+          // Handle multiple response structures
+          if (hearingsData.success && hearingsData.data?.hearings) {
+            hearingsArray = hearingsData.data.hearings;
+          } else if (hearingsData.data?.hearings) {
+            hearingsArray = hearingsData.data.hearings;
+          } else if (hearingsData.hearings) {
+            hearingsArray = hearingsData.hearings;
+          } else if (hearingsData.success && Array.isArray(hearingsData.data)) {
+            hearingsArray = hearingsData.data;
+          } else if (Array.isArray(hearingsData.data)) {
+            hearingsArray = hearingsData.data;
+          } else if (Array.isArray(hearingsData)) {
+            hearingsArray = hearingsData;
           }
+
+          console.log('Parsed court hearings array:', hearingsArray);
+          setCourtHearings(Array.isArray(hearingsArray) ? hearingsArray : []);
+        } else {
+          setCourtHearings([]);
         }
 
         // Process home visit reports
@@ -716,13 +599,13 @@ export default function CaseDetail() {
           <meta name="description" content="Loading CASA case details" />
         </Head>
 
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-fintech-bg-primary dark:to-fintech-bg-secondary">
           <Navigation currentPage="/cases" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading case details...</p>
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 dark:border-fintech-border-subtle border-t-blue-600 dark:border-t-fintech-accent-blue mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-fintech-text-secondary text-lg">Loading case details...</p>
               </div>
             </div>
           </div>
@@ -741,14 +624,22 @@ export default function CaseDetail() {
           <meta name="description" content="Case not found" />
         </Head>
 
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-fintech-bg-primary dark:to-fintech-bg-secondary">
           <Navigation currentPage="/cases" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Case Not Found</h2>
-                <p className="text-gray-600 mb-4">The requested case could not be found.</p>
-                <Link href="/cases" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                <div className="w-20 h-20 bg-red-100 dark:bg-fintech-loss/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-red-500 dark:text-fintech-loss" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-fintech-text-primary mb-3">Case Not Found</h2>
+                <p className="text-gray-600 dark:text-fintech-text-secondary mb-6">The requested case could not be found or you may not have access to it.</p>
+                <Link href="/cases" className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-fintech-accent-blue dark:hover:bg-blue-600 text-white rounded-lg font-medium shadow-lg transition-all">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
                   Return to Cases
                 </Link>
               </div>
@@ -766,43 +657,75 @@ export default function CaseDetail() {
         <meta name="description" content={`CASA case details for ${caseDetails.child_first_name} ${caseDetails.child_last_name}`} />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-fintech-bg-primary dark:to-fintech-bg-secondary">
         <Navigation currentPage="/cases" />
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-fintech-bg-secondary dark:to-fintech-bg-tertiary border-b border-transparent dark:border-fintech-border-subtle">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-8">
-              <div className="flex items-center justify-between">
+              {/* Breadcrumb */}
+              <Link href="/cases" className="inline-flex items-center text-blue-100 dark:text-fintech-text-secondary hover:text-white dark:hover:text-fintech-text-primary mb-4 transition-colors">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Cases
+              </Link>
+
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-light mb-2">
-                    Case {caseDetails.case_number}: {caseDetails.child_first_name} {caseDetails.child_last_name}
+                  <h1 className="text-3xl font-bold text-white dark:text-fintech-text-primary mb-3">
+                    {caseDetails.child_first_name} {caseDetails.child_last_name}
                   </h1>
-                  <div className="flex items-center space-x-4">
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(caseDetails.status)}`}>
-                      {caseDetails.status}
+                  <p className="text-blue-100 dark:text-fintech-text-secondary mb-3">Case #{caseDetails.case_number}</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full ${
+                      caseDetails.status === 'active'
+                        ? 'bg-green-500/20 text-green-100 dark:bg-fintech-gain/20 dark:text-fintech-gain'
+                        : caseDetails.status === 'pending-review'
+                        ? 'bg-yellow-500/20 text-yellow-100 dark:bg-fintech-warning/20 dark:text-fintech-warning'
+                        : 'bg-gray-500/20 text-gray-100 dark:bg-gray-500/20 dark:text-gray-300'
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full mr-2 ${
+                        caseDetails.status === 'active' ? 'bg-green-400 dark:bg-fintech-gain' :
+                        caseDetails.status === 'pending-review' ? 'bg-yellow-400 dark:bg-fintech-warning' : 'bg-gray-400'
+                      }`}></span>
+                      {caseDetails.status?.charAt(0).toUpperCase() + caseDetails.status?.slice(1)}
                     </span>
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getPriorityColor(caseDetails.priority)}`}>
-                      {caseDetails.priority} priority
+                    <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full ${
+                      caseDetails.priority === 'high'
+                        ? 'bg-red-500/20 text-red-100 dark:bg-fintech-loss/20 dark:text-fintech-loss'
+                        : caseDetails.priority === 'medium'
+                        ? 'bg-yellow-500/20 text-yellow-100 dark:bg-fintech-warning/20 dark:text-fintech-warning'
+                        : 'bg-green-500/20 text-green-100 dark:bg-fintech-gain/20 dark:text-fintech-gain'
+                    }`}>
+                      {caseDetails.priority?.charAt(0).toUpperCase() + caseDetails.priority?.slice(1)} Priority
                     </span>
-                    <span className="text-blue-100">
-                      Assigned to: {assignedVolunteerName || 'Unassigned'}
+                    <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full bg-white/10 text-white dark:bg-fintech-bg-tertiary dark:text-fintech-text-secondary">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      {assignedVolunteerName || 'Unassigned'}
                     </span>
                   </div>
                 </div>
-                <div className="flex space-x-3">
+                <div className="flex flex-wrap gap-3">
                   {isEditing ? (
                     <>
                       <button
                         onClick={handleSaveEdit}
                         disabled={isSaving}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-green-700 disabled:opacity-50"
+                        className="inline-flex items-center px-4 py-2.5 bg-green-500 hover:bg-green-600 dark:bg-fintech-gain dark:hover:bg-green-600 text-white rounded-lg font-semibold shadow-lg transition-all disabled:opacity-50"
                       >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
                         {isSaving ? 'Saving...' : 'Save Changes'}
                       </button>
                       <button
                         onClick={handleCancelEdit}
                         disabled={isSaving}
-                        className="bg-gray-500 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 disabled:opacity-50"
+                        className="inline-flex items-center px-4 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow-lg transition-all disabled:opacity-50"
                       >
                         Cancel
                       </button>
@@ -811,20 +734,29 @@ export default function CaseDetail() {
                     <>
                       <button
                         onClick={handleEditClick}
-                        className="bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-yellow-700"
+                        className="inline-flex items-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 dark:bg-fintech-warning dark:hover:bg-amber-600 text-white rounded-lg font-semibold shadow-lg transition-all"
                       >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                         Edit Case
                       </button>
                       <button
                         onClick={generateComprehensiveReport}
-                        className="bg-white text-blue-600 px-4 py-2 rounded-md font-semibold hover:bg-blue-50"
+                        className="inline-flex items-center px-4 py-2.5 bg-white/90 hover:bg-white dark:bg-fintech-bg-tertiary dark:hover:bg-fintech-bg-secondary text-blue-600 dark:text-fintech-accent-blue rounded-lg font-semibold shadow-lg transition-all"
                       >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         Generate Report
                       </button>
                       <Link
                         href={`/contacts/log?case=${caseDetails?.case_number || ''}`}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-green-700"
+                        className="inline-flex items-center px-4 py-2.5 bg-green-500 hover:bg-green-600 dark:bg-fintech-gain dark:hover:bg-green-600 text-white rounded-lg font-semibold shadow-lg transition-all"
                       >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                         Log Contact
                       </Link>
                     </>
@@ -835,43 +767,37 @@ export default function CaseDetail() {
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+        {/* Modern Tabs */}
+        <div className="bg-white dark:bg-fintech-bg-secondary shadow-sm dark:shadow-fintech border-b border-gray-200 dark:border-fintech-border-subtle sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex space-x-8">
-              <Link href="/cases" className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
-                ← All Cases
-              </Link>
-            </nav>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="flex space-x-1 overflow-x-auto py-2" aria-label="Tabs">
               {[
-                { id: 'overview', name: 'Overview', count: null },
-                { id: 'contacts', name: 'Contact Logs', count: contactLogs.length },
-                { id: 'homevisits', name: 'Home Visits', count: homeVisitReports.length },
-                { id: 'documents', name: 'Documents', count: documents.length },
-                { id: 'hearings', name: 'Court Hearings', count: courtHearings.length },
-                { id: 'reports', name: 'Reports', count: courtReports.length },
-                { id: 'timeline', name: 'Timeline', count: null },
+                { id: 'overview', name: 'Overview', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', count: null },
+                { id: 'contacts', name: 'Contacts', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', count: contactLogs.length },
+                { id: 'homevisits', name: 'Home Visits', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', count: homeVisitReports.length },
+                { id: 'documents', name: 'Documents', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', count: documents.length },
+                { id: 'hearings', name: 'Hearings', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', count: courtHearings.length },
+                { id: 'reports', name: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', count: courtReports.length },
+                { id: 'timeline', name: 'Timeline', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', count: null },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`flex items-center whitespace-nowrap px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-fintech-text-secondary dark:hover:text-fintech-text-primary dark:hover:bg-fintech-bg-tertiary'
                   }`}
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+                  </svg>
                   {tab.name}
-                  {tab.count !== null && (
-                    <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                      activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-900'
+                  {tab.count !== null && tab.count > 0 && (
+                    <span className={`ml-2 py-0.5 px-2 rounded-full text-xs font-semibold ${
+                      activeTab === tab.id
+                        ? 'bg-blue-200 text-blue-800 dark:bg-fintech-accent-blue/30 dark:text-fintech-accent-blue'
+                        : 'bg-gray-200 text-gray-700 dark:bg-fintech-bg-tertiary dark:text-fintech-text-secondary'
                     }`}>
                       {tab.count}
                     </span>
@@ -885,95 +811,109 @@ export default function CaseDetail() {
         {/* Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Child Information */}
-              <div className="lg:col-span-2">
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Child Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech p-6 border border-gray-100 dark:border-fintech-border-subtle">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-fintech-accent-blue/20 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-blue-600 dark:text-fintech-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Child Information</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Case Number</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Case Number</label>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData?.case_number || ''}
                           onChange={(e) => handleInputChange('case_number', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                           placeholder="e.g., CASA-2024-001"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.case_number}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{caseDetails.case_number}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">First Name</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">First Name</label>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData?.child_first_name || ''}
                           onChange={(e) => handleInputChange('child_first_name', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.child_first_name}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{caseDetails.child_first_name}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Last Name</label>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData?.child_last_name || ''}
                           onChange={(e) => handleInputChange('child_last_name', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.child_last_name}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{caseDetails.child_last_name}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Date of Birth</label>
                       {isEditing ? (
                         <input
                           type="date"
                           value={editFormData?.child_dob || ''}
                           onChange={(e) => handleInputChange('child_dob', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{formatDate(caseDetails.child_dob)}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{formatDate(caseDetails.child_dob)}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Priority</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Priority</label>
                       {isEditing ? (
                         <select
                           value={editFormData?.priority || ''}
                           onChange={(e) => handleInputChange('priority', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         >
                           <option value="low">Low</option>
                           <option value="medium">Medium</option>
                           <option value="high">High</option>
                         </select>
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.priority}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary capitalize">{caseDetails.priority}</p>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Case Information */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Case Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech p-6 border border-gray-100 dark:border-fintech-border-subtle">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-purple-100 dark:bg-fintech-accent-indigo/20 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-purple-600 dark:text-fintech-accent-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Case Information</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Case Type</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Case Type</label>
                       {isEditing ? (
                         <select
                           value={editFormData?.case_type || ''}
                           onChange={(e) => handleInputChange('case_type', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         >
                           <option value="dependency">Dependency</option>
                           <option value="neglect">Neglect</option>
@@ -981,91 +921,100 @@ export default function CaseDetail() {
                           <option value="abandonment">Abandonment</option>
                         </select>
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.case_type}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary capitalize">{caseDetails.case_type}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Referral Date</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Referral Date</label>
                       {isEditing ? (
                         <input
                           type="date"
                           value={editFormData?.referral_date || ''}
                           onChange={(e) => handleInputChange('referral_date', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{formatDate(caseDetails.referral_date)}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{formatDate(caseDetails.referral_date)}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Court Jurisdiction</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Court Jurisdiction</label>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData?.court_jurisdiction || ''}
                           onChange={(e) => handleInputChange('court_jurisdiction', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.court_jurisdiction}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{caseDetails.court_jurisdiction || 'Not specified'}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Assigned Judge</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Assigned Judge</label>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData?.assigned_judge || ''}
                           onChange={(e) => handleInputChange('assigned_judge', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         />
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.assigned_judge}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary">{caseDetails.assigned_judge || 'Not assigned'}</p>
                       )}
                     </div>
                   </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">Case Summary</label>
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-2">Case Summary</label>
                     {isEditing ? (
                       <textarea
                         value={editFormData?.case_summary || ''}
                         onChange={(e) => handleInputChange('case_summary', e.target.value)}
                         rows={4}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                       />
                     ) : (
-                      <p className="text-sm text-gray-900">{caseDetails.case_summary}</p>
+                      <div className="bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                        <p className="text-sm text-gray-700 dark:text-fintech-text-secondary leading-relaxed">{caseDetails.case_summary || 'No summary available'}</p>
+                      </div>
                     )}
                   </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Status</label>
                     {isEditing ? (
                       <select
                         value={editFormData?.status || ''}
                         onChange={(e) => handleInputChange('status', e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                       >
                         <option value="active">Active</option>
                         <option value="pending">Pending</option>
                         <option value="closed">Closed</option>
                       </select>
                     ) : (
-                      <p className="text-sm text-gray-900">{caseDetails.status}</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary capitalize">{caseDetails.status}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Placement Information */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Current Placement</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech p-6 border border-gray-100 dark:border-fintech-border-subtle">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-green-100 dark:bg-fintech-gain/20 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-green-600 dark:text-fintech-gain" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Current Placement</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Placement Type</label>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Placement Type</label>
                       {isEditing ? (
                         <select
                           value={editFormData?.placement_type || ''}
                           onChange={(e) => handleInputChange('placement_type', e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                         >
                           <option value="foster-care">Foster Care</option>
                           <option value="kinship-care">Kinship Care</option>
@@ -1074,77 +1023,134 @@ export default function CaseDetail() {
                           <option value="independent-living">Independent Living</option>
                         </select>
                       ) : (
-                        <p className="text-sm text-gray-900">{caseDetails.placement_type}</p>
+                        <p className="text-base font-medium text-gray-900 dark:text-fintech-text-primary capitalize">{caseDetails.placement_type?.replace('-', ' ') || 'Not specified'}</p>
                       )}
                     </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">Placement Address & Details</label>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-2">Placement Address & Details</label>
                       {isEditing ? (
                         <textarea
                           value={editFormData?.placement_address || ''}
                           onChange={(e) => handleInputChange('placement_address', e.target.value)}
                           rows={3}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                           placeholder="Address, contact person, phone number, etc."
                         />
                       ) : (
-                        <p className="text-sm text-gray-900 whitespace-pre-line">{caseDetails.placement_address}</p>
+                        <div className="bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                          <p className="text-sm text-gray-700 dark:text-fintech-text-secondary whitespace-pre-line">{caseDetails.placement_address || 'No placement information available'}</p>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div>
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Case Statistics</h3>
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Case Statistics Card */}
+                <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech p-6 border border-gray-100 dark:border-fintech-border-subtle">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-indigo-100 dark:bg-fintech-accent-indigo/20 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-indigo-600 dark:text-fintech-accent-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Case Statistics</h3>
+                  </div>
                   <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Contact Logs</span>
-                      <span className="text-sm font-medium text-gray-900">{contactLogs.length}</span>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-fintech-accent-blue/10 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-fintech-accent-blue/20 rounded-lg flex items-center justify-center mr-3">
+                          <svg className="w-4 h-4 text-blue-600 dark:text-fintech-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-fintech-text-secondary">Contact Logs</span>
+                      </div>
+                      <span className="text-lg font-bold text-blue-600 dark:text-fintech-accent-blue">{contactLogs.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Documents</span>
-                      <span className="text-sm font-medium text-gray-900">{documents.length}</span>
+                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-fintech-gain/10 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-green-100 dark:bg-fintech-gain/20 rounded-lg flex items-center justify-center mr-3">
+                          <svg className="w-4 h-4 text-green-600 dark:text-fintech-gain" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-fintech-text-secondary">Documents</span>
+                      </div>
+                      <span className="text-lg font-bold text-green-600 dark:text-fintech-gain">{documents.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Court Hearings</span>
-                      <span className="text-sm font-medium text-gray-900">{courtHearings.length}</span>
+                    <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-fintech-accent-indigo/10 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-purple-100 dark:bg-fintech-accent-indigo/20 rounded-lg flex items-center justify-center mr-3">
+                          <svg className="w-4 h-4 text-purple-600 dark:text-fintech-accent-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-fintech-text-secondary">Court Hearings</span>
+                      </div>
+                      <span className="text-lg font-bold text-purple-600 dark:text-fintech-accent-indigo">{courtHearings.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Reports</span>
-                      <span className="text-sm font-medium text-gray-900">{homeVisitReports.length + courtReports.length}</span>
+                    <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-fintech-warning/10 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-amber-100 dark:bg-fintech-warning/20 rounded-lg flex items-center justify-center mr-3">
+                          <svg className="w-4 h-4 text-amber-600 dark:text-fintech-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-fintech-text-secondary">Reports</span>
+                      </div>
+                      <span className="text-lg font-bold text-amber-600 dark:text-fintech-warning">{homeVisitReports.length + courtReports.length}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+                {/* Quick Actions Card */}
+                <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech p-6 border border-gray-100 dark:border-fintech-border-subtle">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Quick Actions</h3>
+                  </div>
                   <div className="space-y-3">
                     <Link
                       href={`/contacts/log?case=${caseDetails.case_number}`}
-                      className="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md hover:bg-blue-700"
+                      className="flex items-center justify-center w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                     >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
                       Log New Contact
                     </Link>
                     <Link
                       href={`/reports/home-visit?case=${caseDetails.case_number}`}
-                      className="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-md hover:bg-green-700"
+                      className="flex items-center justify-center w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                     >
-                      New Home Visit Report
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      New Home Visit
                     </Link>
                     <Link
                       href={`/reports/court?case=${caseDetails.case_number}`}
-                      className="block w-full bg-purple-600 text-white text-center py-2 px-4 rounded-md hover:bg-purple-700"
+                      className="flex items-center justify-center w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                     >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
                       New Court Report
                     </Link>
                     <Link
                       href={`/documents?case=${caseDetails.case_number}`}
-                      className="block w-full bg-yellow-600 text-white text-center py-2 px-4 rounded-md hover:bg-yellow-700"
+                      className="flex items-center justify-center w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                     >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
                       Upload Document
                     </Link>
                   </div>
@@ -1154,57 +1160,71 @@ export default function CaseDetail() {
           )}
 
           {activeTab === 'contacts' && (
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Contact Logs ({contactLogs.length})</h3>
+            <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech border border-gray-100 dark:border-fintech-border-subtle overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-200 dark:border-fintech-border-subtle bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-fintech-bg-tertiary dark:to-fintech-bg-secondary">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Contact Logs</h3>
+                    <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{contactLogs.length} contact{contactLogs.length !== 1 ? 's' : ''} recorded</p>
+                  </div>
                   <Link
                     href={`/contacts/log?case=${caseDetails.case_number}`}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-fintech-accent-blue dark:hover:bg-blue-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                   >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     New Contact Log
                   </Link>
                 </div>
               </div>
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-100 dark:divide-fintech-border-subtle">
                 {contactLogs.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">
-                    <p>No contact logs found for this case.</p>
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-600 dark:text-fintech-text-secondary mb-3">No contact logs found for this case.</p>
                     <Link
                       href={`/contacts/log?case=${caseDetails.case_number}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="inline-flex items-center text-blue-600 dark:text-fintech-accent-blue hover:text-blue-800 font-medium"
                     >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
                       Create the first contact log
                     </Link>
                   </div>
                 ) : (
                   contactLogs.map((contact) => (
-                  <div key={contact.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div key={contact.id} className="p-6 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors">
                     <div className="space-y-4">
                       {/* Header with contact type, date, and volunteer */}
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            contact.contact_type === 'phone' ? 'bg-blue-100 text-blue-800' :
-                            contact.contact_type === 'in_person' ? 'bg-green-100 text-green-800' :
-                            contact.contact_type === 'email' ? 'bg-purple-100 text-purple-800' :
-                            contact.contact_type === 'home_visit' ? 'bg-orange-100 text-orange-800' :
-                            'bg-gray-100 text-gray-800'
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
+                            contact.contact_type === 'phone' ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue' :
+                            contact.contact_type === 'in_person' ? 'bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain' :
+                            contact.contact_type === 'email' ? 'bg-purple-100 text-purple-700 dark:bg-fintech-accent-indigo/20 dark:text-fintech-accent-indigo' :
+                            contact.contact_type === 'home_visit' ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400' :
+                            'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300'
                           }`}>
                             {contact.contact_type.replace('_', ' ').toUpperCase()}
                           </span>
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
                             {formatDate(contact.contact_date)}
                           </span>
-                          <span className="text-sm text-gray-500">
-                            Duration: {contact.contact_duration} minutes
+                          <span className="text-sm text-gray-500 dark:text-fintech-text-tertiary">
+                            {contact.contact_duration} min
                           </span>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="text-left sm:text-right">
+                          <div className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
                             {contact.volunteer_name || 'Unknown Volunteer'}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 dark:text-fintech-text-tertiary">
                             {formatDate(contact.created_at)}
                           </div>
                         </div>
@@ -1213,12 +1233,12 @@ export default function CaseDetail() {
                       {/* Contact details */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">Contact Person</h4>
-                          <p className="text-sm text-gray-900">{contact.contact_person || 'Not specified'}</p>
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-1">Contact Person</h4>
+                          <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{contact.contact_person || 'Not specified'}</p>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">Child</h4>
-                          <p className="text-sm text-gray-900">
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-1">Child</h4>
+                          <p className="text-sm text-gray-900 dark:text-fintech-text-primary">
                             {contact.child_first_name} {contact.child_last_name}
                           </p>
                         </div>
@@ -1226,9 +1246,9 @@ export default function CaseDetail() {
 
                       {/* Contact notes */}
                       <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Contact Summary</h4>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-sm text-gray-800 leading-relaxed">
+                        <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Contact Summary</h4>
+                        <div className="bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                          <p className="text-sm text-gray-700 dark:text-fintech-text-secondary leading-relaxed">
                             {contact.contact_notes || 'No notes provided'}
                           </p>
                         </div>
@@ -1236,12 +1256,15 @@ export default function CaseDetail() {
 
                       {/* Follow-up section */}
                       {contact.follow_up_required === '1' && (
-                        <div className="border-l-4 border-yellow-400 bg-yellow-50 p-3 rounded-r-lg">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-yellow-600 font-medium text-sm">⚠️ Follow-up Required</span>
+                        <div className="border-l-4 border-amber-400 dark:border-fintech-warning bg-amber-50 dark:bg-fintech-warning/10 p-4 rounded-r-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <svg className="w-4 h-4 text-amber-600 dark:text-fintech-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span className="text-amber-700 dark:text-fintech-warning font-semibold text-sm">Follow-up Required</span>
                           </div>
                           {contact.follow_up_notes && (
-                            <p className="text-sm text-yellow-800">
+                            <p className="text-sm text-amber-800 dark:text-amber-300">
                               {contact.follow_up_notes}
                             </p>
                           )}
@@ -1249,17 +1272,24 @@ export default function CaseDetail() {
                       )}
 
                       {/* Action buttons */}
-                      <div className="flex justify-end space-x-2 pt-2 border-t border-gray-100">
-                        <button 
+                      <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-fintech-border-subtle">
+                        <button
                           onClick={() => handleViewContact(contact)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-fintech-accent-blue hover:bg-blue-50 dark:hover:bg-fintech-accent-blue/10 rounded-lg transition-colors"
                         >
-                          View Details
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEditContact(contact)}
-                          className="text-xs text-gray-600 hover:text-gray-800 font-medium"
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-fintech-text-secondary hover:bg-gray-100 dark:hover:bg-fintech-bg-tertiary rounded-lg transition-colors"
                         >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                           Edit
                         </button>
                       </div>
@@ -1272,48 +1302,65 @@ export default function CaseDetail() {
           )}
 
           {activeTab === 'homevisits' && (
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Home Visits ({homeVisitReports.length})</h3>
+            <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech border border-gray-100 dark:border-fintech-border-subtle overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-200 dark:border-fintech-border-subtle bg-gradient-to-r from-green-50 to-emerald-50 dark:from-fintech-bg-tertiary dark:to-fintech-bg-secondary">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Home Visits</h3>
+                    <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{homeVisitReports.length} visit{homeVisitReports.length !== 1 ? 's' : ''} recorded</p>
+                  </div>
                   <Link
                     href={`/reports/home-visit?case=${caseDetails.case_number}`}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                    className="inline-flex items-center px-4 py-2.5 bg-green-600 hover:bg-green-700 dark:bg-fintech-gain dark:hover:bg-green-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                   >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     New Home Visit Report
                   </Link>
                 </div>
               </div>
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-100 dark:divide-fintech-border-subtle">
                 {homeVisitReports.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">
-                    <p>No home visit reports found for this case.</p>
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-600 dark:text-fintech-text-secondary mb-3">No home visit reports found for this case.</p>
                     <Link
                       href={`/reports/home-visit?case=${caseDetails.case_number}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="inline-flex items-center text-green-600 dark:text-fintech-gain hover:text-green-800 font-medium"
                     >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
                       Create the first home visit report
                     </Link>
                   </div>
                 ) : (
                   homeVisitReports.map((visit) => (
-                  <div key={visit.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div key={visit.id} className="p-6 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors">
                     <div className="space-y-4">
                       {/* Header with visit date and volunteer */}
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center space-x-3">
-                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain rounded-full text-xs font-semibold">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
                             HOME VISIT
                           </span>
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
                             {formatDate(visit.visit_date)}
                           </span>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="text-left sm:text-right">
+                          <div className="text-sm font-medium text-gray-900 dark:text-fintech-text-primary">
                             {visit.created_by || 'Unknown Volunteer'}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 dark:text-fintech-text-tertiary">
                             {formatDate(visit.created_at)}
                           </div>
                         </div>
@@ -1321,9 +1368,9 @@ export default function CaseDetail() {
 
                       {/* Visit summary */}
                       <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Visit Summary</h4>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-sm text-gray-800 leading-relaxed">
+                        <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Visit Summary</h4>
+                        <div className="bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                          <p className="text-sm text-gray-700 dark:text-fintech-text-secondary leading-relaxed">
                             {visit.visit_summary || 'No summary provided'}
                           </p>
                         </div>
@@ -1332,37 +1379,37 @@ export default function CaseDetail() {
                       {/* Assessment details */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">Child's Physical Appearance</h4>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            visit.child_physical_appearance === 'excellent' ? 'bg-green-100 text-green-800' :
-                            visit.child_physical_appearance === 'good' ? 'bg-blue-100 text-blue-800' :
-                            visit.child_physical_appearance === 'fair' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Physical Appearance</h4>
+                          <span className={`inline-flex px-3 py-1.5 rounded-full text-xs font-semibold ${
+                            visit.child_physical_appearance === 'excellent' ? 'bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain' :
+                            visit.child_physical_appearance === 'good' ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue' :
+                            visit.child_physical_appearance === 'fair' ? 'bg-yellow-100 text-yellow-700 dark:bg-fintech-warning/20 dark:text-fintech-warning' :
+                            'bg-red-100 text-red-700 dark:bg-fintech-loss/20 dark:text-fintech-loss'
                           }`}>
-                            {visit.child_physical_appearance || 'Not assessed'}
+                            {visit.child_physical_appearance?.charAt(0).toUpperCase() + visit.child_physical_appearance?.slice(1) || 'Not assessed'}
                           </span>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">Child's Mood</h4>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            visit.child_mood === 'happy' ? 'bg-green-100 text-green-800' :
-                            visit.child_mood === 'content' ? 'bg-blue-100 text-blue-800' :
-                            visit.child_mood === 'neutral' ? 'bg-gray-100 text-gray-800' :
-                            visit.child_mood === 'sad' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Child's Mood</h4>
+                          <span className={`inline-flex px-3 py-1.5 rounded-full text-xs font-semibold ${
+                            visit.child_mood === 'happy' ? 'bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain' :
+                            visit.child_mood === 'content' ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue' :
+                            visit.child_mood === 'neutral' ? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300' :
+                            visit.child_mood === 'sad' ? 'bg-yellow-100 text-yellow-700 dark:bg-fintech-warning/20 dark:text-fintech-warning' :
+                            'bg-red-100 text-red-700 dark:bg-fintech-loss/20 dark:text-fintech-loss'
                           }`}>
-                            {visit.child_mood || 'Not assessed'}
+                            {visit.child_mood?.charAt(0).toUpperCase() + visit.child_mood?.slice(1) || 'Not assessed'}
                           </span>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">Home Condition</h4>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            visit.home_condition === 'excellent' ? 'bg-green-100 text-green-800' :
-                            visit.home_condition === 'good' ? 'bg-blue-100 text-blue-800' :
-                            visit.home_condition === 'fair' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Home Condition</h4>
+                          <span className={`inline-flex px-3 py-1.5 rounded-full text-xs font-semibold ${
+                            visit.home_condition === 'excellent' ? 'bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain' :
+                            visit.home_condition === 'good' ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue' :
+                            visit.home_condition === 'fair' ? 'bg-yellow-100 text-yellow-700 dark:bg-fintech-warning/20 dark:text-fintech-warning' :
+                            'bg-red-100 text-red-700 dark:bg-fintech-loss/20 dark:text-fintech-loss'
                           }`}>
-                            {visit.home_condition || 'Not assessed'}
+                            {visit.home_condition?.charAt(0).toUpperCase() + visit.home_condition?.slice(1) || 'Not assessed'}
                           </span>
                         </div>
                       </div>
@@ -1372,9 +1419,9 @@ export default function CaseDetail() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {visit.concerns_identified && (
                             <div>
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">Concerns Identified</h4>
-                              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r-lg">
-                                <p className="text-sm text-yellow-800">
+                              <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Concerns Identified</h4>
+                              <div className="bg-amber-50 dark:bg-fintech-warning/10 border-l-4 border-amber-400 dark:border-fintech-warning p-4 rounded-r-lg">
+                                <p className="text-sm text-amber-800 dark:text-amber-300">
                                   {visit.concerns_identified}
                                 </p>
                               </div>
@@ -1382,9 +1429,9 @@ export default function CaseDetail() {
                           )}
                           {visit.recommendations && (
                             <div>
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">Recommendations</h4>
-                              <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-lg">
-                                <p className="text-sm text-blue-800">
+                              <h4 className="text-xs font-semibold text-gray-500 dark:text-fintech-text-tertiary uppercase tracking-wider mb-2">Recommendations</h4>
+                              <div className="bg-blue-50 dark:bg-fintech-accent-blue/10 border-l-4 border-blue-400 dark:border-fintech-accent-blue p-4 rounded-r-lg">
+                                <p className="text-sm text-blue-800 dark:text-blue-300">
                                   {visit.recommendations}
                                 </p>
                               </div>
@@ -1394,17 +1441,24 @@ export default function CaseDetail() {
                       )}
 
                       {/* Action buttons */}
-                      <div className="flex justify-end space-x-2 pt-2 border-t border-gray-100">
-                        <button 
+                      <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-fintech-border-subtle">
+                        <button
                           onClick={() => handleViewHomeVisit(visit)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 dark:text-fintech-gain hover:bg-green-50 dark:hover:bg-fintech-gain/10 rounded-lg transition-colors"
                         >
-                          View Details
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEditHomeVisit(visit)}
-                          className="text-xs text-gray-600 hover:text-gray-800 font-medium"
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-fintech-text-secondary hover:bg-gray-100 dark:hover:bg-fintech-bg-tertiary rounded-lg transition-colors"
                         >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                           Edit
                         </button>
                       </div>
@@ -1417,115 +1471,152 @@ export default function CaseDetail() {
           )}
 
           {activeTab === 'documents' && (
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Documents</h3>
+            <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech border border-gray-100 dark:border-fintech-border-subtle overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-200 dark:border-fintech-border-subtle bg-gradient-to-r from-amber-50 to-orange-50 dark:from-fintech-bg-tertiary dark:to-fintech-bg-secondary">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Documents</h3>
+                    <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{documents.length} document{documents.length !== 1 ? 's' : ''} uploaded</p>
+                  </div>
                   <Link
                     href={`/documents?case=${caseDetails.case_number}`}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                    className="inline-flex items-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 dark:bg-fintech-warning dark:hover:bg-amber-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                   >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
                     Upload Document
                   </Link>
                 </div>
               </div>
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-100 dark:divide-fintech-border-subtle">
                 {documents.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">
-                    <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-2xl">📄</span>
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
                     </div>
-                    <p className="mb-2">No documents found for this case.</p>
+                    <p className="text-gray-600 dark:text-fintech-text-secondary mb-3">No documents found for this case.</p>
                     <Link
                       href={`/documents?case=${caseDetails.case_number}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="inline-flex items-center text-amber-600 dark:text-fintech-warning hover:text-amber-800 font-medium"
                     >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
                       Upload the first document
                     </Link>
                   </div>
                 ) : (
-                  documents.map((document) => (
-                  <div key={document.id} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start space-x-4 flex-1">
+                  documents.map((doc) => (
+                  <div key={doc.id} className="p-6 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                      <div className="flex items-start gap-4 flex-1">
                         {/* Document Icon */}
                         <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <span className="text-2xl">
-                              {document.document_type === 'court-order' ? '⚖️' :
-                               document.document_type === 'medical-record' ? '🏥' :
-                               document.document_type === 'school-report' ? '📚' :
-                               document.document_type === 'case-plan' ? '📋' :
-                               document.document_type === 'home-visit-report' ? '🏠' :
-                               document.document_type === 'court-report' ? '📄' :
-                               document.document_type === 'background-check' ? '🔍' :
-                               document.document_type === 'birth-certificate' ? '📜' :
-                               document.document_type === 'social-services-report' ? '🤝' :
-                               '📄'
-                              }
-                            </span>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            doc.document_type === 'court-order' ? 'bg-red-100 dark:bg-fintech-loss/20' :
+                            doc.document_type === 'medical-record' ? 'bg-blue-100 dark:bg-fintech-accent-blue/20' :
+                            doc.document_type === 'school-report' ? 'bg-green-100 dark:bg-fintech-gain/20' :
+                            doc.document_type === 'case-plan' ? 'bg-purple-100 dark:bg-fintech-accent-indigo/20' :
+                            'bg-gray-100 dark:bg-fintech-bg-tertiary'
+                          }`}>
+                            <svg className={`w-6 h-6 ${
+                              doc.document_type === 'court-order' ? 'text-red-600 dark:text-fintech-loss' :
+                              doc.document_type === 'medical-record' ? 'text-blue-600 dark:text-fintech-accent-blue' :
+                              doc.document_type === 'school-report' ? 'text-green-600 dark:text-fintech-gain' :
+                              doc.document_type === 'case-plan' ? 'text-purple-600 dark:text-fintech-accent-indigo' :
+                              'text-gray-600 dark:text-fintech-text-secondary'
+                            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                           </div>
                         </div>
-                        
+
                         {/* Document Details */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">
-                              {document.document_name}
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-fintech-text-primary">
+                              {doc.document_name}
                             </h4>
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              document.document_type === 'court-order' ? 'bg-red-100 text-red-800' :
-                              document.document_type === 'medical-record' ? 'bg-blue-100 text-blue-800' :
-                              document.document_type === 'school-report' ? 'bg-green-100 text-green-800' :
-                              document.document_type === 'case-plan' ? 'bg-purple-100 text-purple-800' :
-                              document.document_type === 'home-visit-report' ? 'bg-yellow-100 text-yellow-800' :
-                              document.document_type === 'court-report' ? 'bg-indigo-100 text-indigo-800' :
-                              'bg-gray-100 text-gray-800'
+                              doc.document_type === 'court-order' ? 'bg-red-100 text-red-700 dark:bg-fintech-loss/20 dark:text-fintech-loss' :
+                              doc.document_type === 'medical-record' ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue' :
+                              doc.document_type === 'school-report' ? 'bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain' :
+                              doc.document_type === 'case-plan' ? 'bg-purple-100 text-purple-700 dark:bg-fintech-accent-indigo/20 dark:text-fintech-accent-indigo' :
+                              doc.document_type === 'home-visit-report' ? 'bg-amber-100 text-amber-700 dark:bg-fintech-warning/20 dark:text-fintech-warning' :
+                              'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300'
                             }`}>
-                              {document.document_type.replace(/-/g, ' ').toUpperCase()}
+                              {doc.document_type.replace(/-/g, ' ').toUpperCase()}
                             </span>
-                            {document.is_confidential && (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                🔒 Confidential
+                            {doc.is_confidential && (
+                              <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-fintech-loss/20 dark:text-fintech-loss">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                Confidential
                               </span>
                             )}
                           </div>
-                          
-                          {document.description && (
-                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                              {document.description}
+
+                          {doc.description && (
+                            <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mb-2 line-clamp-2">
+                              {doc.description}
                             </p>
                           )}
-                          
-                          <div className="flex items-center text-sm text-gray-500 space-x-4">
-                            <span>File: {document.file_name}</span>
-                            {document.file_size && (
-                              <span>Size: {Math.round(document.file_size / 1024)} KB</span>
-                            )}
-                            <span>Uploaded: {formatDate(document.upload_date)}</span>
-                            <span>By: {document.uploaded_by}</span>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-fintech-text-tertiary">
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              {doc.file_name}
+                            </span>
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {formatDate(doc.upload_date)}
+                            </span>
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {doc.uploaded_by}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Action Buttons */}
-                      <div className="flex items-center space-x-2 ml-4">
-                        <button 
-                          onClick={() => handleViewDocument(document)}
-                          className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleViewDocument(doc)}
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-fintech-accent-blue hover:bg-blue-50 dark:hover:bg-fintech-accent-blue/10 rounded-lg transition-colors"
                         >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                           View
                         </button>
-                        <button 
-                          onClick={() => handleDownloadDocument(document)}
-                          className="text-green-600 hover:text-green-900 text-sm font-medium"
+                        <button
+                          onClick={() => handleDownloadDocument(doc)}
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 dark:text-fintech-gain hover:bg-green-50 dark:hover:bg-fintech-gain/10 rounded-lg transition-colors"
                         >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
                           Download
                         </button>
-                        <button 
-                          onClick={() => handleDeleteDocument(document)}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                        <button
+                          onClick={() => handleDeleteDocument(doc)}
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 dark:text-fintech-loss hover:bg-red-50 dark:hover:bg-fintech-loss/10 rounded-lg transition-colors"
                         >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                           Delete
                         </button>
                       </div>
@@ -1538,52 +1629,93 @@ export default function CaseDetail() {
           )}
 
           {activeTab === 'hearings' && (
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Court Hearings</h3>
+            <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech border border-gray-100 dark:border-fintech-border-subtle overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-200 dark:border-fintech-border-subtle bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-fintech-bg-tertiary dark:to-fintech-bg-secondary">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Court Hearings</h3>
+                    <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{courtHearings.length} hearing{courtHearings.length !== 1 ? 's' : ''} scheduled</p>
+                  </div>
                   <Link
-                    href="/court-hearings"
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+                    href={`/court-hearings?case=${caseDetails.case_number}`}
+                    className="inline-flex items-center px-4 py-2.5 bg-purple-600 hover:bg-purple-700 dark:bg-fintech-accent-indigo dark:hover:bg-purple-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                   >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Schedule Hearing
                   </Link>
                 </div>
               </div>
-              <div className="divide-y divide-gray-200">
-                {courtHearings.map((hearing) => (
-                  <div key={hearing.id} className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4 mb-2">
-                          <h4 className="text-sm font-medium text-gray-900">{hearing.hearing_type}</h4>
-                          <span className={`text-xs font-medium px-2.5 py-0.5 rounded ${
-                            hearing.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                          }`}>
-                            {hearing.status}
-                          </span>
+              <div className="divide-y divide-gray-100 dark:divide-fintech-border-subtle">
+                {courtHearings.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-600 dark:text-fintech-text-secondary mb-3">No court hearings scheduled for this case.</p>
+                    <Link
+                      href={`/court-hearings?case=${caseDetails.case_number}`}
+                      className="inline-flex items-center text-purple-600 dark:text-fintech-accent-indigo hover:text-purple-800 font-medium"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Schedule the first hearing
+                    </Link>
+                  </div>
+                ) : (
+                  courtHearings.map((hearing) => (
+                    <div key={hearing.id} className="p-6 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-3 mb-3">
+                            <h4 className="text-base font-semibold text-gray-900 dark:text-fintech-text-primary">{hearing.hearing_type}</h4>
+                            <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
+                              hearing.status === 'scheduled'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-fintech-accent-blue/20 dark:text-fintech-accent-blue'
+                                : 'bg-green-100 text-green-700 dark:bg-fintech-gain/20 dark:text-fintech-gain'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${hearing.status === 'scheduled' ? 'bg-blue-500' : 'bg-green-500'}`}></span>
+                              {hearing.status?.charAt(0).toUpperCase() + hearing.status?.slice(1)}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div className="flex items-center text-gray-600 dark:text-fintech-text-secondary">
+                              <svg className="w-4 h-4 mr-2 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {formatDate(hearing.hearing_date)} at {hearing.hearing_time}
+                            </div>
+                            <div className="flex items-center text-gray-600 dark:text-fintech-text-secondary">
+                              <svg className="w-4 h-4 mr-2 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              {hearing.court_room || 'TBD'} - {hearing.judge_name || 'Judge TBD'}
+                            </div>
+                          </div>
+                          {hearing.notes && (
+                            <p className="mt-3 text-sm text-gray-600 dark:text-fintech-text-secondary bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-3">{hearing.notes}</p>
+                          )}
                         </div>
-                        <div className="text-sm text-gray-600 mb-1">
-                          <span className="font-medium">Date:</span> {formatDate(hearing.hearing_date)} at {hearing.hearing_time}
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/reports/court?hearing=${hearing.id}`}
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-600 dark:text-fintech-accent-indigo hover:bg-purple-50 dark:hover:bg-fintech-accent-indigo/10 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Create Report
+                          </Link>
                         </div>
-                        <div className="text-sm text-gray-600 mb-1">
-                          <span className="font-medium">Location:</span> {hearing.court_room} - {hearing.judge_name}
-                        </div>
-                        {hearing.notes && (
-                          <p className="text-sm text-gray-600">{hearing.notes}</p>
-                        )}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Link
-                          href={`/reports/court?hearing=${hearing.id}`}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          Create Report
-                        </Link>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -1591,88 +1723,119 @@ export default function CaseDetail() {
           {activeTab === 'reports' && (
             <div className="space-y-6">
               {/* Home Visit Reports */}
-              <div className="bg-white rounded-lg shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Home Visit Reports</h3>
+              <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech border border-gray-100 dark:border-fintech-border-subtle overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-200 dark:border-fintech-border-subtle bg-gradient-to-r from-green-50 to-emerald-50 dark:from-fintech-bg-tertiary dark:to-fintech-bg-secondary">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Home Visit Reports</h3>
+                      <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{homeVisitReports.length} report{homeVisitReports.length !== 1 ? 's' : ''}</p>
+                    </div>
                     <Link
                       href={`/reports/home-visit?case=${caseDetails.case_number}`}
-                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                      className="inline-flex items-center px-4 py-2.5 bg-green-600 hover:bg-green-700 dark:bg-fintech-gain dark:hover:bg-green-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                     >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
                       New Home Visit Report
                     </Link>
                   </div>
                 </div>
-                <div className="divide-y divide-gray-200">
-                  {homeVisitReports.map((report) => (
-                    <div key={report.id} className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="text-sm text-gray-600 mb-2">
-                            Visit Date: {formatDate(report.visit_date)}
+                <div className="divide-y divide-gray-100 dark:divide-fintech-border-subtle">
+                  {homeVisitReports.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500 dark:text-fintech-text-secondary">No home visit reports yet.</div>
+                  ) : (
+                    homeVisitReports.map((report) => (
+                      <div key={report.id} className="p-6 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-fintech-text-secondary mb-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Visit Date: {formatDate(report.visit_date)}
+                            </div>
+                            <p className="text-sm text-gray-900 dark:text-fintech-text-primary mb-3">{report.visit_summary}</p>
+                            <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-fintech-text-secondary">
+                              <span><span className="font-medium">Physical:</span> {report.child_physical_appearance}</span>
+                              <span><span className="font-medium">Mood:</span> {report.child_mood}</span>
+                              <span><span className="font-medium">Home:</span> {report.home_condition}</span>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-900 mb-2">{report.visit_summary}</p>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Child Condition:</span> {report.child_physical_appearance} physical, {report.child_mood} mood
+                          <div className="text-sm text-gray-500 dark:text-fintech-text-tertiary">
+                            By: {report.created_by}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Home Condition:</span> {report.home_condition}
-                          </div>
-                        </div>
-                        <div className="text-right text-sm text-gray-500">
-                          By: {report.created_by}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
               {/* Court Reports */}
-              <div className="bg-white rounded-lg shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Court Reports</h3>
+              <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech border border-gray-100 dark:border-fintech-border-subtle overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-200 dark:border-fintech-border-subtle bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-fintech-bg-tertiary dark:to-fintech-bg-secondary">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Court Reports</h3>
+                      <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{courtReports.length} report{courtReports.length !== 1 ? 's' : ''}</p>
+                    </div>
                     <Link
                       href={`/reports/court?case=${caseDetails.case_number}`}
-                      className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+                      className="inline-flex items-center px-4 py-2.5 bg-purple-600 hover:bg-purple-700 dark:bg-fintech-accent-indigo dark:hover:bg-purple-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                     >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
                       New Court Report
                     </Link>
                   </div>
                 </div>
-                <div className="divide-y divide-gray-200">
-                  {courtReports.map((report) => (
-                    <div key={report.id} className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-4 mb-2">
-                            <h4 className="text-sm font-medium text-gray-900">{report.hearing_type}</h4>
-                            <span className="text-sm text-gray-500">
-                              {formatDate(report.hearing_date)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-900 mb-2">{report.hearing_summary}</p>
-                          {report.casa_recommendations && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">CASA Recommendations:</span> {report.casa_recommendations}
+                <div className="divide-y divide-gray-100 dark:divide-fintech-border-subtle">
+                  {courtReports.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500 dark:text-fintech-text-secondary">No court reports yet.</div>
+                  ) : (
+                    courtReports.map((report) => (
+                      <div key={report.id} className="p-6 hover:bg-gray-50 dark:hover:bg-fintech-bg-tertiary transition-colors">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-3 mb-3">
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-fintech-text-primary">{report.hearing_type}</h4>
+                              <span className="text-sm text-gray-500 dark:text-fintech-text-tertiary">
+                                {formatDate(report.hearing_date)}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                        <div className="text-right text-sm text-gray-500">
-                          By: {report.created_by}
+                            <p className="text-sm text-gray-700 dark:text-fintech-text-secondary mb-3">{report.hearing_summary}</p>
+                            {report.casa_recommendations && (
+                              <div className="bg-purple-50 dark:bg-fintech-accent-indigo/10 border-l-4 border-purple-400 dark:border-fintech-accent-indigo p-3 rounded-r-lg">
+                                <p className="text-sm text-purple-800 dark:text-purple-300">
+                                  <span className="font-semibold">CASA Recommendations:</span> {report.casa_recommendations}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-fintech-text-tertiary">
+                            By: {report.created_by}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'timeline' && (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">Case Timeline</h3>
+            <div className="bg-white dark:bg-fintech-bg-secondary rounded-xl shadow-lg dark:shadow-fintech p-6 border border-gray-100 dark:border-fintech-border-subtle">
+              <div className="flex items-center mb-6">
+                <div className="w-10 h-10 bg-indigo-100 dark:bg-fintech-accent-indigo/20 rounded-lg flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-indigo-600 dark:text-fintech-accent-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-fintech-text-primary">Case Timeline</h3>
+              </div>
               <div className="flow-root">
                 <ul className="-mb-8">
                   {/* Generate comprehensive timeline by combining all activities */}
@@ -1800,26 +1963,28 @@ export default function CaseDetail() {
                       <li key={item.id}>
                         <div className="relative pb-8">
                           {index < timelineItems.length - 1 && (
-                            <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>
+                            <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-fintech-border-subtle"></span>
                           )}
-                          <div className="relative flex space-x-3">
+                          <div className="relative flex space-x-4">
                             <div>
-                              <span className={`h-8 w-8 rounded-full ${item.color} flex items-center justify-center ring-8 ring-white`}>
-                                <span className="text-white text-sm">{item.icon}</span>
+                              <span className={`h-10 w-10 rounded-xl ${item.color} flex items-center justify-center ring-4 ring-white dark:ring-fintech-bg-secondary shadow-md`}>
+                                <span className="text-white text-base">{item.icon}</span>
                               </span>
                             </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                                <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  by <span className="font-medium">{item.user}</span>
-                                </p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                <time dateTime={item.date}>
-                                  {formatDate(item.date)}
-                                </time>
+                            <div className="min-w-0 flex-1 bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-fintech-text-primary">{item.title}</p>
+                                  <p className="text-sm text-gray-600 dark:text-fintech-text-secondary mt-1">{item.description}</p>
+                                  <p className="text-xs text-gray-500 dark:text-fintech-text-tertiary mt-2">
+                                    by <span className="font-medium text-gray-700 dark:text-fintech-text-secondary">{item.user}</span>
+                                  </p>
+                                </div>
+                                <div className="text-sm whitespace-nowrap text-gray-500 dark:text-fintech-text-tertiary">
+                                  <time dateTime={item.date}>
+                                    {formatDate(item.date)}
+                                  </time>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1831,9 +1996,14 @@ export default function CaseDetail() {
                   {/* Empty state if no activities */}
                   {contactLogs.length === 0 && homeVisitReports.length === 0 && documents.length === 0 && courtHearings.length === 0 && courtReports.length === 0 && (
                     <li>
-                      <div className="text-center py-8">
-                        <p className="text-gray-500 text-sm">No activities recorded yet.</p>
-                        <p className="text-gray-400 text-xs mt-1">Activities will appear here as they are added to the case.</p>
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-fintech-bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-gray-400 dark:text-fintech-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-600 dark:text-fintech-text-secondary text-sm">No activities recorded yet.</p>
+                        <p className="text-gray-400 dark:text-fintech-text-tertiary text-xs mt-1">Activities will appear here as they are added to the case.</p>
                       </div>
                     </li>
                   )}
@@ -1846,18 +2016,18 @@ export default function CaseDetail() {
 
       {/* Contact Log Modal */}
       {(isViewingContact || isEditingContact) && selectedContactLog && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 overflow-y-auto h-full w-full z-50 backdrop-blur-sm">
+          <div className="relative top-10 mx-auto p-6 border border-gray-200 dark:border-fintech-border-subtle w-11/12 max-w-4xl shadow-2xl dark:shadow-fintech rounded-xl bg-white dark:bg-fintech-bg-secondary">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                 {isEditingContact ? 'Edit Contact Log' : 'Contact Log Details'}
               </h3>
               <button
                 onClick={handleCloseContactModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:text-fintech-text-tertiary dark:hover:text-fintech-text-primary hover:bg-gray-100 dark:hover:bg-fintech-bg-tertiary rounded-lg transition-colors"
               >
                 <span className="sr-only">Close</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1867,12 +2037,12 @@ export default function CaseDetail() {
               {/* Contact Type and Date */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Type</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Contact Type</label>
                   {isEditingContact ? (
                     <select
                       value={contactEditData?.contact_type || ''}
                       onChange={(e) => handleContactInputChange('contact_type', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     >
                       <option value="phone">Phone</option>
                       <option value="email">Email</option>
@@ -1886,29 +2056,29 @@ export default function CaseDetail() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Date</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Contact Date</label>
                   {isEditingContact ? (
                     <input
                       type="datetime-local"
                       value={contactEditData?.contact_date || ''}
                       onChange={(e) => handleContactInputChange('contact_date', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900">{formatDate(selectedContactLog.contact_date)}</p>
+                    <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{formatDate(selectedContactLog.contact_date)}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Duration (minutes)</label>
                   {isEditingContact ? (
                     <input
                       type="number"
                       value={contactEditData?.contact_duration || ''}
                       onChange={(e) => handleContactInputChange('contact_duration', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900">{selectedContactLog.contact_duration} minutes</p>
+                    <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedContactLog.contact_duration} minutes</p>
                   )}
                 </div>
               </div>
@@ -1916,37 +2086,37 @@ export default function CaseDetail() {
               {/* Contact Person and Child */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Contact Person</label>
                   {isEditingContact ? (
                     <input
                       type="text"
                       value={contactEditData?.contact_person || ''}
                       onChange={(e) => handleContactInputChange('contact_person', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900">{selectedContactLog.contact_person || 'Not specified'}</p>
+                    <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedContactLog.contact_person || 'Not specified'}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Child</label>
-                  <p className="text-sm text-gray-900">{selectedContactLog.child_first_name} {selectedContactLog.child_last_name}</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Child</label>
+                  <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedContactLog.child_first_name} {selectedContactLog.child_last_name}</p>
                 </div>
               </div>
 
               {/* Contact Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Notes</label>
+                <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-2">Contact Notes</label>
                 {isEditingContact ? (
                   <textarea
                     value={contactEditData?.contact_notes || ''}
                     onChange={(e) => handleContactInputChange('contact_notes', e.target.value)}
                     rows={6}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                   />
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                  <div className="bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                    <p className="text-sm text-gray-700 dark:text-fintech-text-secondary leading-relaxed whitespace-pre-wrap">
                       {selectedContactLog.contact_notes || 'No notes provided'}
                     </p>
                   </div>
@@ -1956,61 +2126,61 @@ export default function CaseDetail() {
               {/* Follow-up */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Follow-up Required</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Follow-up Required</label>
                   {isEditingContact ? (
                     <select
                       value={contactEditData?.follow_up_required || '0'}
                       onChange={(e) => handleContactInputChange('follow_up_required', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     >
                       <option value="0">No</option>
                       <option value="1">Yes</option>
                     </select>
                   ) : (
-                    <p className="text-sm text-gray-900">{selectedContactLog.follow_up_required === '1' ? 'Yes' : 'No'}</p>
+                    <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedContactLog.follow_up_required === '1' ? 'Yes' : 'No'}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Follow-up Notes</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Follow-up Notes</label>
                   {isEditingContact ? (
                     <textarea
                       value={contactEditData?.follow_up_notes || ''}
                       onChange={(e) => handleContactInputChange('follow_up_notes', e.target.value)}
                       rows={3}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900">{selectedContactLog.follow_up_notes || 'None'}</p>
+                    <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedContactLog.follow_up_notes || 'None'}</p>
                   )}
                 </div>
               </div>
 
               {/* Volunteer and Created Date */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-fintech-border-subtle">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Created By</label>
-                  <p className="text-sm text-gray-900">{selectedContactLog.volunteer_name || 'Unknown Volunteer'}</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Created By</label>
+                  <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedContactLog.volunteer_name || 'Unknown Volunteer'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
-                  <p className="text-sm text-gray-900">{formatDate(selectedContactLog.created_at)}</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Created Date</label>
+                  <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{formatDate(selectedContactLog.created_at)}</p>
                 </div>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-fintech-border-subtle">
               {isEditingContact ? (
                 <>
                   <button
                     onClick={handleCloseContactModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-fintech-text-secondary bg-white dark:bg-fintech-bg-tertiary border border-gray-300 dark:border-fintech-border-subtle rounded-lg hover:bg-gray-50 dark:hover:bg-fintech-bg-secondary transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveContactEdit}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                    className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 dark:bg-fintech-accent-blue border border-transparent rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md transition-all"
                   >
                     Save Changes
                   </button>
@@ -2019,13 +2189,13 @@ export default function CaseDetail() {
                 <>
                   <button
                     onClick={handleCloseContactModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-fintech-text-secondary bg-white dark:bg-fintech-bg-tertiary border border-gray-300 dark:border-fintech-border-subtle rounded-lg hover:bg-gray-50 dark:hover:bg-fintech-bg-secondary transition-colors"
                   >
                     Close
                   </button>
                   <button
                     onClick={() => handleEditContact(selectedContactLog)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                    className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 dark:bg-fintech-accent-blue border border-transparent rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md transition-all"
                   >
                     Edit Contact Log
                   </button>
@@ -2038,18 +2208,18 @@ export default function CaseDetail() {
 
       {/* Home Visit Modal */}
       {(isViewingHomeVisit || isEditingHomeVisit) && selectedHomeVisit && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 overflow-y-auto h-full w-full z-50 backdrop-blur-sm">
+          <div className="relative top-10 mx-auto p-6 border border-gray-200 dark:border-fintech-border-subtle w-11/12 max-w-4xl shadow-2xl dark:shadow-fintech rounded-xl bg-white dark:bg-fintech-bg-secondary">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200 dark:border-fintech-border-subtle">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-fintech-text-primary">
                 {isEditingHomeVisit ? 'Edit Home Visit Report' : 'Home Visit Report Details'}
               </h3>
               <button
                 onClick={handleCloseHomeVisitModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:text-fintech-text-tertiary dark:hover:text-fintech-text-primary hover:bg-gray-100 dark:hover:bg-fintech-bg-tertiary rounded-lg transition-colors"
               >
                 <span className="sr-only">Close</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -2058,33 +2228,33 @@ export default function CaseDetail() {
             <div className="space-y-6">
               {/* Visit Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Visit Date</label>
+                <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Visit Date</label>
                 {isEditingHomeVisit ? (
                   <input
                     type="date"
                     value={homeVisitEditData?.visit_date || ''}
                     onChange={(e) => handleHomeVisitInputChange('visit_date', e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                   />
                 ) : (
-                  <p className="text-sm text-gray-900">{formatDate(selectedHomeVisit.visit_date)}</p>
+                  <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{formatDate(selectedHomeVisit.visit_date)}</p>
                 )}
               </div>
 
               {/* Visit Summary */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Visit Summary</label>
+                <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-2">Visit Summary</label>
                 {isEditingHomeVisit ? (
                   <textarea
                     value={homeVisitEditData?.visit_summary || ''}
                     onChange={(e) => handleHomeVisitInputChange('visit_summary', e.target.value)}
                     rows={6}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     placeholder="Describe the overall visit..."
                   />
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                  <div className="bg-gray-50 dark:bg-fintech-bg-tertiary rounded-lg p-4">
+                    <p className="text-sm text-gray-700 dark:text-fintech-text-secondary leading-relaxed whitespace-pre-wrap">
                       {selectedHomeVisit.visit_summary || 'No summary provided'}
                     </p>
                   </div>
@@ -2094,12 +2264,12 @@ export default function CaseDetail() {
               {/* Assessment Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Child's Physical Appearance</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Child's Physical Appearance</label>
                   {isEditingHomeVisit ? (
                     <select
                       value={homeVisitEditData?.child_physical_appearance || ''}
                       onChange={(e) => handleHomeVisitInputChange('child_physical_appearance', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     >
                       <option value="">Select assessment</option>
                       <option value="excellent">Excellent</option>
@@ -2119,12 +2289,12 @@ export default function CaseDetail() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Child's Mood</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Child's Mood</label>
                   {isEditingHomeVisit ? (
                     <select
                       value={homeVisitEditData?.child_mood || ''}
                       onChange={(e) => handleHomeVisitInputChange('child_mood', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     >
                       <option value="">Select mood</option>
                       <option value="happy">Happy</option>
@@ -2147,12 +2317,12 @@ export default function CaseDetail() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Home Condition</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Home Condition</label>
                   {isEditingHomeVisit ? (
                     <select
                       value={homeVisitEditData?.home_condition || ''}
                       onChange={(e) => handleHomeVisitInputChange('home_condition', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                     >
                       <option value="">Select condition</option>
                       <option value="excellent">Excellent</option>
@@ -2176,36 +2346,36 @@ export default function CaseDetail() {
               {/* Concerns and Recommendations */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Concerns Identified</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Concerns Identified</label>
                   {isEditingHomeVisit ? (
                     <textarea
                       value={homeVisitEditData?.concerns_identified || ''}
                       onChange={(e) => handleHomeVisitInputChange('concerns_identified', e.target.value)}
                       rows={4}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                       placeholder="Any concerns noted during the visit..."
                     />
                   ) : (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r-lg min-h-[100px]">
-                      <p className="text-sm text-yellow-800">
+                    <div className="bg-amber-50 dark:bg-fintech-warning/10 border-l-4 border-amber-400 dark:border-fintech-warning p-4 rounded-r-lg min-h-[100px]">
+                      <p className="text-sm text-amber-800 dark:text-amber-300">
                         {selectedHomeVisit.concerns_identified || 'No concerns identified'}
                       </p>
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recommendations</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Recommendations</label>
                   {isEditingHomeVisit ? (
                     <textarea
                       value={homeVisitEditData?.recommendations || ''}
                       onChange={(e) => handleHomeVisitInputChange('recommendations', e.target.value)}
                       rows={4}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                       placeholder="Recommendations for next steps..."
                     />
                   ) : (
-                    <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-lg min-h-[100px]">
-                      <p className="text-sm text-blue-800">
+                    <div className="bg-blue-50 dark:bg-fintech-accent-blue/10 border-l-4 border-blue-400 dark:border-fintech-accent-blue p-4 rounded-r-lg min-h-[100px]">
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
                         {selectedHomeVisit.recommendations || 'No recommendations provided'}
                       </p>
                     </div>
@@ -2216,47 +2386,47 @@ export default function CaseDetail() {
               {/* Visit Duration (if available) */}
               {selectedHomeVisit.visit_duration && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Visit Duration</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Visit Duration</label>
                   {isEditingHomeVisit ? (
                     <input
                       type="text"
                       value={homeVisitEditData?.visit_duration || ''}
                       onChange={(e) => handleHomeVisitInputChange('visit_duration', e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="block w-full px-4 py-2.5 border border-gray-300 dark:border-fintech-border-subtle rounded-lg shadow-sm bg-white dark:bg-fintech-bg-tertiary text-gray-900 dark:text-fintech-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-fintech-accent-blue focus:border-transparent transition-all"
                       placeholder="e.g., 2 hours"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900">{selectedHomeVisit.visit_duration}</p>
+                    <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedHomeVisit.visit_duration}</p>
                   )}
                 </div>
               )}
 
               {/* Created By and Date */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-fintech-border-subtle">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Created By</label>
-                  <p className="text-sm text-gray-900">{selectedHomeVisit.created_by || 'Unknown Volunteer'}</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Created By</label>
+                  <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{selectedHomeVisit.created_by || 'Unknown Volunteer'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
-                  <p className="text-sm text-gray-900">{formatDate(selectedHomeVisit.created_at)}</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-fintech-text-secondary mb-1">Created Date</label>
+                  <p className="text-sm text-gray-900 dark:text-fintech-text-primary">{formatDate(selectedHomeVisit.created_at)}</p>
                 </div>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-fintech-border-subtle">
               {isEditingHomeVisit ? (
                 <>
                   <button
                     onClick={handleCloseHomeVisitModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-fintech-text-secondary bg-white dark:bg-fintech-bg-tertiary border border-gray-300 dark:border-fintech-border-subtle rounded-lg hover:bg-gray-50 dark:hover:bg-fintech-bg-secondary transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveHomeVisitEdit}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                    className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 dark:bg-fintech-accent-blue border border-transparent rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md transition-all"
                   >
                     Save Changes
                   </button>
@@ -2265,13 +2435,13 @@ export default function CaseDetail() {
                 <>
                   <button
                     onClick={handleCloseHomeVisitModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-fintech-text-secondary bg-white dark:bg-fintech-bg-tertiary border border-gray-300 dark:border-fintech-border-subtle rounded-lg hover:bg-gray-50 dark:hover:bg-fintech-bg-secondary transition-colors"
                   >
                     Close
                   </button>
                   <button
                     onClick={() => handleEditHomeVisit(selectedHomeVisit)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                    className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 dark:bg-fintech-accent-blue border border-transparent rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md transition-all"
                   >
                     Edit Home Visit Report
                   </button>

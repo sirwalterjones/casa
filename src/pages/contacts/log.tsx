@@ -42,20 +42,21 @@ interface ContactLogFormData {
   attachments?: string;
 }
 
-const mockCases = [
-  { id: 'case-1', number: '2024-001', childName: 'Emily Johnson' },
-  { id: 'case-2', number: '2024-002', childName: 'Michael Davis' },
-  { id: 'case-3', number: '2024-003', childName: 'Sarah Martinez' },
-  { id: 'case-4', number: '2024-004', childName: 'David Wilson' },
-];
+interface CaseOption {
+  id: string;
+  number: string;
+  childName: string;
+}
 
 export default function ContactLog() {
   const { user, loading } = useRequireAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [cases, setCases] = useState<CaseOption[]>([]);
+  const [isLoadingCases, setIsLoadingCases] = useState(true);
   const { showToast, showSuccessAnimation } = useToast();
-  
+
   const {
     register,
     handleSubmit,
@@ -65,17 +66,60 @@ export default function ContactLog() {
     setValue,
   } = useForm<ContactLogFormData>();
 
+  // Load cases from API
+  useEffect(() => {
+    const loadCases = async () => {
+      try {
+        setIsLoadingCases(true);
+        const response = await apiClient.casaGet('cases?limit=100');
+        if (response.success && response.data) {
+          const apiData = response.data as any;
+          let casesData: any[] = [];
+
+          if (apiData.success && apiData.data?.cases) {
+            casesData = apiData.data.cases;
+          } else if (apiData.data?.cases) {
+            casesData = apiData.data.cases;
+          } else if (apiData.cases) {
+            casesData = apiData.cases;
+          } else if (Array.isArray(apiData.data)) {
+            casesData = apiData.data;
+          } else if (Array.isArray(apiData)) {
+            casesData = apiData;
+          }
+
+          setCases(casesData.map((c: any) => ({
+            id: c.id,
+            number: c.case_number,
+            childName: `${c.child_first_name || ''} ${c.child_last_name || ''}`.trim() || 'Unknown'
+          })));
+        }
+      } catch (error) {
+        console.error('Failed to load cases:', error);
+      } finally {
+        setIsLoadingCases(false);
+      }
+    };
+
+    if (user) {
+      loadCases();
+    }
+  }, [user]);
+
   // Handle case pre-selection from URL
   useEffect(() => {
-    if (router.query.case) {
+    if (router.query.case && cases.length > 0) {
       const caseNumber = router.query.case as string;
-      const selectedCase = mockCases.find(c => c.number === caseNumber);
+      const selectedCase = cases.find(c => c.number === caseNumber);
       if (selectedCase) {
         setValue('case_number', selectedCase.number);
         setValue('child_name', selectedCase.childName);
+      } else {
+        // If case number not found in list, still set it (might be valid)
+        setValue('case_number', caseNumber);
       }
     }
-  }, [router.query.case, setValue]);
+  }, [router.query.case, cases, setValue]);
 
   if (loading) {
     return (
@@ -181,10 +225,10 @@ export default function ContactLog() {
         <meta name="description" content="Log contact interactions with children and families" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-primary">
         <Navigation currentPage="/contacts/log" />
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-teal-700 text-white">
+        <div className="bg-gradient-to-r from-green-600 to-teal-700 dark:from-green-700 dark:to-teal-800 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-8">
               <h1 className="text-3xl font-light mb-2">CASA Contact Log</h1>
@@ -194,36 +238,36 @@ export default function ContactLog() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="bg-white dark:bg-fintech-bg-secondary shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <nav className="flex space-x-8">
               <Link
                 href="/dashboard"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Dashboard
               </Link>
               <Link
                 href="/cases/intake"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Case Intake
               </Link>
               <Link
                 href="/contacts/log"
-                className="py-4 px-1 border-b-2 border-green-500 text-green-600 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-green-500 text-green-600 dark:text-green-400 font-medium text-sm"
               >
                 Contact Log
               </Link>
               <Link
                 href="/contacts/history"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Contact History
               </Link>
               <Link
                 href="/documents"
-                className="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
+                className="py-4 px-1 border-b-2 border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm"
               >
                 Documents
               </Link>
@@ -235,7 +279,7 @@ export default function ContactLog() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Success Message */}
           {submitSuccess && (
-            <div className="mb-6 rounded-md bg-green-50 p-4">
+            <div className="mb-6 rounded-md bg-green-50 dark:bg-green-900/20 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -243,10 +287,10 @@ export default function ContactLog() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-green-800">
+                  <h3 className="text-sm font-medium text-green-800 dark:text-green-400">
                     Contact Log Saved Successfully!
                   </h3>
-                  <p className="mt-1 text-sm text-green-700">
+                  <p className="mt-1 text-sm text-green-700 dark:text-green-300">
                     The contact interaction has been documented and is now part of the case record.
                   </p>
                 </div>
@@ -256,24 +300,24 @@ export default function ContactLog() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Case Selection */}
-            <div className="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg border-l-4 border-green-500 shadow-sm dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 📋 Case Information
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Case Number <span className="text-red-500">*</span>
                   </label>
                   <select
                     {...register('case_number', { required: 'Case number is required' })}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                      errors.case_number ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white ${
+                      errors.case_number ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   >
-                    <option value="">Select Case</option>
-                    {mockCases.map((caseItem) => (
+                    <option value="">{isLoadingCases ? 'Loading cases...' : 'Select Case'}</option>
+                    {cases.map((caseItem) => (
                       <option key={caseItem.id} value={caseItem.number}>
                         {caseItem.number} - {caseItem.childName}
                       </option>
@@ -285,14 +329,14 @@ export default function ContactLog() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Child Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register('child_name', { required: 'Child name is required' })}
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                      errors.child_name ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white ${
+                      errors.child_name ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="Child's name"
                   />
@@ -304,20 +348,20 @@ export default function ContactLog() {
             </div>
 
             {/* Contact Details */}
-            <div className="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg border-l-4 border-green-500 shadow-sm dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 📞 Contact Details
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Contact Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     {...register('contact_type', { required: 'Contact type is required' })}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                      errors.contact_type ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white ${
+                      errors.contact_type ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   >
                     <option value="">Select Type</option>
@@ -331,14 +375,14 @@ export default function ContactLog() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Contact Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register('contact_date', { required: 'Contact date is required' })}
                     type="date"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                      errors.contact_date ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white ${
+                      errors.contact_date ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   />
                   {errors.contact_date && (
@@ -347,39 +391,39 @@ export default function ContactLog() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Contact Time
                   </label>
                   <input
                     {...register('contact_time')}
                     type="time"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Duration (minutes)
                   </label>
                   <input
                     {...register('duration_minutes', { valueAsNumber: true })}
                     type="number"
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="e.g., 60"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Location
                   </label>
                   <input
                     {...register('location')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="e.g., Child's home, school, court"
                   />
                 </div>
@@ -387,32 +431,32 @@ export default function ContactLog() {
             </div>
 
             {/* Participants & Purpose */}
-            <div className="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg border-l-4 border-green-500 shadow-sm dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 👥 Participants & Purpose
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Participants Present
                   </label>
                   <input
                     {...register('participants')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="e.g., Child, foster parent, social worker"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Purpose of Contact
                   </label>
                   <input
                     {...register('purpose')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="e.g., Monthly visit, check on well-being"
                   />
                 </div>
@@ -420,21 +464,21 @@ export default function ContactLog() {
             </div>
 
             {/* Contact Summary */}
-            <div className="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg border-l-4 border-green-500 shadow-sm dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 📝 Contact Summary
               </h3>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Contact Summary <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     {...register('summary', { required: 'Contact summary is required' })}
                     rows={5}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                      errors.summary ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white ${
+                      errors.summary ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="Describe the contact interaction, what was discussed, child's demeanor, etc."
                   />
@@ -444,25 +488,25 @@ export default function ContactLog() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Observations
                   </label>
                   <textarea
                     {...register('observations')}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="Observations about the child's behavior, environment, relationships, etc."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Concerns or Issues
                   </label>
                   <textarea
                     {...register('concerns')}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="Any concerns, safety issues, or items that need follow-up"
                   />
                 </div>
@@ -470,8 +514,8 @@ export default function ContactLog() {
             </div>
 
             {/* Follow-up */}
-            <div className="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg border-l-4 border-green-500 shadow-sm dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 🔄 Follow-up Actions
               </h3>
               
@@ -483,45 +527,45 @@ export default function ContactLog() {
                     id="follow_up_required"
                     className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="follow_up_required" className="ml-2 block text-sm text-gray-900">
+                  <label htmlFor="follow_up_required" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
                     Follow-up action required
                   </label>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Follow-up Notes
                   </label>
                   <textarea
                     {...register('follow_up_notes')}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="What follow-up actions are needed?"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Next Contact Date
                   </label>
                   <input
                     {...register('next_contact_date')}
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                   />
                 </div>
               </div>
             </div>
 
             {/* Expenses & Mileage */}
-            <div className="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg border-l-4 border-green-500 shadow-sm dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6 flex items-center">
                 💰 Expenses & Mileage
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Mileage
                   </label>
                   <input
@@ -529,13 +573,13 @@ export default function ContactLog() {
                     type="number"
                     min="0"
                     step="0.1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="Miles driven"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Other Expenses
                   </label>
                   <input
@@ -543,7 +587,7 @@ export default function ContactLog() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-fintech-bg-secondary dark:text-white"
                     placeholder="$0.00"
                   />
                 </div>

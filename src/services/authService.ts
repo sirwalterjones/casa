@@ -369,12 +369,14 @@ export class AuthService {
   }
 
   // Validate current token
-    async validateToken(): Promise<ApiResponse<{ user: User; organization: CasaOrganization }>> {
+  // Note: JWT tokens are validated on each API call by the backend.
+  // This method just checks if we have valid local auth data.
+  async validateToken(): Promise<ApiResponse<{ user: User; organization: CasaOrganization }>> {
     try {
       const token = this.getToken();
       const user = this.getCurrentUser();
       const organization = this.getCurrentOrganization();
-      
+
       if (!token || !user) {
         return {
           success: false,
@@ -382,64 +384,22 @@ export class AuthService {
         };
       }
 
-      // In development, if we have token and user data, assume valid
-      if (process.env.NODE_ENV === 'development' && user && organization) {
+      // If we have token, user, and organization data, consider it valid
+      // The backend will validate the JWT on each API request
+      if (user && organization) {
         return {
           success: true,
           data: { user, organization }
         };
       }
 
-      // Try to validate with WordPress
-      try {
-        const response = await apiClient.wpPost('jwt-auth/v1/token/validate');
-
-        if (response.success) {
-          return {
-            success: true,
-            data: { user, organization: organization || {} as CasaOrganization }
-          };
-        }
-
-        // Validation endpoint failed (returned success: false)
-        // If we have valid local data, continue anyway
-        if (user && organization) {
-          console.warn('Token validation endpoint failed, but continuing with local auth data');
-          return {
-            success: true,
-            data: { user, organization }
-          };
-        }
-      } catch (validateError) {
-        // If validation endpoint throws an error but we have valid local data, continue
-        if (user && organization) {
-          console.warn('Token validation threw error, but continuing with local auth data');
-          return {
-            success: true,
-            data: { user, organization }
-          };
-        }
-      }
-
-      // Only clear auth data if we really can't validate AND don't have local data
+      // No organization data - clear auth and require re-login
       this.clearAuthData();
       return {
         success: false,
-        error: 'Token validation failed',
+        error: 'Missing organization data',
       };
     } catch (error: any) {
-      // In development, be more forgiving
-      const user = this.getCurrentUser();
-      const organization = this.getCurrentOrganization();
-      
-      if (process.env.NODE_ENV === 'development' && user && organization) {
-        console.warn('Token validation error, but continuing with local auth data:', error.message);
-        return {
-          success: true,
-          data: { user, organization }
-        };
-      }
-      
       this.clearAuthData();
       return {
         success: false,
@@ -449,36 +409,27 @@ export class AuthService {
   }
 
   // Get current user data
-    getCurrentUser(): User | null {
+  getCurrentUser(): User | null {
     try {
       const userData = Cookies.get(AuthService.USER_KEY);
-      console.log('Getting user data from cookie:', userData);
       if (userData) {
-        const parsed = JSON.parse(userData);
-        console.log('Parsed user data:', parsed);
-        return parsed;
+        return JSON.parse(userData);
       }
-      console.log('No user data found in cookie');
       return null;
     } catch (error) {
-      console.error('Error getting user data:', error);
       return null;
     }
   }
 
   // Get current organization data
-    getCurrentOrganization(): CasaOrganization | null {
+  getCurrentOrganization(): CasaOrganization | null {
     try {
       const organizationData = Cookies.get(AuthService.ORGANIZATION_KEY);
-      console.log('Getting organization data from cookie:', organizationData);
       if (organizationData) {
-        const parsed = JSON.parse(organizationData);
-        console.log('Parsed organization data:', parsed);
-        return parsed;
+        return JSON.parse(organizationData);
       }
       return null;
     } catch (error) {
-      console.error('Error getting organization data:', error);
       return null;
     }
   }
@@ -593,20 +544,12 @@ export class AuthService {
       path: '/'
     };
 
-    console.log('Setting auth data - organization:', organization);
-    console.log('Setting auth data - user:', user);
-    console.log('Setting auth data - token:', token ? 'present' : 'missing');
-
     Cookies.set(AuthService.TOKEN_KEY, token, cookieOptions);
     Cookies.set(AuthService.USER_KEY, JSON.stringify(user), cookieOptions);
 
     if (organization) {
-      console.log('Storing organization in cookie:', JSON.stringify(organization));
       Cookies.set(AuthService.ORGANIZATION_KEY, JSON.stringify(organization), cookieOptions);
-      // Set organization context in API client
-      apiClient.setTenant(organization.id); // TODO: Update apiClient to use organization
-    } else {
-      console.log('No organization to store');
+      apiClient.setTenant(organization.id);
     }
 
     if (refreshToken) {

@@ -1,0 +1,41 @@
+# CASA Backend - Cloud Build Configuration
+# Run from wordpress-backend directory
+
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-east4-docker.pkg.dev/gov-webhosting-east-1766330024/casa-repo/casa-backend:latest'
+      - '.'
+    id: 'build-backend'
+
+  # Step 2: Push the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-east4-docker.pkg.dev/gov-webhosting-east-1766330024/casa-repo/casa-backend:latest'
+    waitFor:
+      - 'build-backend'
+    id: 'push-backend'
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'casa-backend'
+      - '--image'
+      - 'us-east4-docker.pkg.dev/gov-webhosting-east-1766330024/casa-repo/casa-backend:latest'
+      - '--region'
+      - 'us-east4'
+    waitFor:
+      - 'push-backend'
+    id: 'deploy-backend'
+
+timeout: '1800s'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

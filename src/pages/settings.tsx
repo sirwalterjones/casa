@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import { useToast } from '@/components/common/Toast';
 import Navigation from '@/components/Navigation';
 import { apiClient } from '@/services/apiClient';
 import Cookies from 'js-cookie';
@@ -157,6 +159,8 @@ const mockUsers: UserManagementData[] = [
 export default function Settings() {
   const { user, loading } = useRequireAuth();
   const { hasRole } = usePermissions();
+  const { theme, resolvedTheme, setTheme, colorTheme, setColorTheme } = useTheme();
+  const { showToast } = useToast();
 
   // All hooks must be called before any conditional returns
   const [activeTab, setActiveTab] = useState('organization');
@@ -368,11 +372,11 @@ export default function Settings() {
                 console.log('Form should now be populated with organization data');
               } else {
                 console.error('No organization found for user');
-                alert('Error: Could not load your organization data. Please contact support.');
+                showToast({ type: 'error', title: 'Error', description: 'Could not load your organization data. Please contact support.' });
               }
             } else {
               console.error('Failed to get organization data');
-              alert('Error: Could not load organization data. Please contact support.');
+              showToast({ type: 'error', title: 'Error', description: 'Could not load organization data. Please contact support.' });
             }
           } else {
             console.error('User has no organization assigned in API response');
@@ -449,23 +453,23 @@ export default function Settings() {
                   resetOrg(orgSettings);
                   console.log('Form should now be populated with organization data');
                 } else {
-                  alert('Error: Could not load your organization data. Please contact support.');
+                  showToast({ type: 'error', title: 'Error', description: 'Could not load your organization data. Please contact support.' });
                 }
               } else {
-                alert('Error: Could not load organization data. Please contact support.');
+                showToast({ type: 'error', title: 'Error', description: 'Could not load organization data. Please contact support.' });
               }
             } else {
               console.error('No organization found in API response or auth context');
-              alert('Error: You are not assigned to any organization. Please contact support.');
+              showToast({ type: 'error', title: 'Error', description: 'You are not assigned to any organization. Please contact support.' });
             }
           }
         } else {
           console.error('Failed to get user profile');
-          alert('Error: Could not load user profile. Please contact support.');
+          showToast({ type: 'error', title: 'Error', description: 'Could not load user profile. Please contact support.' });
         }
       } catch (error) {
         console.error('Failed to load organization data:', error);
-        alert('Error: Failed to load organization data. Please try again or contact support.');
+        showToast({ type: 'error', title: 'Error', description: 'Failed to load organization data. Please try again or contact support.' });
       }
     };
 
@@ -531,13 +535,13 @@ export default function Settings() {
   // Only allow administrators to access settings
   if (!hasRole(['administrator', 'casa_administrator'])) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-secondary dark:bg-fintech-bg-primary">
         <Navigation />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="bg-white shadow rounded-lg p-6">
-              <h1 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h1>
-              <p className="text-gray-600">You do not have permission to access the settings page. Only administrators can manage organization settings.</p>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Access Denied</h1>
+              <p className="text-gray-600 dark:text-gray-300">You do not have permission to access the settings page. Only administrators can manage organization settings.</p>
             </div>
           </div>
         </div>
@@ -583,7 +587,7 @@ export default function Settings() {
       
     } catch (error) {
       console.error('Failed to update organization settings:', error);
-      alert('Failed to update settings. Please try again.');
+      showToast({ type: 'error', title: 'Error', description: 'Failed to update settings. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -623,7 +627,7 @@ export default function Settings() {
       
     } catch (error) {
       console.error('Failed to invite user:', error);
-      alert('Failed to send invitation. Please try again.');
+      showToast({ type: 'error', title: 'Error', description: 'Failed to send invitation. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -648,13 +652,13 @@ export default function Settings() {
 
     } catch (error) {
       console.error(`Failed to ${action} user:`, error);
-      alert(`Failed to ${action} user. Please try again.`);
+      showToast({ type: 'error', title: 'Error', description: `Failed to ${action} user. Please try again.` });
     }
   };
 
   const handlePasswordChange = async (userId: string, data: PasswordChangeData) => {
     if (data.new_password !== data.confirm_password) {
-      alert('Passwords do not match');
+      showToast({ type: 'warning', title: 'Password Mismatch', description: 'Passwords do not match. Please try again.' });
       return;
     }
 
@@ -668,12 +672,12 @@ export default function Settings() {
         throw new Error(response.error || 'Failed to change password');
       }
 
-      alert('Password changed successfully');
+      showToast({ type: 'success', title: 'Success', description: 'Password changed successfully.' });
       resetPassword();
 
     } catch (error) {
       console.error('Failed to change password:', error);
-      alert('Failed to change password. Please try again.');
+      showToast({ type: 'error', title: 'Error', description: 'Failed to change password. Please try again.' });
     }
   };
 
@@ -708,7 +712,7 @@ export default function Settings() {
       setTimeout(() => setSubmitSuccess(false), 5000);
     } catch (error) {
       console.error('Failed to save security settings:', error);
-      alert('Failed to save security settings. Please try again.');
+      showToast({ type: 'error', title: 'Error', description: 'Failed to save security settings. Please try again.' });
     } finally {
       setSavingSecuritySettings(false);
     }
@@ -731,7 +735,7 @@ export default function Settings() {
       setTimeout(() => setSubmitSuccess(false), 5000);
     } catch (error) {
       console.error('Failed to save notification settings:', error);
-      alert('Failed to save notification settings. Please try again.');
+      showToast({ type: 'error', title: 'Error', description: 'Failed to save notification settings. Please try again.' });
     } finally {
       setSavingNotificationSettings(false);
     }
@@ -742,6 +746,7 @@ export default function Settings() {
     { id: 'users', name: 'User Management', icon: '👥' },
     { id: 'security', name: 'Security', icon: '🔒' },
     { id: 'notifications', name: 'Notifications', icon: '🔔' },
+    { id: 'appearance', name: 'Appearance', icon: '🎨' },
   ];
 
   return (
@@ -751,7 +756,7 @@ export default function Settings() {
         <meta name="description" content="Manage organization settings and users" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-fintech-bg-secondary dark:bg-fintech-bg-primary">
         {/* Header Navigation */}
         <Navigation currentPage="/settings" />
         
@@ -799,7 +804,7 @@ export default function Settings() {
                     className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       activeTab === tab.id
                         ? 'bg-purple-100 text-purple-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-50 dark:bg-fintech-bg-secondary dark:hover:bg-fintech-bg-secondary'
                     }`}
                   >
                     <span className="mr-3">{tab.icon}</span>
@@ -812,21 +817,21 @@ export default function Settings() {
             {/* Content */}
             <div className="flex-1">
               {activeTab === 'organization' && (
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6">Organization Settings</h2>
+                <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg shadow-sm">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Organization Settings</h2>
                   
                   <form onSubmit={handleSubmitOrg(onSubmitOrganization)} className="space-y-6">
                     {/* Basic Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Organization Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           {...registerOrg('name', { required: 'Organization name is required' })}
                           type="text"
                           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                            errorsOrg.name ? 'border-red-300' : 'border-gray-300'
+                            errorsOrg.name ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                           }`}
                         />
                         {errorsOrg.name && (
@@ -835,14 +840,14 @@ export default function Settings() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Organization Slug <span className="text-red-500">*</span>
                         </label>
                         <input
                           {...registerOrg('slug', { required: 'Organization slug is required' })}
                           type="text"
                           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                            errorsOrg.slug ? 'border-red-300' : 'border-gray-300'
+                            errorsOrg.slug ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                           }`}
                           placeholder="demo-casa"
                         />
@@ -854,32 +859,32 @@ export default function Settings() {
 
                     {/* Contact Information */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-medium text-gray-900">Contact Information</h3>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">Contact Information</h3>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
                         <input
                           {...registerOrg('address')}
                           type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
                           <input
                             {...registerOrg('city')}
                             type="text"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State</label>
                           <select
                             {...registerOrg('state')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           >
                             <option value="">Select State</option>
                             {US_STATES.map((state) => (
@@ -891,31 +896,31 @@ export default function Settings() {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ZIP Code</label>
                           <input
                             {...registerOrg('zip_code')}
                             type="text"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
                           <input
                             {...registerOrg('phone')}
                             type="tel"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                           <input
                             {...registerOrg('email')}
                             type="email"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
                       </div>
@@ -923,11 +928,11 @@ export default function Settings() {
 
                     {/* Program Settings */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-medium text-gray-900">Program Settings</h3>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">Program Settings</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Max Cases per Volunteer
                           </label>
                           <input
@@ -935,12 +940,12 @@ export default function Settings() {
                             type="number"
                             min="1"
                             max="10"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Contact Frequency (days)
                           </label>
                           <input
@@ -948,7 +953,7 @@ export default function Settings() {
                             type="number"
                             min="7"
                             max="90"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
                         </div>
                       </div>
@@ -958,9 +963,9 @@ export default function Settings() {
                           <input
                             {...registerOrg('allow_volunteer_self_registration')}
                             type="checkbox"
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                             Allow volunteers to self-register
                           </span>
                         </label>
@@ -969,9 +974,9 @@ export default function Settings() {
                           <input
                             {...registerOrg('require_background_check')}
                             type="checkbox"
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                             Require background check for all volunteers
                           </span>
                         </label>
@@ -994,20 +999,20 @@ export default function Settings() {
               {activeTab === 'users' && (
                 <div className="space-y-6">
                   {/* Invite User */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-6">Invite New User</h2>
+                  <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg shadow-sm">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Invite New User</h2>
                     
                     <form onSubmit={handleSubmitUser(onSubmitUserInvite)} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             First Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             {...registerUser('first_name', { required: 'First name is required' })}
                             type="text"
                             className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                              errorsUser.first_name ? 'border-red-300' : 'border-gray-300'
+                              errorsUser.first_name ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                             }`}
                           />
                           {errorsUser.first_name && (
@@ -1016,14 +1021,14 @@ export default function Settings() {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Last Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             {...registerUser('last_name', { required: 'Last name is required' })}
                             type="text"
                             className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                              errorsUser.last_name ? 'border-red-300' : 'border-gray-300'
+                              errorsUser.last_name ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                             }`}
                           />
                           {errorsUser.last_name && (
@@ -1034,7 +1039,7 @@ export default function Settings() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Email <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -1047,7 +1052,7 @@ export default function Settings() {
                             })}
                             type="email"
                             className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                              errorsUser.email ? 'border-red-300' : 'border-gray-300'
+                              errorsUser.email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                             }`}
                           />
                           {errorsUser.email && (
@@ -1056,13 +1061,13 @@ export default function Settings() {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Role <span className="text-red-500">*</span>
                           </label>
                           <select
                             {...registerUser('role', { required: 'Role is required' })}
                             className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                              errorsUser.role ? 'border-red-300' : 'border-gray-300'
+                              errorsUser.role ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                             }`}
                           >
                             <option value="">Select Role</option>
@@ -1082,9 +1087,9 @@ export default function Settings() {
                           <input
                             {...registerUser('send_invitation')}
                             type="checkbox"
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                             Send invitation email immediately
                           </span>
                         </label>
@@ -1103,34 +1108,34 @@ export default function Settings() {
                   </div>
 
                   {/* User List */}
-                  <div className="bg-white rounded-lg shadow-sm">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                      <h2 className="text-xl font-semibold text-gray-900">Current Users</h2>
+                  <div className="bg-white dark:bg-fintech-bg-card rounded-lg shadow-sm">
+                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Current Users</h2>
                     </div>
 
                     <div className="p-4">
                       {loadingUsers ? (
                         <div className="flex justify-center items-center py-8">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                          <span className="ml-2 text-gray-600">Loading users...</span>
+                          <span className="ml-2 text-gray-600 dark:text-gray-300">Loading users...</span>
                         </div>
                       ) : users.length === 0 ? (
                         <div className="flex flex-col items-center py-8">
                           <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                           </svg>
-                          <p className="text-lg font-medium text-gray-900 mb-2">No users found</p>
-                          <p className="text-sm text-gray-500">Invite your first user to get started.</p>
+                          <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">No users found</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-300">Invite your first user to get started.</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
                           {users.map((userItem) => (
-                            <div key={userItem.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                            <div key={userItem.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:bg-fintech-bg-secondary dark:hover:bg-fintech-bg-secondary">
                               {/* User Info Row */}
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
                                 <div className="mb-2 sm:mb-0">
-                                  <div className="text-base font-medium text-gray-900">{userItem.name}</div>
-                                  <div className="text-sm text-gray-500">{userItem.email}</div>
+                                  <div className="text-base font-medium text-gray-900 dark:text-white">{userItem.name}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-300">{userItem.email}</div>
                                 </div>
                                 <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full self-start sm:self-auto ${
                                   userItem.status === 'Active'
@@ -1144,7 +1149,7 @@ export default function Settings() {
                               </div>
 
                               {/* Details Row */}
-                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-300 mb-4">
                                 <div>
                                   <span className="font-medium">Role:</span> {userItem.role}
                                 </div>
@@ -1210,13 +1215,13 @@ export default function Settings() {
                     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
                       <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
                         <div className="mt-3">
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                             Change Password for {selectedUserForPassword.name}
                           </h3>
                           
                           <form onSubmit={handleSubmitPassword((data) => handlePasswordChange(selectedUserForPassword.id, data))} className="space-y-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 New Password <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -1226,7 +1231,7 @@ export default function Settings() {
                                 })}
                                 type="password"
                                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                                  errorsPassword.new_password ? 'border-red-300' : 'border-gray-300'
+                                  errorsPassword.new_password ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                                 }`}
                               />
                               {errorsPassword.new_password && (
@@ -1235,7 +1240,7 @@ export default function Settings() {
                             </div>
                             
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Confirm New Password <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -1244,7 +1249,7 @@ export default function Settings() {
                                 })}
                                 type="password"
                                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                                  errorsPassword.confirm_password ? 'border-red-300' : 'border-gray-300'
+                                  errorsPassword.confirm_password ? 'border-red-300' : 'border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
                                 }`}
                               />
                               {errorsPassword.confirm_password && (
@@ -1259,7 +1264,7 @@ export default function Settings() {
                                   setSelectedUserForPassword(null);
                                   resetPassword();
                                 }}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
                               >
                                 Cancel
                               </button>
@@ -1279,13 +1284,13 @@ export default function Settings() {
               )}
 
               {activeTab === 'security' && (
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6">Security Settings</h2>
+                <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg shadow-sm">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Security Settings</h2>
 
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Password Policy</h3>
-                      <p className="text-sm text-gray-500 mb-4">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Password Policy</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
                         Configure password requirements for all users in your organization.
                       </p>
                       <div className="space-y-3">
@@ -1294,48 +1299,48 @@ export default function Settings() {
                             type="checkbox"
                             checked={securitySettings.require_min_length}
                             onChange={(e) => handleSecuritySettingChange('require_min_length', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Require minimum 8 characters</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Require minimum 8 characters</span>
                         </label>
                         <label className="flex items-center">
                           <input
                             type="checkbox"
                             checked={securitySettings.require_mixed_case}
                             onChange={(e) => handleSecuritySettingChange('require_mixed_case', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Require uppercase and lowercase letters</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Require uppercase and lowercase letters</span>
                         </label>
                         <label className="flex items-center">
                           <input
                             type="checkbox"
                             checked={securitySettings.require_special_chars}
                             onChange={(e) => handleSecuritySettingChange('require_special_chars', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Require special characters (!@#$%^&*)</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Require special characters (!@#$%^&*)</span>
                         </label>
                         <label className="flex items-center">
                           <input
                             type="checkbox"
                             checked={securitySettings.require_numbers}
                             onChange={(e) => handleSecuritySettingChange('require_numbers', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Require at least one number</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Require at least one number</span>
                         </label>
                       </div>
                     </div>
 
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Session Management</h3>
-                      <p className="text-sm text-gray-500 mb-4">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Session Management</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
                         Control how long users can remain logged in without activity.
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Session Timeout (minutes)
                           </label>
                           <input
@@ -1344,16 +1349,16 @@ export default function Settings() {
                             onChange={(e) => handleSecuritySettingChange('session_timeout_minutes', parseInt(e.target.value) || 30)}
                             min="5"
                             max="480"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           />
-                          <p className="mt-1 text-xs text-gray-500">
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
                             Users will be logged out after this period of inactivity (5-480 minutes)
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-200">
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                       <button
                         type="button"
                         onClick={saveSecuritySettings}
@@ -1368,13 +1373,13 @@ export default function Settings() {
               )}
 
               {activeTab === 'notifications' && (
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6">Notification Settings</h2>
+                <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg shadow-sm">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Notification Settings</h2>
 
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Email Notifications</h3>
-                      <p className="text-sm text-gray-500 mb-4">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Email Notifications</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
                         Configure which email notifications are sent to users in your organization.
                       </p>
                       <div className="space-y-3">
@@ -1383,9 +1388,9 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.new_case_assignments}
                             onChange={(e) => handleNotificationSettingChange('new_case_assignments', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">New case assignments</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">New case assignments</span>
                           <span className="ml-2 text-xs text-gray-400">- Notify volunteers when assigned to a new case</span>
                         </label>
                         <label className="flex items-center">
@@ -1393,9 +1398,9 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.upcoming_court_dates}
                             onChange={(e) => handleNotificationSettingChange('upcoming_court_dates', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Upcoming court dates</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Upcoming court dates</span>
                           <span className="ml-2 text-xs text-gray-400">- Remind volunteers about upcoming hearings</span>
                         </label>
                         <label className="flex items-center">
@@ -1403,9 +1408,9 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.overdue_contact_logs}
                             onChange={(e) => handleNotificationSettingChange('overdue_contact_logs', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Overdue contact logs</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Overdue contact logs</span>
                           <span className="ml-2 text-xs text-gray-400">- Alert when contact logs are overdue</span>
                         </label>
                         <label className="flex items-center">
@@ -1413,9 +1418,9 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.volunteer_registration_requests}
                             onChange={(e) => handleNotificationSettingChange('volunteer_registration_requests', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Volunteer registration requests</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Volunteer registration requests</span>
                           <span className="ml-2 text-xs text-gray-400">- Notify admins of new volunteer signups</span>
                         </label>
                         <label className="flex items-center">
@@ -1423,9 +1428,9 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.task_reminders}
                             onChange={(e) => handleNotificationSettingChange('task_reminders', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Task reminders</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Task reminders</span>
                           <span className="ml-2 text-xs text-gray-400">- Remind users of upcoming task deadlines</span>
                         </label>
                         <label className="flex items-center">
@@ -1433,15 +1438,15 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.report_due_reminders}
                             onChange={(e) => handleNotificationSettingChange('report_due_reminders', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Report due reminders</span>
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Report due reminders</span>
                           <span className="ml-2 text-xs text-gray-400">- Alert volunteers when reports are due</span>
                         </label>
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-200">
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                       <button
                         type="button"
                         onClick={saveNotificationSettings}
@@ -1450,6 +1455,186 @@ export default function Settings() {
                       >
                         {savingNotificationSettings ? 'Saving...' : 'Save Notification Settings'}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'appearance' && (
+                <div className="bg-white dark:bg-fintech-bg-card p-6 rounded-lg shadow-sm">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Appearance Settings</h2>
+
+                  <div className="space-y-8">
+                    {/* Theme Selection */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Color Theme</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
+                        Choose a color theme for your CASA dashboard.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Default Theme */}
+                        <button
+                          onClick={() => setColorTheme('default')}
+                          className={`relative p-4 rounded-xl border-2 transition-all ${
+                            colorTheme === 'default'
+                              ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600"></div>
+                            <span className="font-medium text-gray-900 dark:text-white">Default</span>
+                          </div>
+                          <div className="flex space-x-1">
+                            <div className="w-6 h-4 rounded bg-purple-600"></div>
+                            <div className="w-6 h-4 rounded bg-blue-600"></div>
+                            <div className="w-6 h-4 rounded bg-gray-200"></div>
+                          </div>
+                          {colorTheme === 'default' && (
+                            <div className="absolute top-2 right-2 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Theme 1 - Slack-inspired */}
+                        <button
+                          onClick={() => setColorTheme('theme1')}
+                          className={`relative p-4 rounded-xl border-2 transition-all ${
+                            colorTheme === 'theme1'
+                              ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#611f69] to-[#4a154b]"></div>
+                            <span className="font-medium text-gray-900 dark:text-white">Theme 1</span>
+                          </div>
+                          <div className="flex space-x-1">
+                            <div className="w-6 h-4 rounded bg-[#611f69]"></div>
+                            <div className="w-6 h-4 rounded bg-[#4a154b]"></div>
+                            <div className="w-6 h-4 rounded bg-[#e8d5e1]"></div>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">Aubergine & Purple</p>
+                          {colorTheme === 'theme1' && (
+                            <div className="absolute top-2 right-2 w-5 h-5 bg-[#611f69] rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Theme 2 - Monday-inspired */}
+                        <button
+                          onClick={() => setColorTheme('theme2')}
+                          className={`relative p-4 rounded-xl border-2 transition-all ${
+                            colorTheme === 'theme2'
+                              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0073ea] to-[#00d2d3]"></div>
+                            <span className="font-medium text-gray-900 dark:text-white">Theme 2</span>
+                          </div>
+                          <div className="flex space-x-1">
+                            <div className="w-6 h-4 rounded bg-[#0073ea]"></div>
+                            <div className="w-6 h-4 rounded bg-[#00d2d3]"></div>
+                            <div className="w-6 h-4 rounded bg-[#cce5ff]"></div>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">Vibrant Blue</p>
+                          {colorTheme === 'theme2' && (
+                            <div className="absolute top-2 right-2 w-5 h-5 bg-[#0073ea] rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dark Mode Toggle */}
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Dark Mode</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
+                        Switch between light and dark modes for comfortable viewing.
+                      </p>
+                      <div className="flex items-center space-x-4">
+                        <button
+                          onClick={() => setTheme('light')}
+                          className={`flex items-center space-x-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                            resolvedTheme === 'light'
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">Light</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-300">Bright & clean</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setTheme('dark')}
+                          className={`flex items-center space-x-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                            resolvedTheme === 'dark'
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 dark:bg-fintech-bg-secondary dark:text-white'
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">Dark</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-300">Easy on the eyes</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Preview</h3>
+                      <div className={`p-6 rounded-xl border ${resolvedTheme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 dark:bg-fintech-bg-secondary border-gray-200 dark:border-gray-700'}`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className={`text-lg font-semibold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                            Sample Card
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            colorTheme === 'theme1'
+                              ? 'bg-[#611f69] text-white'
+                              : colorTheme === 'theme2'
+                              ? 'bg-[#0073ea] text-white'
+                              : 'bg-purple-600 text-white'
+                          }`}>
+                            Active
+                          </span>
+                        </div>
+                        <p className={`text-sm ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                          This is how your dashboard cards will look with the selected theme.
+                        </p>
+                        <button className={`mt-4 px-4 py-2 rounded-lg text-white font-medium ${
+                          colorTheme === 'theme1'
+                            ? 'bg-[#611f69] hover:bg-[#4a154b]'
+                            : colorTheme === 'theme2'
+                            ? 'bg-[#0073ea] hover:bg-[#0060c0]'
+                            : 'bg-purple-600 hover:bg-purple-700'
+                        }`}>
+                          Sample Button
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

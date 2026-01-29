@@ -321,11 +321,30 @@ function casa_verify_2fa_code($request) {
         ));
 
         if ($expired) {
+            // Log expired 2FA code attempt
+            $expired_user = get_user_by('ID', $expired->user_id);
+            casa_log_audit('auth', '2fa_expired', array(
+                'user_id' => $expired->user_id,
+                'user_email' => $expired_user ? $expired_user->user_email : 'unknown',
+                'status' => 'failure',
+                'severity' => 'warning',
+                'metadata' => array('reason' => 'code_expired')
+            ));
+
             return new WP_REST_Response(array(
                 'success' => false,
                 'message' => 'Verification code has expired. Please request a new code.'
             ), 401);
         }
+
+        // Log failed 2FA verification
+        casa_log_audit('auth', '2fa_failed', array(
+            'user_id' => 0,
+            'user_email' => 'unknown',
+            'status' => 'failure',
+            'severity' => 'warning',
+            'metadata' => array('reason' => 'invalid_code')
+        ));
 
         return new WP_REST_Response(array(
             'success' => false,
@@ -394,6 +413,16 @@ function casa_verify_2fa_code($request) {
 
     // Clean up old codes (older than 24 hours)
     $wpdb->query("DELETE FROM $table_name WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+
+    // Log successful login
+    casa_log_audit('auth', 'login_success', array(
+        'user_id' => $user->ID,
+        'organization_id' => $organization['id'],
+        'metadata' => array(
+            'login_method' => '2fa_email',
+            'organization_name' => $organization['name']
+        )
+    ));
 
     return new WP_REST_Response(array(
         'success' => true,
@@ -500,6 +529,19 @@ function casa_enhanced_login_with_2fa($request) {
     $user = wp_authenticate($username, $password);
 
     if (is_wp_error($user)) {
+        // Log failed login attempt
+        casa_log_audit('auth', 'login_failure', array(
+            'user_id' => 0,
+            'user_email' => sanitize_email($username),
+            'user_role' => 'unknown',
+            'status' => 'failure',
+            'severity' => 'warning',
+            'metadata' => array(
+                'reason' => 'invalid_credentials',
+                'organization_slug' => $organization_slug
+            )
+        ));
+
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Invalid credentials'
@@ -515,6 +557,14 @@ function casa_enhanced_login_with_2fa($request) {
             'message' => $result->get_error_message()
         ), 500);
     }
+
+    // Log 2FA code sent
+    casa_log_audit('auth', '2fa_code_sent', array(
+        'user_id' => $user->ID,
+        'metadata' => array(
+            'organization_slug' => $organization_slug
+        )
+    ));
 
     // Return 2FA required response
     return new WP_REST_Response(array(

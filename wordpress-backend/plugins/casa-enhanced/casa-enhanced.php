@@ -735,8 +735,11 @@ function casa_create_tables() {
         contact_type varchar(30) NOT NULL,
         contact_date datetime NOT NULL,
         contact_duration int(11) NULL,
+        duration_minutes int(11) NULL,
         contact_person varchar(255),
+        participants varchar(500),
         contact_notes text,
+        summary text,
         follow_up_required boolean DEFAULT false,
         follow_up_notes text,
         created_by bigint(20) NOT NULL,
@@ -748,6 +751,25 @@ function casa_create_tables() {
         KEY contact_type (contact_type),
         KEY contact_date (contact_date)
     ) $charset_collate;";
+
+    // Add missing columns to existing table if they don't exist
+    $table_check = $wpdb->get_var("SHOW TABLES LIKE '$table_name'");
+    if ($table_check) {
+        $existing_columns = $wpdb->get_col("SHOW COLUMNS FROM $table_name", 0);
+        if (!in_array('organization_id', $existing_columns)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN organization_id bigint(20) NOT NULL DEFAULT 0 AFTER case_number");
+            $wpdb->query("ALTER TABLE $table_name ADD KEY organization_id (organization_id)");
+        }
+        if (!in_array('duration_minutes', $existing_columns)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN duration_minutes int(11) NULL AFTER contact_duration");
+        }
+        if (!in_array('participants', $existing_columns)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN participants varchar(500) NULL AFTER contact_person");
+        }
+        if (!in_array('summary', $existing_columns)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN summary text NULL AFTER contact_notes");
+        }
+    }
 
     $create_table_if_not_exists($table_name, $sql);
 
@@ -847,6 +869,53 @@ function casa_create_tables() {
         PRIMARY KEY (id),
         KEY idx_ip_action (ip_address, action_type),
         KEY idx_created (created_at)
+    ) $charset_collate;";
+
+    $create_table_if_not_exists($table_name, $sql);
+
+    // Feedback/Bug tracking table
+    $table_name = $wpdb->prefix . 'casa_feedback';
+    $sql = "CREATE TABLE $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        organization_id bigint(20) NOT NULL,
+        submitted_by bigint(20) NOT NULL,
+        submitter_email varchar(255) NOT NULL,
+        submitter_name varchar(255) NOT NULL,
+        feedback_type enum('bug','suggestion','question','other') NOT NULL DEFAULT 'suggestion',
+        title varchar(255) NOT NULL,
+        description text NOT NULL,
+        page_url varchar(500),
+        browser_info text,
+        priority enum('low','medium','high','critical') DEFAULT 'medium',
+        status enum('new','in_review','in_progress','resolved','closed','wont_fix') DEFAULT 'new',
+        admin_notes text,
+        attachments longtext,
+        resolved_by bigint(20),
+        resolved_at datetime,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_org (organization_id),
+        KEY idx_submitter (submitted_by),
+        KEY idx_status (status),
+        KEY idx_type (feedback_type),
+        KEY idx_created (created_at)
+    ) $charset_collate;";
+
+    $create_table_if_not_exists($table_name, $sql);
+
+    // Feedback attachments table
+    $table_name = $wpdb->prefix . 'casa_feedback_attachments';
+    $sql = "CREATE TABLE $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        feedback_id bigint(20) NOT NULL,
+        file_name varchar(255) NOT NULL,
+        file_url varchar(500) NOT NULL,
+        file_type varchar(100) NOT NULL,
+        file_size bigint(20) NOT NULL,
+        uploaded_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_feedback (feedback_id)
     ) $charset_collate;";
 
     $create_table_if_not_exists($table_name, $sql);
@@ -1221,6 +1290,13 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_cleanup_test_data',
         'permission_callback' => 'casa_check_authentication'
     ));
+
+    // Comprehensive cleanup - deletes ALL data for organization
+    register_rest_route('casa/v1', '/admin/cleanup-all-data', array(
+        'methods' => 'POST',
+        'callback' => 'casa_cleanup_all_organization_data',
+        'permission_callback' => 'casa_check_authentication'
+    ));
     
     // Contact logs endpoints
     register_rest_route('casa/v1', '/contact-logs', array(
@@ -1251,6 +1327,49 @@ function casa_register_enhanced_routes() {
         'methods' => 'DELETE',
         'callback' => 'casa_delete_contact_log',
         'permission_callback' => 'casa_check_contact_log_permission'
+    ));
+
+    // Feedback/Bug Tracking endpoints
+    register_rest_route('casa/v1', '/feedback', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_feedback_list',
+        'permission_callback' => 'casa_check_authentication'
+    ));
+
+    register_rest_route('casa/v1', '/feedback', array(
+        'methods' => 'POST',
+        'callback' => 'casa_create_feedback',
+        'permission_callback' => 'casa_check_authentication'
+    ));
+
+    register_rest_route('casa/v1', '/feedback/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_feedback',
+        'permission_callback' => 'casa_check_authentication'
+    ));
+
+    register_rest_route('casa/v1', '/feedback/(?P<id>\d+)', array(
+        'methods' => 'PUT',
+        'callback' => 'casa_update_feedback',
+        'permission_callback' => 'casa_check_authentication'
+    ));
+
+    register_rest_route('casa/v1', '/feedback/(?P<id>\d+)/status', array(
+        'methods' => 'PUT',
+        'callback' => 'casa_update_feedback_status',
+        'permission_callback' => 'casa_check_authentication'
+    ));
+
+    register_rest_route('casa/v1', '/feedback/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'casa_delete_feedback',
+        'permission_callback' => 'casa_check_authentication'
+    ));
+
+    register_rest_route('casa/v1', '/feedback/upload', array(
+        'methods' => 'POST',
+        'callback' => 'casa_upload_feedback_attachment',
+        'permission_callback' => 'casa_check_authentication'
     ));
 
     // Home Visit Reports endpoints
@@ -1941,10 +2060,19 @@ function casa_create_case($request) {
     global $wpdb;
     $cases_table = $wpdb->prefix . 'casa_cases';
     
+    // Get assigned volunteer ID if provided
+    $assigned_volunteer_id = null;
+    if (!empty($params['assigned_volunteer'])) {
+        $volunteer_id = intval($params['assigned_volunteer']);
+        if ($volunteer_id > 0) {
+            $assigned_volunteer_id = $volunteer_id;
+        }
+    }
+
     $case_data = array(
         'case_number' => sanitize_text_field($params['case_number']),
         'organization_id' => $organization_id,
-        'assigned_volunteer_id' => null, // Will be assigned later
+        'assigned_volunteer_id' => $assigned_volunteer_id,
         'child_first_name' => sanitize_text_field($params['child_first_name']),
         'child_last_name' => sanitize_text_field($params['child_last_name']),
         'child_dob' => sanitize_text_field($params['child_dob'] ?? ''),
@@ -2475,6 +2603,7 @@ function casa_get_cases($request) {
     // Get cases from database table with volunteer names
     $volunteers_table = $wpdb->prefix . 'casa_volunteers';
     $query = "SELECT c.*,
+                     CONCAT(c.child_first_name, ' ', c.child_last_name) as child_name,
                      CASE
                          WHEN c.assigned_volunteer_id IS NOT NULL
                          THEN CONCAT(v.first_name, ' ', v.last_name)
@@ -3841,7 +3970,7 @@ function casa_create_volunteer_user_account($volunteer) {
     $wpdb->insert($user_orgs_table, array(
         'user_id' => $user_id,
         'organization_id' => $volunteer['organization_id'],
-        'role' => 'volunteer',
+        'casa_role' => 'volunteer',
         'status' => 'active',
         'created_at' => current_time('mysql')
     ));
@@ -4228,7 +4357,7 @@ function casa_get_contact_logs($request) {
     global $wpdb;
     $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
     $cases_table = $wpdb->prefix . 'casa_cases';
-    $users_table = $wpdb->prefix . 'casa_organization_users';
+    $users_table = $wpdb->prefix . 'casa_user_organizations';
 
     // Always filter by user's organization - regardless of super admin status
     $current_user = wp_get_current_user();
@@ -4265,9 +4394,13 @@ function casa_get_contact_logs($request) {
     }
     
     // Query contact logs from database table (using case_number to join)
-    $query = "SELECT cl.*, c.child_first_name, c.child_last_name,
-                     COALESCE(NULLIF(cl.child_name, ''), CONCAT(COALESCE(c.child_first_name, ''), ' ', COALESCE(c.child_last_name, ''))) as child_name,
-                     CONCAT(um_first.meta_value, ' ', um_last.meta_value) as volunteer_name
+    $query = "SELECT cl.id, cl.case_number, cl.contact_type, cl.contact_date,
+                     cl.contact_duration, cl.duration_minutes, cl.contact_person,
+                     cl.participants, cl.contact_notes, cl.summary,
+                     cl.follow_up_required, cl.follow_up_notes, cl.created_by, cl.created_at,
+                     c.child_first_name, c.child_last_name,
+                     CONCAT(COALESCE(c.child_first_name, ''), ' ', COALESCE(c.child_last_name, '')) as child_name,
+                     CONCAT(COALESCE(um_first.meta_value, ''), ' ', COALESCE(um_last.meta_value, '')) as volunteer_name
               FROM $contact_logs_table cl
               LEFT JOIN $cases_table c ON cl.case_number = c.case_number AND c.organization_id = cl.organization_id
               LEFT JOIN {$wpdb->users} u ON cl.created_by = u.ID
@@ -4275,7 +4408,7 @@ function casa_get_contact_logs($request) {
               LEFT JOIN {$wpdb->usermeta} um_last ON (u.ID = um_last.user_id AND um_last.meta_key = 'last_name')
               $where_clause
               ORDER BY cl.contact_date DESC";
-    
+
     $contact_logs = $wpdb->get_results($wpdb->prepare($query, ...$params), ARRAY_A);
     
     return new WP_REST_Response(array(
@@ -4947,7 +5080,16 @@ function casa_invite_user($request) {
     }
     
     // Send invitation email if requested
-    if ($params['send_invitation']) {
+    // Handle both boolean and string values from frontend
+    $should_send = isset($params['send_invitation']) &&
+                   ($params['send_invitation'] === true ||
+                    $params['send_invitation'] === 'true' ||
+                    $params['send_invitation'] === '1' ||
+                    $params['send_invitation'] === 1);
+
+    error_log('CASA Invite: send_invitation param = ' . var_export($params['send_invitation'] ?? 'not set', true) . ', should_send = ' . ($should_send ? 'true' : 'false'));
+
+    if ($should_send) {
         // Generate password reset key for the new user
         $reset_key = get_password_reset_key(get_user_by('ID', $user_id));
 
@@ -5013,21 +5155,138 @@ function casa_invite_user($request) {
 
 /**
  * Send professional invitation email to new user via Brevo API
+ * Uses same inline approach as working 2FA emails
  */
 function casa_send_invitation_email($email, $first_name, $last_name, $role, $org_name, $set_password_url, $invited_by) {
+    // Brevo API configuration - same as 2FA emails
+    $brevo_api_key = defined('BREVO_API_KEY') ? BREVO_API_KEY : getenv('BREVO_API_KEY');
+    $sender_email = defined('BREVO_SENDER_EMAIL') ? BREVO_SENDER_EMAIL : (getenv('BREVO_SENDER_EMAIL') ?: 'notify@notifyplus.org');
+    $sender_name = defined('BREVO_SENDER_NAME') ? BREVO_SENDER_NAME : (getenv('BREVO_SENDER_NAME') ?: 'PA-CASA');
+
+    if (empty($brevo_api_key)) {
+        error_log('CASA Invitation Email Error: BREVO_API_KEY not configured');
+        return false;
+    }
+
     $subject = "You've been invited to join $org_name on CASA";
+    $role_display = ucfirst($role);
+    $year = date('Y');
 
-    $html_body = casa_get_email_template('invitation', array(
-        'first_name' => $first_name,
-        'last_name' => $last_name,
-        'role' => ucfirst($role),
-        'org_name' => $org_name,
-        'set_password_url' => $set_password_url,
-        'invited_by' => $invited_by,
-        'year' => date('Y')
-    ));
+    $html_content = "
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>CASA Invitation</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .email-wrapper { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+            .header { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 30px; text-align: center; }
+            .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; }
+            .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px; }
+            .content { padding: 40px 30px; }
+            .content h2 { color: #1f2937; font-size: 22px; margin: 0 0 20px; }
+            .content p { color: #4b5563; margin: 0 0 15px; }
+            .button { display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+            .info-box { background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 20px 0; }
+            .info-box p { margin: 5px 0; color: #374151; }
+            .info-box strong { color: #1f2937; }
+            .footer { background-color: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+            .footer p { color: #6b7280; font-size: 13px; margin: 5px 0; }
+            .divider { height: 1px; background-color: #e5e7eb; margin: 25px 0; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='email-wrapper'>
+                <div class='header'>
+                    <h1>CASA</h1>
+                    <p>Court Appointed Special Advocates</p>
+                </div>
+                <div class='content'>
+                    <h2>Welcome to {$org_name}!</h2>
+                    <p>Hello {$first_name},</p>
+                    <p>You have been invited by <strong>{$invited_by}</strong> to join the CASA Case Management System as a <strong>{$role_display}</strong>.</p>
 
-    return casa_send_brevo_email($email, $first_name . ' ' . $last_name, $subject, $html_body);
+                    <div class='info-box'>
+                        <p><strong>Organization:</strong> {$org_name}</p>
+                        <p><strong>Your Role:</strong> {$role_display}</p>
+                    </div>
+
+                    <p>To get started, please set up your password by clicking the button below:</p>
+
+                    <p style='text-align: center;'>
+                        <a href='{$set_password_url}' class='button'>Set Your Password</a>
+                    </p>
+
+                    <p style='font-size: 13px; color: #6b7280;'>If the button above does not work, copy and paste this link into your browser:</p>
+                    <p style='font-size: 12px; word-break: break-all; color: #7c3aed;'>{$set_password_url}</p>
+
+                    <div class='divider'></div>
+
+                    <p style='font-size: 13px; color: #6b7280;'>This invitation link will expire in 24 hours. If you did not expect this invitation, please ignore this email.</p>
+                </div>
+                <div class='footer'>
+                    <p><strong>{$org_name}</strong></p>
+                    <p>CASA Case Management System</p>
+                    <p>&copy; {$year} All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    ";
+
+    // Brevo API endpoint - same as 2FA
+    $url = 'https://api.brevo.com/v3/smtp/email';
+
+    $payload = array(
+        'sender' => array(
+            'name' => $sender_name,
+            'email' => $sender_email
+        ),
+        'to' => array(
+            array(
+                'email' => $email,
+                'name' => $first_name . ' ' . $last_name
+            )
+        ),
+        'subject' => $subject,
+        'htmlContent' => $html_content
+    );
+
+    $args = array(
+        'method' => 'POST',
+        'headers' => array(
+            'accept' => 'application/json',
+            'api-key' => $brevo_api_key,
+            'content-type' => 'application/json'
+        ),
+        'body' => json_encode($payload),
+        'timeout' => 30
+    );
+
+    error_log('CASA Invitation: Attempting to send email to ' . $email);
+
+    $response = wp_remote_post($url, $args);
+
+    if (is_wp_error($response)) {
+        error_log('CASA Invitation Brevo Error: ' . $response->get_error_message());
+        return false;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code >= 200 && $response_code < 300) {
+        error_log('CASA Invitation: Email sent successfully to ' . $email);
+        return true;
+    } else {
+        error_log('CASA Invitation Brevo Error: HTTP ' . $response_code . ' - ' . $response_body);
+        return false;
+    }
 }
 
 /**
@@ -6891,74 +7150,100 @@ function casa_generate_comprehensive_report($request) {
 }
 
 function casa_get_complete_case_data($request) {
+    global $wpdb;
+
     $case_number = $request['case_number'];
-    
+
     // Get current user and organization
     $current_user = wp_get_current_user();
     $organization_id = casa_get_user_organization_id($current_user->ID);
-    
+
     if (!$organization_id) {
         return new WP_REST_Response(array(
             'success' => false,
             'error' => 'User not associated with any organization'
         ), 400);
     }
-    
-    // In production, fetch all related data from database
+
+    // Fetch real case data from database
+    $cases_table = $wpdb->prefix . 'casa_cases';
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+    $contacts_table = $wpdb->prefix . 'casa_contact_logs';
+    $documents_table = $wpdb->prefix . 'casa_documents';
+    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+    $home_visits_table = $wpdb->prefix . 'casa_home_visit_reports';
+
+    // Get case details
+    $case = $wpdb->get_row($wpdb->prepare(
+        "SELECT c.*, CONCAT(v.first_name, ' ', v.last_name) as assigned_volunteer_name
+         FROM $cases_table c
+         LEFT JOIN $volunteers_table v ON c.assigned_volunteer_id = v.id
+         WHERE c.case_number = %s AND c.organization_id = %d",
+        $case_number, $organization_id
+    ), ARRAY_A);
+
+    if (!$case) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Case not found'
+        ), 404);
+    }
+
+    // Get contact logs for this case
+    $contact_logs = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $contacts_table WHERE case_id = %d ORDER BY contact_date DESC",
+        $case['id']
+    ), ARRAY_A);
+
+    // Get documents for this case
+    $documents = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $documents_table WHERE case_id = %d ORDER BY upload_date DESC",
+        $case['id']
+    ), ARRAY_A);
+
+    // Get court hearings for this case
+    $court_hearings = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $hearings_table WHERE case_id = %d ORDER BY hearing_date DESC",
+        $case['id']
+    ), ARRAY_A);
+
+    // Get home visit reports for this case
+    $home_visits = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $home_visits_table WHERE case_id = %d ORDER BY visit_date DESC",
+        $case['id']
+    ), ARRAY_A);
+
     $complete_case_data = array(
         'case_details' => array(
-            'case_number' => $case_number,
-            'child_name' => 'Emily Johnson',
-            'case_type' => 'abuse',
-            'case_status' => 'active',
-            'assigned_volunteer' => 'Jane Smith',
-            'created_date' => '2024-01-15',
+            'id' => $case['id'],
+            'case_number' => $case['case_number'],
+            'child_name' => $case['child_first_name'] . ' ' . $case['child_last_name'],
+            'child_first_name' => $case['child_first_name'],
+            'child_last_name' => $case['child_last_name'],
+            'child_dob' => $case['child_dob'],
+            'case_type' => $case['case_type'],
+            'case_status' => $case['status'],
+            'priority' => $case['priority'],
+            'assigned_volunteer' => $case['assigned_volunteer_name'],
+            'assigned_volunteer_id' => $case['assigned_volunteer_id'],
+            'court_jurisdiction' => $case['court_jurisdiction'],
+            'assigned_judge' => $case['assigned_judge'],
+            'placement_type' => $case['placement_type'],
+            'placement_address' => $case['placement_address'],
+            'case_summary' => $case['case_summary'],
+            'referral_date' => $case['referral_date'],
+            'assignment_date' => $case['assignment_date'],
+            'created_at' => $case['created_at'],
         ),
-        'contact_logs' => array(
-            array(
-                'id' => 1,
-                'contact_date' => '2024-12-10',
-                'contact_type' => 'home-visit',
-                'summary' => 'Child appears well-adjusted',
-                'created_by' => 'Jane Smith',
-            ),
-        ),
-        'documents' => array(
-            array(
-                'id' => 1,
-                'document_type' => 'court-order',
-                'document_name' => 'Initial Removal Order',
-                'upload_date' => '2024-01-15',
-            ),
-        ),
-        'court_hearings' => array(
-            array(
-                'id' => 1,
-                'hearing_date' => '2024-12-20',
-                'hearing_type' => 'Review Hearing',
-                'status' => 'scheduled',
-            ),
-        ),
+        'contact_logs' => $contact_logs ?: array(),
+        'documents' => $documents ?: array(),
+        'court_hearings' => $court_hearings ?: array(),
         'reports' => array(
-            'home_visits' => array(
-                array(
-                    'id' => 1,
-                    'visit_date' => '2024-12-10',
-                    'child_condition' => 'excellent',
-                    'home_condition' => 'excellent',
-                ),
-            ),
-            'court_reports' => array(
-                array(
-                    'id' => 1,
-                    'hearing_date' => '2024-09-15',
-                    'hearing_type' => 'Initial Hearing',
-                    'recommendations' => 'Continue foster placement',
-                ),
-            ),
+            'home_visits' => $home_visits ?: array(),
+            'court_reports' => array(), // Add when table exists
         ),
     );
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => $complete_case_data
@@ -6966,60 +7251,149 @@ function casa_get_complete_case_data($request) {
 }
 
 function casa_get_case_timeline($request) {
+    global $wpdb;
+
     $case_number = $request['case_number'];
-    
+
     // Get current user and organization
     $current_user = wp_get_current_user();
     $organization_id = casa_get_user_organization_id($current_user->ID);
-    
+
     if (!$organization_id) {
         return new WP_REST_Response(array(
             'success' => false,
             'error' => 'User not associated with any organization'
         ), 400);
     }
-    
-    // In production, compile chronological timeline from all case activities
-    $timeline = array(
-        array(
-            'date' => '2024-01-15',
-            'time' => '10:00:00',
+
+    // Get case ID
+    $cases_table = $wpdb->prefix . 'casa_cases';
+    $case = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, created_at, case_summary, assignment_date, assigned_volunteer_id FROM $cases_table
+         WHERE case_number = %s AND organization_id = %d",
+        $case_number, $organization_id
+    ), ARRAY_A);
+
+    if (!$case) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'error' => 'Case not found'
+        ), 404);
+    }
+
+    $case_id = $case['id'];
+    $timeline = array();
+
+    // Add case creation event
+    if ($case['created_at']) {
+        $timeline[] = array(
+            'date' => date('Y-m-d', strtotime($case['created_at'])),
+            'time' => date('H:i:s', strtotime($case['created_at'])),
             'event' => 'Case opened',
             'type' => 'case_creation',
-            'details' => 'Case created due to abuse allegations',
+            'details' => $case['case_summary'] ?: 'Case created',
             'created_by' => 'System',
-        ),
-        array(
-            'date' => '2024-01-20',
-            'time' => '14:30:00',
+        );
+    }
+
+    // Add volunteer assignment if exists
+    if ($case['assignment_date'] && $case['assigned_volunteer_id']) {
+        $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+        $volunteer = $wpdb->get_row($wpdb->prepare(
+            "SELECT first_name, last_name FROM $volunteers_table WHERE id = %d",
+            $case['assigned_volunteer_id']
+        ), ARRAY_A);
+        $vol_name = $volunteer ? $volunteer['first_name'] . ' ' . $volunteer['last_name'] : 'Unknown';
+
+        $timeline[] = array(
+            'date' => $case['assignment_date'],
+            'time' => '00:00:00',
             'event' => 'CASA volunteer assigned',
             'type' => 'assignment',
-            'details' => 'Jane Smith assigned as CASA volunteer',
-            'created_by' => 'Supervisor',
-        ),
-        array(
-            'date' => '2024-12-10',
-            'time' => '15:00:00',
-            'event' => 'Home visit conducted',
+            'details' => $vol_name . ' assigned as CASA volunteer',
+            'created_by' => 'System',
+        );
+    }
+
+    // Get contact logs
+    $contacts_table = $wpdb->prefix . 'casa_contact_logs';
+    $contacts = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $contacts_table WHERE case_id = %d",
+        $case_id
+    ), ARRAY_A);
+
+    foreach ($contacts as $contact) {
+        $timeline[] = array(
+            'date' => $contact['contact_date'],
+            'time' => $contact['contact_time'] ?: '00:00:00',
+            'event' => ucfirst(str_replace('_', ' ', $contact['contact_type'])) . ' contact',
             'type' => 'contact',
-            'details' => 'Regular home visit - child doing well',
-            'created_by' => 'Jane Smith',
-        ),
-        array(
-            'date' => '2024-12-10',
-            'time' => '16:30:00',
-            'event' => 'Home visit report submitted',
-            'type' => 'report',
-            'details' => 'Comprehensive home visit report filed',
-            'created_by' => 'Jane Smith',
-        ),
-    );
-    
+            'details' => $contact['contact_notes'] ?: $contact['summary'] ?: 'Contact logged',
+            'created_by' => $contact['volunteer_name'] ?: 'Unknown',
+        );
+    }
+
+    // Get court hearings
+    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+    $hearings = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $hearings_table WHERE case_id = %d",
+        $case_id
+    ), ARRAY_A);
+
+    foreach ($hearings as $hearing) {
+        $timeline[] = array(
+            'date' => $hearing['hearing_date'],
+            'time' => $hearing['hearing_time'] ?: '00:00:00',
+            'event' => $hearing['hearing_type'] . ' hearing',
+            'type' => 'court_hearing',
+            'details' => $hearing['notes'] ?: 'Court hearing scheduled',
+            'created_by' => 'Court System',
+        );
+    }
+
+    // Get home visit reports
+    $home_visits_table = $wpdb->prefix . 'casa_home_visit_reports';
+    $home_visits = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $home_visits_table WHERE case_id = %d",
+        $case_id
+    ), ARRAY_A);
+
+    foreach ($home_visits as $visit) {
+        $timeline[] = array(
+            'date' => $visit['visit_date'],
+            'time' => '00:00:00',
+            'event' => 'Home visit conducted',
+            'type' => 'home_visit',
+            'details' => $visit['visit_summary'] ?: 'Home visit completed',
+            'created_by' => $visit['created_by'] ?: 'Unknown',
+        );
+    }
+
+    // Get documents
+    $documents_table = $wpdb->prefix . 'casa_documents';
+    $documents = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $documents_table WHERE case_id = %d",
+        $case_id
+    ), ARRAY_A);
+
+    foreach ($documents as $doc) {
+        $timeline[] = array(
+            'date' => $doc['upload_date'] ?: $doc['created_at'],
+            'time' => '00:00:00',
+            'event' => 'Document uploaded',
+            'type' => 'document',
+            'details' => $doc['document_name'] . ' (' . $doc['document_type'] . ')',
+            'created_by' => $doc['uploaded_by'] ?: 'Unknown',
+        );
+    }
+
     // Sort by date and time (most recent first)
     usort($timeline, function($a, $b) {
-        return strtotime($b['date'] . ' ' . $b['time']) - strtotime($a['date'] . ' ' . $a['time']);
+        $time_a = strtotime($a['date'] . ' ' . $a['time']);
+        $time_b = strtotime($b['date'] . ' ' . $b['time']);
+        return $time_b - $time_a;
     });
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => $timeline
@@ -7138,7 +7512,21 @@ add_action('rest_api_init', function() {
         },
         'permission_callback' => '__return_true'
     ));
-    
+
+    // Endpoint to run database migrations
+    register_rest_route('casa/v1', '/debug/migrate-tables', array(
+        'methods' => 'POST',
+        'callback' => function() {
+            casa_create_tables();
+            return new WP_REST_Response(array(
+                'success' => true,
+                'message' => 'Database tables migrated successfully',
+                'timestamp' => current_time('mysql')
+            ), 200);
+        },
+        'permission_callback' => '__return_true'
+    ));
+
     // Temporary endpoint to fix user associations - no auth required
     register_rest_route('casa/v1', '/admin/fix-all-users', array(
         'methods' => 'POST',
@@ -8125,6 +8513,134 @@ function casa_cleanup_test_data($request) {
     }
 }
 
+/**
+ * Comprehensive cleanup of ALL data for the user's organization
+ * WARNING: This permanently deletes all cases, volunteers, documents, etc.
+ */
+function casa_cleanup_all_organization_data($request) {
+    global $wpdb;
+
+    $params = $request->get_json_params();
+
+    // Require confirmation parameter
+    if (empty($params['confirm']) || $params['confirm'] !== 'DELETE_ALL_DATA') {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Must confirm deletion by passing {"confirm": "DELETE_ALL_DATA"}'
+        ), 400);
+    }
+
+    // Get user's organization
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with an organization'
+        ), 403);
+    }
+
+    try {
+        $results = array();
+
+        // Delete feedback
+        $results['feedback'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_feedback WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete feedback attachments (orphaned)
+        $wpdb->query("DELETE fa FROM {$wpdb->prefix}casa_feedback_attachments fa
+                      LEFT JOIN {$wpdb->prefix}casa_feedback f ON fa.feedback_id = f.id
+                      WHERE f.id IS NULL");
+
+        // Delete tasks
+        $results['tasks'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_tasks WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete home visit reports
+        $results['home_visit_reports'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_reports WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete court hearings
+        $results['court_hearings'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_court_hearings WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete contact logs
+        $results['contact_logs'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_contact_logs WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete documents (and their WordPress attachments)
+        $documents = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}casa_documents WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        foreach ($documents as $doc) {
+            if (!empty($doc->attachment_id)) {
+                wp_delete_attachment($doc->attachment_id, true);
+            }
+        }
+
+        $results['documents'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_documents WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete cases
+        $results['cases'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_cases WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete volunteers
+        $results['volunteers'] = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}casa_volunteers WHERE organization_id = %d",
+            $organization_id
+        ));
+
+        // Delete volunteer applications (if table exists)
+        $app_table = $wpdb->prefix . 'casa_volunteer_applications';
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$app_table'");
+        if ($table_exists) {
+            $results['volunteer_applications'] = $wpdb->query($wpdb->prepare(
+                "DELETE FROM $app_table WHERE organization_id = %d",
+                $organization_id
+            ));
+        } else {
+            $results['volunteer_applications'] = 'table_not_exists';
+        }
+
+        // Log the cleanup
+        casa_log_audit('admin', 'cleanup_all_data', array(
+            'organization_id' => $organization_id,
+            'metadata' => $results,
+            'severity' => 'critical'
+        ));
+
+        return new WP_REST_Response(array(
+            'success' => true,
+            'message' => 'All organization data has been deleted',
+            'data' => $results
+        ), 200);
+
+    } catch (Exception $e) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Error cleaning up data: ' . $e->getMessage()
+        ), 500);
+    }
+}
+
 function casa_cleanup_all_documents($request) {
     global $wpdb;
     
@@ -8566,6 +9082,575 @@ function casa_setup_formidable_tables($request) {
     return new WP_REST_Response(array(
         'success' => true,
         'messages' => $messages
+    ), 200);
+}
+
+// ============================================================================
+// FEEDBACK/BUG TRACKING FUNCTIONS
+// ============================================================================
+
+/**
+ * Get list of feedback/suggestions
+ */
+function casa_get_feedback_list($request) {
+    global $wpdb;
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with organization'
+        ), 403);
+    }
+
+    $table = $wpdb->prefix . 'casa_feedback';
+    $params = $request->get_params();
+
+    // Build query with filters
+    $where = array("organization_id = %d");
+    $values = array($organization_id);
+
+    // Filter by status
+    if (!empty($params['status'])) {
+        $where[] = "status = %s";
+        $values[] = sanitize_text_field($params['status']);
+    }
+
+    // Filter by type
+    if (!empty($params['feedback_type'])) {
+        $where[] = "feedback_type = %s";
+        $values[] = sanitize_text_field($params['feedback_type']);
+    }
+
+    // Filter by submitted_by (for user's own feedback)
+    if (!empty($params['my_feedback']) && $params['my_feedback'] === 'true') {
+        $where[] = "submitted_by = %d";
+        $values[] = $current_user->ID;
+    }
+
+    $where_clause = implode(' AND ', $where);
+
+    // Pagination
+    $page = max(1, intval($params['page'] ?? 1));
+    $per_page = min(100, max(1, intval($params['per_page'] ?? 20)));
+    $offset = ($page - 1) * $per_page;
+
+    // Get total count
+    $total = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table WHERE $where_clause",
+        ...$values
+    ));
+
+    // Get feedback list
+    $values[] = $per_page;
+    $values[] = $offset;
+
+    $feedback = $wpdb->get_results($wpdb->prepare(
+        "SELECT f.*,
+                u.display_name as submitter_display_name,
+                r.display_name as resolver_display_name
+         FROM $table f
+         LEFT JOIN {$wpdb->users} u ON f.submitted_by = u.ID
+         LEFT JOIN {$wpdb->users} r ON f.resolved_by = r.ID
+         WHERE $where_clause
+         ORDER BY f.created_at DESC
+         LIMIT %d OFFSET %d",
+        ...$values
+    ), ARRAY_A);
+
+    // Decode attachments JSON
+    foreach ($feedback as &$item) {
+        $item['attachments'] = $item['attachments'] ? json_decode($item['attachments'], true) : array();
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $feedback,
+        'total' => intval($total),
+        'page' => $page,
+        'per_page' => $per_page,
+        'total_pages' => ceil($total / $per_page)
+    ), 200);
+}
+
+/**
+ * Get single feedback item
+ */
+function casa_get_feedback($request) {
+    global $wpdb;
+
+    $id = intval($request['id']);
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $table = $wpdb->prefix . 'casa_feedback';
+
+    $feedback = $wpdb->get_row($wpdb->prepare(
+        "SELECT f.*,
+                u.display_name as submitter_display_name,
+                r.display_name as resolver_display_name
+         FROM $table f
+         LEFT JOIN {$wpdb->users} u ON f.submitted_by = u.ID
+         LEFT JOIN {$wpdb->users} r ON f.resolved_by = r.ID
+         WHERE f.id = %d AND f.organization_id = %d",
+        $id, $organization_id
+    ), ARRAY_A);
+
+    if (!$feedback) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Feedback not found'
+        ), 404);
+    }
+
+    $feedback['attachments'] = $feedback['attachments'] ? json_decode($feedback['attachments'], true) : array();
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $feedback
+    ), 200);
+}
+
+/**
+ * Create new feedback/bug report
+ */
+function casa_create_feedback($request) {
+    global $wpdb;
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with organization'
+        ), 403);
+    }
+
+    $params = $request->get_json_params();
+
+    // Validate required fields
+    if (empty($params['title'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Title is required'
+        ), 400);
+    }
+
+    if (empty($params['description'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Description is required'
+        ), 400);
+    }
+
+    $table = $wpdb->prefix . 'casa_feedback';
+
+    $data = array(
+        'organization_id' => $organization_id,
+        'submitted_by' => $current_user->ID,
+        'submitter_email' => $current_user->user_email,
+        'submitter_name' => $current_user->display_name,
+        'feedback_type' => sanitize_text_field($params['feedback_type'] ?? 'suggestion'),
+        'title' => sanitize_text_field($params['title']),
+        'description' => sanitize_textarea_field($params['description']),
+        'page_url' => sanitize_text_field($params['page_url'] ?? ''),
+        'browser_info' => sanitize_textarea_field($params['browser_info'] ?? ''),
+        'priority' => sanitize_text_field($params['priority'] ?? 'medium'),
+        'status' => 'new',
+        'attachments' => !empty($params['attachments']) ? wp_json_encode($params['attachments']) : null,
+        'created_at' => current_time('mysql')
+    );
+
+    $result = $wpdb->insert($table, $data);
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Failed to create feedback: ' . $wpdb->last_error
+        ), 500);
+    }
+
+    $feedback_id = $wpdb->insert_id;
+
+    // Log the audit
+    casa_log_audit('feedback', 'create', array(
+        'resource_type' => 'feedback',
+        'resource_id' => $feedback_id,
+        'resource_identifier' => $params['title'],
+        'new_values' => $data
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Feedback submitted successfully',
+        'data' => array('id' => $feedback_id)
+    ), 201);
+}
+
+/**
+ * Update feedback (admin notes, etc.)
+ */
+function casa_update_feedback($request) {
+    global $wpdb;
+
+    $id = intval($request['id']);
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $table = $wpdb->prefix . 'casa_feedback';
+
+    // Verify feedback exists and belongs to org
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table WHERE id = %d AND organization_id = %d",
+        $id, $organization_id
+    ), ARRAY_A);
+
+    if (!$existing) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Feedback not found'
+        ), 404);
+    }
+
+    $params = $request->get_json_params();
+
+    $update_data = array(
+        'updated_at' => current_time('mysql')
+    );
+
+    // Allow updating admin notes
+    if (isset($params['admin_notes'])) {
+        $update_data['admin_notes'] = sanitize_textarea_field($params['admin_notes']);
+    }
+
+    // Allow updating priority
+    if (isset($params['priority'])) {
+        $update_data['priority'] = sanitize_text_field($params['priority']);
+    }
+
+    $result = $wpdb->update($table, $update_data, array('id' => $id));
+
+    casa_log_audit('feedback', 'update', array(
+        'resource_type' => 'feedback',
+        'resource_id' => $id,
+        'old_values' => $existing,
+        'new_values' => $update_data
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Feedback updated successfully'
+    ), 200);
+}
+
+/**
+ * Update feedback status with email notification
+ */
+function casa_update_feedback_status($request) {
+    global $wpdb;
+
+    $id = intval($request['id']);
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $table = $wpdb->prefix . 'casa_feedback';
+
+    // Verify feedback exists and belongs to org
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table WHERE id = %d AND organization_id = %d",
+        $id, $organization_id
+    ), ARRAY_A);
+
+    if (!$existing) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Feedback not found'
+        ), 404);
+    }
+
+    $params = $request->get_json_params();
+
+    if (empty($params['status'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Status is required'
+        ), 400);
+    }
+
+    $old_status = $existing['status'];
+    $new_status = sanitize_text_field($params['status']);
+
+    // Valid statuses
+    $valid_statuses = array('new', 'in_review', 'in_progress', 'resolved', 'closed', 'wont_fix');
+    if (!in_array($new_status, $valid_statuses)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Invalid status'
+        ), 400);
+    }
+
+    $update_data = array(
+        'status' => $new_status,
+        'updated_at' => current_time('mysql')
+    );
+
+    // If resolved or closed, set resolver info
+    if (in_array($new_status, array('resolved', 'closed', 'wont_fix'))) {
+        $update_data['resolved_by'] = $current_user->ID;
+        $update_data['resolved_at'] = current_time('mysql');
+    }
+
+    // Include admin notes if provided
+    if (!empty($params['admin_notes'])) {
+        $update_data['admin_notes'] = sanitize_textarea_field($params['admin_notes']);
+    }
+
+    $result = $wpdb->update($table, $update_data, array('id' => $id));
+
+    // Send email notification to submitter if status changed
+    if ($old_status !== $new_status) {
+        casa_send_feedback_status_notification($existing, $new_status, $params['admin_notes'] ?? '');
+    }
+
+    casa_log_audit('feedback', 'status_change', array(
+        'resource_type' => 'feedback',
+        'resource_id' => $id,
+        'old_values' => array('status' => $old_status),
+        'new_values' => array('status' => $new_status),
+        'metadata' => array('admin_notes' => $params['admin_notes'] ?? '')
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Feedback status updated successfully'
+    ), 200);
+}
+
+/**
+ * Send email notification on status change
+ */
+function casa_send_feedback_status_notification($feedback, $new_status, $admin_notes = '') {
+    $status_labels = array(
+        'new' => 'New',
+        'in_review' => 'Under Review',
+        'in_progress' => 'In Progress',
+        'resolved' => 'Resolved',
+        'closed' => 'Closed',
+        'wont_fix' => 'Won\'t Fix'
+    );
+
+    $status_label = $status_labels[$new_status] ?? $new_status;
+    $feedback_type = ucfirst($feedback['feedback_type']);
+
+    $subject = "Your {$feedback_type} Status Update: {$status_label}";
+
+    $html_content = "
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; }
+            .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; }
+            .status-new { background: #dbeafe; color: #1e40af; }
+            .status-in_review { background: #fef3c7; color: #92400e; }
+            .status-in_progress { background: #e0e7ff; color: #3730a3; }
+            .status-resolved { background: #d1fae5; color: #065f46; }
+            .status-closed { background: #f3f4f6; color: #374151; }
+            .status-wont_fix { background: #fee2e2; color: #991b1b; }
+            .feedback-box { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin: 15px 0; }
+            .admin-notes { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 15px; }
+            .footer { text-align: center; padding: 15px; color: #6b7280; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h2 style='margin: 0;'>Feedback Status Update</h2>
+            </div>
+            <div class='content'>
+                <p>Hi {$feedback['submitter_name']},</p>
+
+                <p>Your {$feedback_type} has been updated to a new status:</p>
+
+                <p><span class='status-badge status-{$new_status}'>{$status_label}</span></p>
+
+                <div class='feedback-box'>
+                    <strong>Title:</strong> {$feedback['title']}<br>
+                    <strong>Type:</strong> {$feedback_type}<br>
+                    <strong>Submitted:</strong> " . date('F j, Y', strtotime($feedback['created_at'])) . "
+                </div>";
+
+    if (!empty($admin_notes)) {
+        $html_content .= "
+                <div class='admin-notes'>
+                    <strong>Admin Notes:</strong><br>
+                    " . nl2br(esc_html($admin_notes)) . "
+                </div>";
+    }
+
+    $html_content .= "
+                <p>Thank you for helping us improve CASA!</p>
+            </div>
+            <div class='footer'>
+                <p>This is an automated notification from CASA Case Management System.</p>
+                <p>&copy; " . date('Y') . " PA-CASA. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>";
+
+    return casa_send_brevo_email(
+        $feedback['submitter_email'],
+        $feedback['submitter_name'],
+        $subject,
+        $html_content
+    );
+}
+
+/**
+ * Delete feedback
+ */
+function casa_delete_feedback($request) {
+    global $wpdb;
+
+    $id = intval($request['id']);
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    $table = $wpdb->prefix . 'casa_feedback';
+
+    // Verify feedback exists
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table WHERE id = %d AND organization_id = %d",
+        $id, $organization_id
+    ), ARRAY_A);
+
+    if (!$existing) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Feedback not found'
+        ), 404);
+    }
+
+    $result = $wpdb->delete($table, array('id' => $id));
+
+    // Also delete attachments
+    $attachments_table = $wpdb->prefix . 'casa_feedback_attachments';
+    $wpdb->delete($attachments_table, array('feedback_id' => $id));
+
+    casa_log_audit('feedback', 'delete', array(
+        'resource_type' => 'feedback',
+        'resource_id' => $id,
+        'old_values' => $existing
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Feedback deleted successfully'
+    ), 200);
+}
+
+/**
+ * Upload feedback attachment (screenshot/video)
+ */
+function casa_upload_feedback_attachment($request) {
+    global $wpdb;
+
+    $current_user = wp_get_current_user();
+    $organization_id = casa_get_user_organization_id($current_user->ID);
+
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not associated with organization'
+        ), 403);
+    }
+
+    // Get uploaded file
+    $files = $request->get_file_params();
+
+    if (empty($files['file'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'No file uploaded'
+        ), 400);
+    }
+
+    $file = $files['file'];
+
+    // Check for upload errors
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Upload error: ' . $file['error']
+        ), 400);
+    }
+
+    // Allowed file types for feedback (images and videos)
+    $allowed_types = array(
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/quicktime'
+    );
+
+    $file_type = wp_check_filetype($file['name']);
+    $mime_type = $file['type'];
+
+    if (!in_array($mime_type, $allowed_types)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'File type not allowed. Allowed: JPG, PNG, GIF, WebP, MP4, WebM, MOV'
+        ), 400);
+    }
+
+    // Max file size: 50MB for videos, 10MB for images
+    $max_size = strpos($mime_type, 'video/') === 0 ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if ($file['size'] > $max_size) {
+        $max_mb = $max_size / (1024 * 1024);
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => "File too large. Maximum size: {$max_mb}MB"
+        ), 400);
+    }
+
+    // Include WordPress upload functions
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    require_once(ABSPATH . 'wp-admin/includes/media.php');
+
+    // Create unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $sanitized_name = 'feedback_' . time() . '_' . wp_generate_password(8, false) . '.' . $extension;
+
+    // Custom upload callback for unique filename
+    add_filter('wp_handle_upload_prefilter', function($f) use ($sanitized_name) {
+        $f['name'] = $sanitized_name;
+        return $f;
+    });
+
+    // Handle the upload
+    $uploaded = wp_handle_upload($file, array('test_form' => false));
+
+    if (isset($uploaded['error'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Upload failed: ' . $uploaded['error']
+        ), 500);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => array(
+            'file_name' => $sanitized_name,
+            'file_url' => $uploaded['url'],
+            'file_type' => $mime_type,
+            'file_size' => $file['size']
+        )
     ), 200);
 }
 
