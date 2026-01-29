@@ -78,19 +78,33 @@ export const CASE_STATUS_LABELS = {
 
 // Volunteer Statuses
 export const VOLUNTEER_STATUS = {
+  APPLIED: 'applied',
+  BACKGROUND_CHECK: 'background_check',
+  TRAINING: 'training',
   ACTIVE: 'active',
   INACTIVE: 'inactive',
-  TRAINING: 'training',
-  BACKGROUND_CHECK: 'background_check',
+  REJECTED: 'rejected',
   SUSPENDED: 'suspended',
 } as const;
 
 export const VOLUNTEER_STATUS_LABELS = {
+  [VOLUNTEER_STATUS.APPLIED]: 'Applied',
+  [VOLUNTEER_STATUS.BACKGROUND_CHECK]: 'Background Check',
+  [VOLUNTEER_STATUS.TRAINING]: 'In Training',
   [VOLUNTEER_STATUS.ACTIVE]: 'Active',
   [VOLUNTEER_STATUS.INACTIVE]: 'Inactive',
-  [VOLUNTEER_STATUS.TRAINING]: 'In Training',
-  [VOLUNTEER_STATUS.BACKGROUND_CHECK]: 'Background Check Pending',
+  [VOLUNTEER_STATUS.REJECTED]: 'Rejected',
   [VOLUNTEER_STATUS.SUSPENDED]: 'Suspended',
+} as const;
+
+// Pipeline actions for volunteer workflow
+export const PIPELINE_ACTIONS = {
+  START_BACKGROUND_CHECK: 'start_background_check',
+  APPROVE_BACKGROUND_CHECK: 'approve_background_check',
+  FAIL_BACKGROUND_CHECK: 'fail_background_check',
+  COMPLETE_TRAINING: 'complete_training',
+  APPROVE_VOLUNTEER: 'approve_volunteer',
+  REJECT_APPLICATION: 'reject_application',
 } as const;
 
 // User Roles

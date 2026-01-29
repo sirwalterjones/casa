@@ -61,6 +61,7 @@ export interface TenantSettings extends OrganizationSettings {}
 // Volunteer Types
 export interface Volunteer {
   id: string;
+  userId?: string | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -72,14 +73,92 @@ export interface Volunteer {
   backgroundCheckDate?: string;
   trainingStatus: 'not_started' | 'in_progress' | 'completed' | 'expired';
   trainingCompletedDate?: string;
+  volunteerStatus: 'applied' | 'background_check' | 'training' | 'active' | 'inactive' | 'rejected' | 'suspended';
   isActive: boolean;
   specialties?: string[];
   availability?: string[];
   preferredCaseTypes?: string[];
   organizationId: string;
   assignedCases?: string[];
+  // Pipeline tracking fields
+  applicationDate?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Volunteer Application (public submission - no user account yet)
+export interface VolunteerApplicationData {
+  // Personal Information
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+
+  // Emergency Contact
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  emergencyContactRelationship: string;
+
+  // Background Information
+  employer?: string;
+  occupation?: string;
+  educationLevel?: string;
+  languagesSpoken?: string;
+  previousVolunteerExperience?: string;
+
+  // Availability
+  preferredSchedule?: string;
+  maxCases: number;
+  availabilityNotes?: string;
+
+  // References
+  reference1Name: string;
+  reference1Phone: string;
+  reference1Relationship: string;
+  reference2Name: string;
+  reference2Phone: string;
+  reference2Relationship: string;
+
+  // Preferences
+  agePreference?: string;
+  genderPreference?: string;
+  specialNeedsExperience?: boolean;
+  transportationAvailable?: boolean;
+
+  // Legal agreements
+  backgroundCheckConsent: boolean;
+  liabilityWaiver: boolean;
+  confidentialityAgreement: boolean;
+}
+
+// Organization public info (for application form)
+export interface OrganizationPublicInfo {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+// Pipeline action request
+export interface PipelineActionRequest {
+  action: 'start_background_check' | 'approve_background_check' | 'fail_background_check' | 'complete_training' | 'approve_volunteer' | 'reject_application';
+  notes?: string;
+  rejectionReason?: string;
+}
+
+// Application submission response
+export interface ApplicationSubmissionResponse {
+  success: boolean;
+  referenceNumber: string;
+  message: string;
 }
 
 // Case Types

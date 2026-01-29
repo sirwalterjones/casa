@@ -635,20 +635,27 @@ function casa_create_tables() {
         gender_preference varchar(20),
         special_needs_experience boolean DEFAULT false,
         transportation_available boolean DEFAULT true,
-        volunteer_status varchar(30) DEFAULT 'background_check',
+        volunteer_status varchar(30) DEFAULT 'applied',
         background_check_status varchar(20) DEFAULT 'pending',
         background_check_date datetime NULL,
         training_status varchar(20) DEFAULT 'pending',
         training_completion_date datetime NULL,
         assigned_cases_count int(11) DEFAULT 0,
-        created_by bigint(20) NOT NULL,
+        created_by bigint(20) NULL,
+        application_date datetime DEFAULT CURRENT_TIMESTAMP,
+        application_reference varchar(20) NULL,
+        approved_at datetime NULL,
+        approved_by bigint(20) NULL,
+        rejected_at datetime NULL,
+        rejection_reason text NULL,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         KEY organization_id (organization_id),
         KEY user_id (user_id),
         KEY volunteer_status (volunteer_status),
-        KEY email (email)
+        KEY email (email),
+        KEY application_reference (application_reference)
     ) $charset_collate;";
 
     $create_table_if_not_exists($table_name, $sql);
@@ -797,6 +804,52 @@ function casa_create_tables() {
     ) $charset_collate;";
 
     $create_table_if_not_exists($table_name, $sql);
+
+    // Audit logs table - comprehensive audit trail for all system actions
+    $table_name = $wpdb->prefix . 'casa_audit_logs';
+    $sql = "CREATE TABLE $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        organization_id bigint(20) NULL,
+        user_id bigint(20) NOT NULL,
+        user_email varchar(255) NOT NULL,
+        user_role varchar(50) NOT NULL,
+        action_type varchar(50) NOT NULL,
+        action varchar(100) NOT NULL,
+        resource_type varchar(50) NULL,
+        resource_id bigint(20) NULL,
+        resource_identifier varchar(255) NULL,
+        old_values longtext NULL,
+        new_values longtext NULL,
+        metadata longtext NULL,
+        ip_address varchar(45) NOT NULL,
+        user_agent text NULL,
+        request_uri varchar(500) NULL,
+        status varchar(20) DEFAULT 'success',
+        severity varchar(20) DEFAULT 'info',
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_org_created (organization_id, created_at),
+        KEY idx_user_created (user_id, created_at),
+        KEY idx_action_type (action_type, created_at),
+        KEY idx_resource (resource_type, resource_id),
+        KEY idx_severity (severity, created_at)
+    ) $charset_collate;";
+
+    $create_table_if_not_exists($table_name, $sql);
+
+    // Rate limits table (for public endpoint protection)
+    $table_name = $wpdb->prefix . 'casa_rate_limits';
+    $sql = "CREATE TABLE $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        ip_address varchar(45) NOT NULL,
+        action_type varchar(50) NOT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_ip_action (ip_address, action_type),
+        KEY idx_created (created_at)
+    ) $charset_collate;";
+
+    $create_table_if_not_exists($table_name, $sql);
 }
 
 // Set capabilities for existing roles
@@ -916,7 +969,28 @@ function casa_register_enhanced_routes() {
         'callback' => 'casa_volunteer_action',
         'permission_callback' => 'casa_check_volunteer_create_permission',
     ));
-    
+
+    // Public volunteer application endpoint (no auth required)
+    register_rest_route('casa/v1', '/volunteer-applications', array(
+        'methods' => 'POST',
+        'callback' => 'casa_submit_volunteer_application',
+        'permission_callback' => '__return_true',
+    ));
+
+    // Public organization info endpoint (for application form)
+    register_rest_route('casa/v1', '/organizations/(?P<slug>[a-z0-9-]+)/public', array(
+        'methods' => 'GET',
+        'callback' => 'casa_get_organization_public_info',
+        'permission_callback' => '__return_true',
+    ));
+
+    // Pipeline action endpoint for admin workflow
+    register_rest_route('casa/v1', '/volunteers/(?P<id>\d+)/pipeline-action', array(
+        'methods' => 'POST',
+        'callback' => 'casa_volunteer_pipeline_action',
+        'permission_callback' => 'casa_check_volunteer_create_permission',
+    ));
+
     // Reports endpoints
     register_rest_route('casa/v1', '/reports', array(
         'methods' => 'GET',
@@ -1689,13 +1763,13 @@ function casa_get_dashboard_stats($request) {
             'message' => 'Authentication required'
         ), 401);
     }
-    
+
     $current_user = wp_get_current_user();
-    
+
     global $wpdb;
     $cases_table = $wpdb->prefix . 'casa_cases';
     $users_table = $wpdb->prefix . 'casa_user_organizations';
-    
+
     // For development, if no current user, use first admin user
     if (!$current_user || $current_user->ID === 0) {
         $admin_users = get_users(['role' => 'administrator']);
@@ -1706,36 +1780,36 @@ function casa_get_dashboard_stats($request) {
             $current_user = $admin_users[0];
         }
     }
-    
-    // Get user's organization
+
+    // Always get user's organization - show data only for their org regardless of super admin status
     $user_org = $wpdb->get_var($wpdb->prepare(
         "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
         $current_user->ID
     ));
-    
+
     // If no organization found, try to get any organization (for development)
     if (!$user_org) {
         $user_org = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
     }
-    
+
     // Get real statistics from database
     $active_cases = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $cases_table WHERE organization_id = %d AND status = 'active'",
         $user_org
     ));
-    
+
     // Count volunteers from the actual volunteers table
     $volunteers_table = $wpdb->prefix . 'casa_volunteers';
     $volunteers = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $volunteers_table WHERE organization_id = %d AND volunteer_status = 'active'",
         $user_org
     ));
-    
+
     $pending_reviews = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $cases_table WHERE organization_id = %d AND status = 'pending-review'",
         $user_org
     ));
-    
+
     // Get upcoming court hearings count (next 30 days)
     // Note: court_hearings table has organization_id directly, no need to join
     $court_hearings_table = $wpdb->prefix . 'casa_court_hearings';
@@ -1902,6 +1976,21 @@ function casa_create_case($request) {
 
     // Also create Formidable Forms entry for form integration
     $frm_entry_id = casa_create_formidable_entry(1, $params, $current_user->ID); // Form ID 1 = Case Intake
+
+    // Log case creation
+    casa_log_audit('case', 'create', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'case',
+        'resource_id' => $db_case_id,
+        'resource_identifier' => $params['case_number'],
+        'new_values' => array(
+            'case_number' => $params['case_number'],
+            'child_name' => $params['child_first_name'] . ' ' . $params['child_last_name'],
+            'case_type' => $params['case_type'],
+            'priority' => $params['case_priority'] ?? 'medium',
+            'status' => 'active'
+        )
+    ));
 
     return new WP_REST_Response(array(
         'success' => true,
@@ -2528,14 +2617,25 @@ function casa_get_case_by_id($request) {
     // Check if user has permission to view this case
     // $user_roles = $current_user->roles;
     // $is_volunteer = in_array('volunteer', $user_roles) || in_array('casa_volunteer', $user_roles);
-    // 
+    //
     // if ($is_volunteer && $case['assigned_volunteer_id'] != $current_user->ID) {
     //     return new WP_REST_Response(array(
     //         'success' => false,
     //         'message' => 'Access denied - case not assigned to you'
     //     ), 403);
     // }
-    
+
+    // Log case view
+    casa_log_audit('case', 'view', array(
+        'organization_id' => $user_org,
+        'resource_type' => 'case',
+        'resource_id' => $case_id,
+        'resource_identifier' => $case['case_number'],
+        'metadata' => array(
+            'child_name' => $case['child_first_name'] . ' ' . $case['child_last_name']
+        )
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => $case
@@ -2663,7 +2763,17 @@ function casa_update_case($request) {
         "SELECT * FROM $cases_table WHERE id = %d LIMIT 1",
         $case_id
     ), ARRAY_A);
-    
+
+    // Log case update
+    casa_log_audit('case', 'update', array(
+        'organization_id' => $user_org,
+        'resource_type' => 'case',
+        'resource_id' => $case_id,
+        'resource_identifier' => $existing_case['case_number'],
+        'old_values' => $existing_case,
+        'new_values' => $update_data
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => $updated_case,
@@ -2676,21 +2786,36 @@ function casa_delete_case($request) {
     $case_id = intval($request['id']);
     $cases_table = $wpdb->prefix . 'casa_cases';
 
-    // Get case_number before deleting (needed for FF deletion)
-    $case_number = $wpdb->get_var($wpdb->prepare("SELECT case_number FROM $cases_table WHERE id = %d", $case_id));
+    // Get full case data before deleting (needed for audit log)
+    $case = $wpdb->get_row($wpdb->prepare("SELECT * FROM $cases_table WHERE id = %d", $case_id), ARRAY_A);
 
-    if (!$case_number) {
+    if (!$case) {
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Case not found'
         ), 404);
     }
 
+    $case_number = $case['case_number'];
+    $organization_id = $case['organization_id'];
+
     // Delete the case from CASA table
     $deleted = $wpdb->query($wpdb->prepare("DELETE FROM $cases_table WHERE id = %d", $case_id));
 
     // Also delete from Formidable Forms (Form 1 = Cases, field key 'case_number')
     casa_delete_formidable_entry_by_field(1, 'case_number', $case_number);
+
+    if ($deleted > 0) {
+        // Log case deletion
+        casa_log_audit('case', 'delete', array(
+            'organization_id' => $organization_id,
+            'resource_type' => 'case',
+            'resource_id' => $case_id,
+            'resource_identifier' => $case_number,
+            'old_values' => $case,
+            'severity' => 'warning'
+        ));
+    }
 
     return new WP_REST_Response(array(
         'success' => ($deleted > 0),
@@ -2860,6 +2985,15 @@ add_action('rest_api_init', function() {
     register_rest_route('jwt-auth/v1', '/logout', array(
         'methods' => 'POST',
         'callback' => function($request) {
+            // Log the logout event
+            $user_id = get_current_user_id();
+            if ($user_id) {
+                casa_log_audit('auth', 'logout', array(
+                    'user_id' => $user_id,
+                    'metadata' => array('method' => 'user_initiated')
+                ));
+            }
+
             return new WP_REST_Response(array(
                 'success' => true,
                 'message' => 'Logged out successfully'
@@ -3050,6 +3184,19 @@ function casa_create_volunteer($request) {
     );
     $frm_entry_id = casa_create_formidable_entry(2, $ff_data, $current_user->ID);
 
+    // Log volunteer creation
+    casa_log_audit('volunteer', 'create', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'volunteer',
+        'resource_id' => $volunteer_id,
+        'resource_identifier' => $email,
+        'new_values' => array(
+            'name' => $first_name . ' ' . $last_name,
+            'email' => $email,
+            'volunteer_status' => $params['volunteer_status'] ?? 'background_check'
+        )
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
@@ -3075,27 +3222,35 @@ function casa_get_volunteers($request) {
 
     global $wpdb;
     $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+    $users_table = $wpdb->prefix . 'casa_user_organizations';
 
-    // Get organization filter (NULL for super admins = all orgs, or specific org ID)
-    $requested_org_id = $request->get_param('organization_id');
-    $org_filter = casa_get_organization_filter(null, $requested_org_id);
+    // Always filter by user's organization - regardless of super admin status
+    $current_user = wp_get_current_user();
+    $organization_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
+        $current_user->ID
+    ));
 
-    // Build WHERE clause with organization filtering (also filter out old test data with ID 1)
-    $params = array();
-    $org_where = casa_build_org_where_clause('organization_id', $org_filter, $params);
-    $where_clause = "WHERE $org_where AND id != 1";
-    
+    // Fallback for development
+    if (!$organization_id) {
+        $organization_id = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
+    }
+
+    // Build WHERE clause (also filter out old test data with ID 1)
+    $params = array($organization_id);
+    $where_clause = "WHERE organization_id = %d AND id != 1";
+
     // Add filters if provided
     $status = $request->get_param('status');
     if ($status) {
         $where_clause .= " AND volunteer_status = %s";
         $params[] = $status;
     }
-    
+
     // Get volunteers
     $query = "SELECT * FROM $volunteers_table $where_clause ORDER BY created_at DESC";
     $volunteers = $wpdb->get_results($wpdb->prepare($query, ...$params), ARRAY_A);
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
@@ -3181,10 +3336,544 @@ function casa_delete_volunteer($request) {
         casa_delete_formidable_entry_by_field(2, 'vol_email', $volunteer['email']);
     }
 
+    // Log volunteer deletion
+    casa_log_audit('volunteer', 'delete', array(
+        'organization_id' => $volunteer['organization_id'],
+        'resource_type' => 'volunteer',
+        'resource_id' => $volunteer_id,
+        'resource_identifier' => $volunteer['email'],
+        'old_values' => $volunteer,
+        'severity' => 'warning'
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => 'Volunteer and WordPress user deleted successfully'
     ), 200);
+}
+
+// ============================================================================
+// PUBLIC VOLUNTEER APPLICATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Submit a public volunteer application (no authentication required)
+ * Creates volunteer record with user_id = NULL and status = 'applied'
+ */
+function casa_submit_volunteer_application($request) {
+    global $wpdb;
+
+    // Rate limiting check - 5 submissions per hour per IP
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $rate_limit_table = $wpdb->prefix . 'casa_rate_limits';
+
+    // Clean up old rate limit entries (older than 1 hour)
+    $wpdb->query("DELETE FROM $rate_limit_table WHERE created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+
+    // Check current submission count
+    $submission_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $rate_limit_table WHERE ip_address = %s AND action_type = 'volunteer_application'",
+        $ip_address
+    ));
+
+    if ($submission_count >= 5) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Too many submission attempts. Please try again later.'
+        ), 429);
+    }
+
+    $params = $request->get_json_params();
+
+    // Validate organization slug
+    $organization_slug = sanitize_text_field($params['organization_slug'] ?? '');
+    if (empty($organization_slug)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Organization is required'
+        ), 400);
+    }
+
+    // Get organization by slug
+    $orgs_table = $wpdb->prefix . 'casa_organizations';
+    $organization = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, name, slug, status FROM $orgs_table WHERE slug = %s",
+        $organization_slug
+    ), ARRAY_A);
+
+    if (!$organization || $organization['status'] !== 'active') {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Invalid or inactive organization'
+        ), 400);
+    }
+
+    $organization_id = $organization['id'];
+
+    // Validate required fields
+    $required_fields = ['first_name', 'last_name', 'email', 'phone', 'date_of_birth',
+                        'address', 'city', 'state', 'zip_code',
+                        'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
+                        'reference1_name', 'reference1_phone', 'reference1_relationship',
+                        'reference2_name', 'reference2_phone', 'reference2_relationship'];
+
+    foreach ($required_fields as $field) {
+        if (empty($params[$field])) {
+            return new WP_REST_Response(array(
+                'success' => false,
+                'message' => "Missing required field: $field"
+            ), 400);
+        }
+    }
+
+    // Validate legal agreements
+    if (empty($params['background_check_consent']) || empty($params['liability_waiver']) || empty($params['confidentiality_agreement'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'All legal agreements must be accepted'
+        ), 400);
+    }
+
+    // Validate email format
+    $email = sanitize_email($params['email']);
+    if (!is_email($email)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Invalid email address'
+        ), 400);
+    }
+
+    // Check if email already exists for this organization
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+    $existing = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM $volunteers_table WHERE email = %s AND organization_id = %d",
+        $email, $organization_id
+    ));
+
+    if ($existing) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'An application with this email address already exists for this organization'
+        ), 400);
+    }
+
+    // Generate unique reference number
+    $reference_number = 'APP-' . strtoupper(substr(md5(uniqid()), 0, 8));
+
+    // Insert volunteer application (user_id = NULL, status = 'applied')
+    $result = $wpdb->insert($volunteers_table, array(
+        'organization_id' => $organization_id,
+        'user_id' => null, // No WordPress user yet
+        'first_name' => sanitize_text_field($params['first_name']),
+        'last_name' => sanitize_text_field($params['last_name']),
+        'email' => $email,
+        'phone' => sanitize_text_field($params['phone']),
+        'date_of_birth' => $params['date_of_birth'],
+        'address' => sanitize_textarea_field($params['address']),
+        'city' => sanitize_text_field($params['city']),
+        'state' => sanitize_text_field($params['state']),
+        'zip_code' => sanitize_text_field($params['zip_code']),
+        'emergency_contact_name' => sanitize_text_field($params['emergency_contact_name']),
+        'emergency_contact_phone' => sanitize_text_field($params['emergency_contact_phone']),
+        'emergency_contact_relationship' => sanitize_text_field($params['emergency_contact_relationship']),
+        'employer' => sanitize_text_field($params['employer'] ?? ''),
+        'occupation' => sanitize_text_field($params['occupation'] ?? ''),
+        'education_level' => sanitize_text_field($params['education_level'] ?? ''),
+        'languages_spoken' => sanitize_text_field($params['languages_spoken'] ?? ''),
+        'previous_volunteer_experience' => sanitize_textarea_field($params['previous_volunteer_experience'] ?? ''),
+        'preferred_schedule' => sanitize_text_field($params['preferred_schedule'] ?? ''),
+        'max_cases' => intval($params['max_cases'] ?? 3),
+        'availability_notes' => sanitize_textarea_field($params['availability_notes'] ?? ''),
+        'reference1_name' => sanitize_text_field($params['reference1_name']),
+        'reference1_phone' => sanitize_text_field($params['reference1_phone']),
+        'reference1_relationship' => sanitize_text_field($params['reference1_relationship']),
+        'reference2_name' => sanitize_text_field($params['reference2_name']),
+        'reference2_phone' => sanitize_text_field($params['reference2_phone']),
+        'reference2_relationship' => sanitize_text_field($params['reference2_relationship']),
+        'age_preference' => sanitize_text_field($params['age_preference'] ?? ''),
+        'gender_preference' => sanitize_text_field($params['gender_preference'] ?? ''),
+        'special_needs_experience' => !empty($params['special_needs_experience']),
+        'transportation_available' => !empty($params['transportation_available']),
+        'volunteer_status' => 'applied',
+        'background_check_status' => 'pending',
+        'training_status' => 'pending',
+        'application_date' => current_time('mysql'),
+        'application_reference' => $reference_number,
+        'created_by' => null, // No creator - public submission
+    ));
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Failed to submit application: ' . $wpdb->last_error
+        ), 500);
+    }
+
+    $application_id = $wpdb->insert_id;
+
+    // Record rate limit entry
+    $wpdb->insert($rate_limit_table, array(
+        'ip_address' => $ip_address,
+        'action_type' => 'volunteer_application',
+        'created_at' => current_time('mysql')
+    ));
+
+    // Log application submission
+    casa_log_audit('volunteer_application', 'create', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'volunteer_application',
+        'resource_id' => $application_id,
+        'resource_identifier' => $reference_number,
+        'new_values' => array(
+            'name' => $params['first_name'] . ' ' . $params['last_name'],
+            'email' => $email,
+            'organization' => $organization['name']
+        ),
+        'ip_address' => $ip_address
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => array(
+            'reference_number' => $reference_number,
+            'message' => 'Your volunteer application has been submitted successfully. You will be contacted within 2-3 business days.'
+        )
+    ), 201);
+}
+
+/**
+ * Get public organization info for application form
+ */
+function casa_get_organization_public_info($request) {
+    global $wpdb;
+
+    $slug = sanitize_text_field($request->get_param('slug'));
+    if (empty($slug)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Organization slug is required'
+        ), 400);
+    }
+
+    $orgs_table = $wpdb->prefix . 'casa_organizations';
+    $organization = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, name, slug FROM $orgs_table WHERE slug = %s AND status = 'active'",
+        $slug
+    ), ARRAY_A);
+
+    if (!$organization) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Organization not found'
+        ), 404);
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => array(
+            'id' => $organization['id'],
+            'name' => $organization['name'],
+            'slug' => $organization['slug']
+        )
+    ), 200);
+}
+
+/**
+ * Pipeline action for volunteer workflow (admin only)
+ * Actions: start_background_check, approve_background_check, fail_background_check,
+ *          complete_training, approve_volunteer, reject_application
+ */
+function casa_volunteer_pipeline_action($request) {
+    if (!casa_check_volunteer_create_permission()) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Insufficient permissions'
+        ), 403);
+    }
+
+    $context = casa_ensure_organization_context();
+    if (is_wp_error($context) || isset($context['success'])) {
+        return $context;
+    }
+
+    $current_user = $context['user'];
+    $user_organization_id = $context['organization_id'];
+
+    $volunteer_id = intval($request->get_param('id'));
+    $params = $request->get_json_params();
+    $action = sanitize_text_field($params['action'] ?? '');
+    $notes = sanitize_textarea_field($params['notes'] ?? '');
+
+    if (empty($action)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Action is required'
+        ), 400);
+    }
+
+    $valid_actions = ['start_background_check', 'approve_background_check', 'fail_background_check',
+                      'complete_training', 'approve_volunteer', 'reject_application'];
+
+    if (!in_array($action, $valid_actions)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Invalid action. Valid actions: ' . implode(', ', $valid_actions)
+        ), 400);
+    }
+
+    global $wpdb;
+    $volunteers_table = $wpdb->prefix . 'casa_volunteers';
+
+    // Get volunteer
+    $volunteer = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $volunteers_table WHERE id = %d",
+        $volunteer_id
+    ), ARRAY_A);
+
+    if (!$volunteer) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Volunteer not found'
+        ), 404);
+    }
+
+    // Check organization access
+    if (!casa_can_access_organization($volunteer['organization_id'])) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'You can only manage volunteers from your organization'
+        ), 403);
+    }
+
+    $update_data = array();
+    $old_status = $volunteer['volunteer_status'];
+
+    switch ($action) {
+        case 'start_background_check':
+            if ($volunteer['volunteer_status'] !== 'applied') {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Can only start background check for applied volunteers'
+                ), 400);
+            }
+            $update_data['volunteer_status'] = 'background_check';
+            $update_data['background_check_status'] = 'in_progress';
+            $update_data['background_check_date'] = current_time('mysql');
+            break;
+
+        case 'approve_background_check':
+            if ($volunteer['volunteer_status'] !== 'background_check') {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Volunteer must be in background_check status'
+                ), 400);
+            }
+            $update_data['volunteer_status'] = 'training';
+            $update_data['background_check_status'] = 'approved';
+            break;
+
+        case 'fail_background_check':
+            if ($volunteer['volunteer_status'] !== 'background_check') {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Volunteer must be in background_check status'
+                ), 400);
+            }
+            $update_data['volunteer_status'] = 'rejected';
+            $update_data['background_check_status'] = 'rejected';
+            $update_data['rejected_at'] = current_time('mysql');
+            $update_data['rejection_reason'] = $params['rejection_reason'] ?? 'Background check failed';
+            break;
+
+        case 'complete_training':
+            if ($volunteer['volunteer_status'] !== 'training') {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Volunteer must be in training status'
+                ), 400);
+            }
+            $update_data['training_status'] = 'completed';
+            $update_data['training_completion_date'] = current_time('mysql');
+            // Volunteer stays in 'training' status until approved
+            break;
+
+        case 'approve_volunteer':
+            // Can approve from training (after completion) or directly from background_check for fast-track
+            if (!in_array($volunteer['volunteer_status'], ['training', 'background_check'])) {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Volunteer must be in training or background_check status to approve'
+                ), 400);
+            }
+
+            // Create WordPress user account
+            $user_result = casa_create_volunteer_user_account($volunteer);
+            if (is_wp_error($user_result)) {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Failed to create user account: ' . $user_result->get_error_message()
+                ), 500);
+            }
+
+            $update_data['volunteer_status'] = 'active';
+            $update_data['user_id'] = $user_result['user_id'];
+            $update_data['approved_at'] = current_time('mysql');
+            $update_data['approved_by'] = $current_user->ID;
+
+            // Update background check and training if not already done
+            if ($volunteer['background_check_status'] !== 'approved') {
+                $update_data['background_check_status'] = 'approved';
+            }
+            if ($volunteer['training_status'] !== 'completed') {
+                $update_data['training_status'] = 'completed';
+                $update_data['training_completion_date'] = current_time('mysql');
+            }
+            break;
+
+        case 'reject_application':
+            if (in_array($volunteer['volunteer_status'], ['active', 'rejected'])) {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Cannot reject active or already rejected volunteers'
+                ), 400);
+            }
+            $update_data['volunteer_status'] = 'rejected';
+            $update_data['rejected_at'] = current_time('mysql');
+            $update_data['rejection_reason'] = $params['rejection_reason'] ?? 'Application rejected';
+            break;
+    }
+
+    // Perform update
+    $result = $wpdb->update(
+        $volunteers_table,
+        $update_data,
+        array('id' => $volunteer_id),
+        null,
+        array('%d')
+    );
+
+    if ($result === false) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Failed to update volunteer: ' . $wpdb->last_error
+        ), 500);
+    }
+
+    // Log pipeline action
+    casa_log_audit('volunteer_pipeline', $action, array(
+        'organization_id' => $volunteer['organization_id'],
+        'resource_type' => 'volunteer',
+        'resource_id' => $volunteer_id,
+        'resource_identifier' => $volunteer['email'],
+        'old_values' => array('volunteer_status' => $old_status),
+        'new_values' => $update_data,
+        'notes' => $notes
+    ));
+
+    // Prepare response
+    $response_data = array(
+        'id' => $volunteer_id,
+        'action' => $action,
+        'old_status' => $old_status,
+        'new_status' => $update_data['volunteer_status'] ?? $volunteer['volunteer_status'],
+        'message' => "Pipeline action '$action' completed successfully"
+    );
+
+    // Include user credentials if account was created
+    if ($action === 'approve_volunteer' && isset($user_result)) {
+        $response_data['user_created'] = true;
+        $response_data['username'] = $user_result['username'];
+        $response_data['temporary_password'] = $user_result['password'];
+        $response_data['welcome_email_sent'] = $user_result['email_sent'];
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'data' => $response_data
+    ), 200);
+}
+
+/**
+ * Helper function to create WordPress user account for approved volunteer
+ */
+function casa_create_volunteer_user_account($volunteer) {
+    $email = $volunteer['email'];
+    $first_name = $volunteer['first_name'];
+    $last_name = $volunteer['last_name'];
+
+    // Check if user already exists
+    $existing_user = get_user_by('email', $email);
+    if ($existing_user) {
+        return new WP_Error('user_exists', 'A user with this email already exists');
+    }
+
+    // Generate username from email
+    $username = sanitize_user(explode('@', $email)[0]);
+    $original_username = $username;
+    $counter = 1;
+    while (username_exists($username)) {
+        $username = $original_username . $counter;
+        $counter++;
+    }
+
+    // Generate temporary password
+    $password = wp_generate_password(12, false);
+
+    // Create WordPress user
+    $user_id = wp_create_user($username, $password, $email);
+
+    if (is_wp_error($user_id)) {
+        return $user_id;
+    }
+
+    // Update user meta
+    wp_update_user(array(
+        'ID' => $user_id,
+        'first_name' => $first_name,
+        'last_name' => $last_name,
+        'display_name' => $first_name . ' ' . $last_name,
+        'role' => 'subscriber'
+    ));
+
+    // Add user to organization
+    global $wpdb;
+    $user_orgs_table = $wpdb->prefix . 'casa_user_organizations';
+    $wpdb->insert($user_orgs_table, array(
+        'user_id' => $user_id,
+        'organization_id' => $volunteer['organization_id'],
+        'role' => 'volunteer',
+        'status' => 'active',
+        'created_at' => current_time('mysql')
+    ));
+
+    // Send welcome email
+    $email_sent = false;
+    $org_table = $wpdb->prefix . 'casa_organizations';
+    $organization = $wpdb->get_row($wpdb->prepare(
+        "SELECT name FROM $org_table WHERE id = %d",
+        $volunteer['organization_id']
+    ));
+
+    $org_name = $organization ? $organization->name : 'CASA';
+
+    $subject = "Welcome to $org_name - Your Volunteer Account is Ready";
+    $message = "Dear $first_name,\n\n";
+    $message .= "Congratulations! Your volunteer application with $org_name has been approved.\n\n";
+    $message .= "Your account has been created with the following credentials:\n";
+    $message .= "Username: $username\n";
+    $message .= "Temporary Password: $password\n\n";
+    $message .= "Please log in and change your password as soon as possible.\n\n";
+    $message .= "Thank you for joining our team of dedicated CASA volunteers!\n\n";
+    $message .= "Best regards,\n$org_name Team";
+
+    $email_sent = wp_mail($email, $subject, $message);
+
+    return array(
+        'user_id' => $user_id,
+        'username' => $username,
+        'password' => $password,
+        'email_sent' => $email_sent
+    );
 }
 
 // Report Management Functions
@@ -3539,15 +4228,26 @@ function casa_get_contact_logs($request) {
     global $wpdb;
     $contact_logs_table = $wpdb->prefix . 'casa_contact_logs';
     $cases_table = $wpdb->prefix . 'casa_cases';
+    $users_table = $wpdb->prefix . 'casa_organization_users';
 
-    // Get organization filter (NULL for super admins = all orgs, or specific org ID)
-    $requested_org_id = $request->get_param('organization_id');
-    $org_filter = casa_get_organization_filter(null, $requested_org_id);
+    // Always filter by user's organization - regardless of super admin status
+    $current_user = wp_get_current_user();
+    $organization_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT organization_id FROM $users_table WHERE user_id = %d AND status = 'active' LIMIT 1",
+        $current_user->ID
+    ));
 
-    // Build WHERE clause with organization filtering
-    $params = array();
-    $org_where = casa_build_org_where_clause('c.organization_id', $org_filter, $params);
-    $where_clause = "WHERE $org_where";
+    if (!$organization_id) {
+        return new WP_REST_Response(array(
+            'success' => true,
+            'data' => array(),
+            'total' => 0
+        ), 200);
+    }
+
+    // Build WHERE clause with organization filtering (use cl.organization_id since c is LEFT JOINed)
+    $params = array($organization_id);
+    $where_clause = "WHERE cl.organization_id = %d";
 
     // Get case_id filter if provided
     $case_id = $request->get_param('case_id');
@@ -3566,13 +4266,14 @@ function casa_get_contact_logs($request) {
     
     // Query contact logs from database table (using case_number to join)
     $query = "SELECT cl.*, c.child_first_name, c.child_last_name,
+                     COALESCE(NULLIF(cl.child_name, ''), CONCAT(COALESCE(c.child_first_name, ''), ' ', COALESCE(c.child_last_name, ''))) as child_name,
                      CONCAT(um_first.meta_value, ' ', um_last.meta_value) as volunteer_name
               FROM $contact_logs_table cl
-              JOIN $cases_table c ON cl.case_number = c.case_number
+              LEFT JOIN $cases_table c ON cl.case_number = c.case_number AND c.organization_id = cl.organization_id
               LEFT JOIN {$wpdb->users} u ON cl.created_by = u.ID
               LEFT JOIN {$wpdb->usermeta} um_first ON (u.ID = um_first.user_id AND um_first.meta_key = 'first_name')
               LEFT JOIN {$wpdb->usermeta} um_last ON (u.ID = um_last.user_id AND um_last.meta_key = 'last_name')
-              $where_clause 
+              $where_clause
               ORDER BY cl.contact_date DESC";
     
     $contact_logs = $wpdb->get_results($wpdb->prepare($query, ...$params), ARRAY_A);
@@ -4098,38 +4799,78 @@ function casa_volunteer_action($request) {
 
 // User action handler
 function casa_user_action($request) {
-    $user_id = $request['id'];
+    global $wpdb;
+
+    $user_id = intval($request['id']);
     $action = $request['action'];
     $params = $request->get_json_params();
-    
+
+    // Verify user exists
+    $user = get_user_by('ID', $user_id);
+    if (!$user) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'User not found'
+        ), 404);
+    }
+
     switch ($action) {
         case 'activate':
-            // Activate user
-            wp_update_user(array('ID' => $user_id, 'user_status' => 0));
+            // Activate user - update the casa_user_organizations status
+            $wpdb->update(
+                $wpdb->prefix . 'casa_user_organizations',
+                array('status' => 'active'),
+                array('user_id' => $user_id),
+                array('%s'),
+                array('%d')
+            );
+            // Also update user meta for status
+            update_user_meta($user_id, 'casa_status', 'active');
             break;
-            
+
         case 'deactivate':
-            // Deactivate user
-            wp_update_user(array('ID' => $user_id, 'user_status' => 1));
+            // Deactivate user - update the casa_user_organizations status
+            $wpdb->update(
+                $wpdb->prefix . 'casa_user_organizations',
+                array('status' => 'inactive'),
+                array('user_id' => $user_id),
+                array('%s'),
+                array('%d')
+            );
+            // Also update user meta for status
+            update_user_meta($user_id, 'casa_status', 'inactive');
             break;
-            
+
         case 'delete':
-            // Delete user (careful with this)
-            if (!wp_delete_user($user_id)) {
+            // First, remove from casa_user_organizations table
+            $wpdb->delete(
+                $wpdb->prefix . 'casa_user_organizations',
+                array('user_id' => $user_id),
+                array('%d')
+            );
+
+            // Load required WordPress admin functions for wp_delete_user
+            if (!function_exists('wp_delete_user')) {
+                require_once(ABSPATH . 'wp-admin/includes/user.php');
+            }
+
+            // Delete the WordPress user
+            $deleted = wp_delete_user($user_id);
+            if (!$deleted) {
                 return new WP_REST_Response(array(
                     'success' => false,
-                    'message' => 'Failed to delete user'
+                    'message' => 'Failed to delete user from WordPress'
                 ), 500);
             }
             break;
-            
+
         default:
             return new WP_REST_Response(array(
                 'success' => false,
-                'message' => 'Invalid action'
+                'message' => 'Invalid action: ' . $action
             ), 400);
     }
-    
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => "User {$action} successful"
@@ -4243,6 +4984,23 @@ function casa_invite_user($request) {
             }
         }
     }
+
+    // Log user invitation
+    casa_log_audit('user', 'invite', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'user',
+        'resource_id' => $user_id,
+        'resource_identifier' => $params['email'],
+        'new_values' => array(
+            'email' => $params['email'],
+            'first_name' => $params['first_name'],
+            'last_name' => $params['last_name'],
+            'role' => $params['role']
+        ),
+        'metadata' => array(
+            'send_invitation' => $params['send_invitation'] ?? false
+        )
+    ));
 
     return new WP_REST_Response(array(
         'success' => true,
@@ -4607,7 +5365,15 @@ function casa_update_organization($request) {
             'message' => 'Failed to update organization settings: ' . $wpdb->last_error
         ), 500);
     }
-    
+
+    // Log settings update
+    casa_log_audit('settings', 'update_org', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'organization',
+        'resource_id' => $organization_id,
+        'new_values' => $params
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'message' => 'Organization settings updated successfully'
@@ -4618,28 +5384,42 @@ function casa_update_organization($request) {
 function casa_get_court_hearings($request) {
     // Get real court hearings from database
     global $wpdb;
-    $table_name = $wpdb->prefix . 'casa_court_hearings';
-    
+    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+    $cases_table = $wpdb->prefix . 'casa_cases';
+
     // Get user's organization
     $current_user = wp_get_current_user();
     $organization_id = casa_get_user_organization_id($current_user->ID);
-    
+
+    // Fallback: if no organization found through user, try to get any active organization (for development)
+    if (!$organization_id) {
+        $organization_id = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}casa_organizations WHERE status = 'active' LIMIT 1");
+    }
+
     if (!$organization_id) {
         return new WP_REST_Response(array(
             'success' => true,
-            'data' => array()
+            'data' => array('hearings' => array())
         ), 200);
     }
-    
-    // Get court hearings for the user's organization
+
+    // Get court hearings for the user's organization with child name and case_id from cases table
+    // Use LEFT JOIN to get child name from cases table if not stored directly in hearings
     $hearings = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM $table_name WHERE organization_id = %d ORDER BY hearing_date DESC",
+        "SELECT h.*,
+                c.id as case_id,
+                COALESCE(NULLIF(h.child_name, ''), CONCAT(c.child_first_name, ' ', c.child_last_name)) as child_name
+         FROM $hearings_table h
+         LEFT JOIN $cases_table c ON h.case_number = c.case_number AND c.organization_id = h.organization_id
+         WHERE h.organization_id = %d
+         AND h.hearing_date >= CURDATE()
+         ORDER BY h.hearing_date ASC",
         $organization_id
     ), ARRAY_A);
-    
+
     return new WP_REST_Response(array(
         'success' => true,
-        'data' => $hearings
+        'data' => array('hearings' => $hearings ? $hearings : array())
     ), 200);
 }
 
@@ -4647,6 +5427,7 @@ function casa_create_court_hearing($request) {
     global $wpdb;
     $params = $request->get_json_params();
     $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+    $cases_table = $wpdb->prefix . 'casa_cases';
 
     // Get current user and organization
     $current_user = wp_get_current_user();
@@ -4667,10 +5448,27 @@ function casa_create_court_hearing($request) {
         ), 400);
     }
 
+    // Get child name from case if not provided
+    $child_name = '';
+    if (!empty($params['child_name'])) {
+        $child_name = sanitize_text_field($params['child_name']);
+    } else {
+        // Look up child name from case
+        $case_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT child_first_name, child_last_name FROM $cases_table WHERE case_number = %s AND organization_id = %d",
+            $params['case_number'],
+            $organization_id
+        ));
+        if ($case_data) {
+            $child_name = trim($case_data->child_first_name . ' ' . $case_data->child_last_name);
+        }
+    }
+
     // Insert into casa_court_hearings table
     $result = $wpdb->insert($hearings_table, array(
         'organization_id' => $organization_id,
         'case_number' => sanitize_text_field($params['case_number']),
+        'child_name' => $child_name,
         'hearing_date' => sanitize_text_field($params['hearing_date']),
         'hearing_time' => sanitize_text_field($params['hearing_time'] ?? ''),
         'hearing_type' => sanitize_text_field($params['hearing_type']),
@@ -5715,6 +6513,21 @@ function casa_upload_document_new($request) {
     );
     $frm_entry_id = casa_create_formidable_entry(5, $ff_data, 1);
 
+    // Log document upload
+    casa_log_audit('document', 'upload', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'document',
+        'resource_id' => $document_id,
+        'resource_identifier' => $document_name,
+        'new_values' => array(
+            'case_number' => $case_number,
+            'document_type' => $document_type,
+            'file_name' => basename($uploaded_file['file']),
+            'file_size' => $file['size'],
+            'is_confidential' => $is_confidential
+        )
+    ));
+
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
@@ -6013,6 +6826,16 @@ function casa_delete_document($request) {
     if (!empty($document->document_name)) {
         casa_delete_formidable_entry_by_field(5, 'doc_name', $document->document_name);
     }
+
+    // Log document deletion
+    casa_log_audit('document', 'delete', array(
+        'organization_id' => $organization_id,
+        'resource_type' => 'document',
+        'resource_id' => $document_id,
+        'resource_identifier' => $document->document_name,
+        'old_values' => (array) $document,
+        'severity' => 'warning'
+    ));
 
     return new WP_REST_Response(array(
         'success' => true,

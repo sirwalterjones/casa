@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { Volunteer, CasaCase, ApiResponse } from '@/types';
+import { Volunteer, CasaCase, ApiResponse, PipelineActionRequest } from '@/types';
 
 export class VolunteerService {
   // Get all volunteers for current organization
@@ -434,6 +434,194 @@ export class VolunteerService {
       return {
         success: false,
         error: error.message || 'Failed to export volunteers',
+      };
+    }
+  }
+
+  // ============================================================================
+  // PIPELINE WORKFLOW METHODS
+  // ============================================================================
+
+  /**
+   * Get volunteers grouped by pipeline status for Kanban board view
+   */
+  async getVolunteersByPipeline(): Promise<ApiResponse<{
+    applied: Volunteer[];
+    background_check: Volunteer[];
+    training: Volunteer[];
+    active: Volunteer[];
+    rejected: Volunteer[];
+  }>> {
+    try {
+      const response = await apiClient.get<{ volunteers: Volunteer[]; pagination: any }>(
+        'casa/v1/volunteers'
+      );
+
+      if (!response.success || !response.data) {
+        return {
+          success: false,
+          error: response.error || 'Failed to fetch volunteers',
+        };
+      }
+
+      // Group volunteers by status
+      const volunteers = response.data.volunteers || [];
+      const grouped = {
+        applied: [] as Volunteer[],
+        background_check: [] as Volunteer[],
+        training: [] as Volunteer[],
+        active: [] as Volunteer[],
+        rejected: [] as Volunteer[],
+      };
+
+      volunteers.forEach((volunteer: any) => {
+        const status = volunteer.volunteer_status || volunteer.volunteerStatus || 'applied';
+
+        // Transform snake_case to camelCase
+        const transformedVolunteer: Volunteer = {
+          id: String(volunteer.id),
+          userId: volunteer.user_id ? String(volunteer.user_id) : null,
+          firstName: volunteer.first_name || volunteer.firstName || '',
+          lastName: volunteer.last_name || volunteer.lastName || '',
+          email: volunteer.email || '',
+          phone: volunteer.phone || '',
+          dateOfBirth: volunteer.date_of_birth || volunteer.dateOfBirth,
+          address: volunteer.address ? {
+            street: volunteer.address,
+            city: volunteer.city || '',
+            state: volunteer.state || '',
+            zipCode: volunteer.zip_code || volunteer.zipCode || '',
+          } : undefined,
+          emergencyContact: volunteer.emergency_contact_name ? {
+            name: volunteer.emergency_contact_name,
+            relationship: volunteer.emergency_contact_relationship || '',
+            phone: volunteer.emergency_contact_phone || '',
+          } : undefined,
+          backgroundCheckStatus: volunteer.background_check_status || 'pending',
+          backgroundCheckDate: volunteer.background_check_date,
+          trainingStatus: volunteer.training_status || 'not_started',
+          trainingCompletedDate: volunteer.training_completion_date,
+          volunteerStatus: status,
+          isActive: status === 'active',
+          organizationId: String(volunteer.organization_id || volunteer.organizationId || ''),
+          applicationDate: volunteer.application_date,
+          approvedAt: volunteer.approved_at,
+          approvedBy: volunteer.approved_by ? String(volunteer.approved_by) : undefined,
+          rejectedAt: volunteer.rejected_at,
+          rejectionReason: volunteer.rejection_reason,
+          createdAt: volunteer.created_at || volunteer.createdAt || '',
+          updatedAt: volunteer.updated_at || volunteer.updatedAt || '',
+        };
+
+        if (status in grouped) {
+          grouped[status as keyof typeof grouped].push(transformedVolunteer);
+        } else {
+          // Default to applied for unknown statuses
+          grouped.applied.push(transformedVolunteer);
+        }
+      });
+
+      return {
+        success: true,
+        data: grouped,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch volunteers by pipeline',
+      };
+    }
+  }
+
+  /**
+   * Execute a pipeline action on a volunteer
+   */
+  async updatePipelineStatus(
+    volunteerId: string,
+    action: PipelineActionRequest['action'],
+    notes?: string,
+    rejectionReason?: string
+  ): Promise<ApiResponse<{
+    id: string;
+    action: string;
+    oldStatus: string;
+    newStatus: string;
+    userCreated?: boolean;
+    username?: string;
+    temporaryPassword?: string;
+    welcomeEmailSent?: boolean;
+  }>> {
+    try {
+      const response = await apiClient.post(`casa/v1/volunteers/${volunteerId}/pipeline-action`, {
+        action,
+        notes,
+        rejection_reason: rejectionReason,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error || 'Failed to update pipeline status',
+        };
+      }
+
+      const data = response.data as any;
+      return {
+        success: true,
+        data: {
+          id: String(data.id),
+          action: data.action,
+          oldStatus: data.old_status,
+          newStatus: data.new_status,
+          userCreated: data.user_created,
+          username: data.username,
+          temporaryPassword: data.temporary_password,
+          welcomeEmailSent: data.welcome_email_sent,
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to update pipeline status',
+      };
+    }
+  }
+
+  /**
+   * Approve volunteer and create user account (convenience method)
+   */
+  async approveAndCreateAccount(
+    volunteerId: string,
+    notes?: string
+  ): Promise<ApiResponse<{
+    id: string;
+    username: string;
+    temporaryPassword: string;
+    welcomeEmailSent: boolean;
+  }>> {
+    try {
+      const response = await this.updatePipelineStatus(volunteerId, 'approve_volunteer', notes);
+
+      if (!response.success || !response.data) {
+        return {
+          success: false,
+          error: response.error || 'Failed to approve volunteer',
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          id: response.data.id,
+          username: response.data.username || '',
+          temporaryPassword: response.data.temporaryPassword || '',
+          welcomeEmailSent: response.data.welcomeEmailSent || false,
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to approve volunteer and create account',
       };
     }
   }
