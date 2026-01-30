@@ -2984,45 +2984,39 @@ function casa_clear_test_data($request) {
     global $wpdb;
     $deleted = array();
 
-    // Delete cases
-    $cases_table = $wpdb->prefix . 'casa_cases';
-    $cases_deleted = $wpdb->query($wpdb->prepare(
-        "DELETE FROM $cases_table WHERE organization_id = %d",
-        $organization_id
-    ));
-    $deleted['cases'] = $cases_deleted;
+    // Helper function to safely delete from a table
+    $safe_delete = function($table_name) use ($wpdb, $organization_id) {
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'");
+        if (!$table_exists) {
+            return 'table_not_found';
+        }
+        return $wpdb->query($wpdb->prepare(
+            "DELETE FROM $table_name WHERE organization_id = %d",
+            $organization_id
+        ));
+    };
 
-    // Delete children
-    $children_table = $wpdb->prefix . 'casa_children';
-    $children_deleted = $wpdb->query($wpdb->prepare(
-        "DELETE FROM $children_table WHERE organization_id = %d",
-        $organization_id
-    ));
-    $deleted['children'] = $children_deleted;
+    // Delete cases
+    $deleted['cases'] = $safe_delete($wpdb->prefix . 'casa_cases');
+
+    // Delete children (may not exist)
+    $deleted['children'] = $safe_delete($wpdb->prefix . 'casa_children');
 
     // Delete contact logs
-    $contacts_table = $wpdb->prefix . 'casa_contact_logs';
-    $contacts_deleted = $wpdb->query($wpdb->prepare(
-        "DELETE FROM $contacts_table WHERE organization_id = %d",
-        $organization_id
-    ));
-    $deleted['contact_logs'] = $contacts_deleted;
+    $deleted['contact_logs'] = $safe_delete($wpdb->prefix . 'casa_contact_logs');
 
     // Delete court hearings
-    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
-    $hearings_deleted = $wpdb->query($wpdb->prepare(
-        "DELETE FROM $hearings_table WHERE organization_id = %d",
-        $organization_id
-    ));
-    $deleted['court_hearings'] = $hearings_deleted;
+    $deleted['court_hearings'] = $safe_delete($wpdb->prefix . 'casa_court_hearings');
 
     // Delete documents
-    $docs_table = $wpdb->prefix . 'casa_documents';
-    $docs_deleted = $wpdb->query($wpdb->prepare(
-        "DELETE FROM $docs_table WHERE organization_id = %d",
-        $organization_id
-    ));
-    $deleted['documents'] = $docs_deleted;
+    $deleted['documents'] = $safe_delete($wpdb->prefix . 'casa_documents');
+
+    // Delete home visit reports
+    $deleted['home_visits'] = $safe_delete($wpdb->prefix . 'casa_home_visit_reports');
+
+    // Delete tasks
+    $deleted['tasks'] = $safe_delete($wpdb->prefix . 'casa_tasks');
 
     // Log the action
     casa_log_audit('admin', 'clear_test_data', array(
