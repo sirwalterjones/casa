@@ -2985,16 +2985,15 @@ function casa_clear_test_data($request) {
     $deleted = array();
 
     // Helper function to safely delete from a table
-    $safe_delete = function($table_name) use ($wpdb, $organization_id) {
+    // For super admin, delete ALL data (not just for one org)
+    $safe_delete = function($table_name) use ($wpdb) {
         // Check if table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'");
         if (!$table_exists) {
             return 'table_not_found';
         }
-        return $wpdb->query($wpdb->prepare(
-            "DELETE FROM $table_name WHERE organization_id = %d",
-            $organization_id
-        ));
+        // Delete ALL rows - this is a full data wipe for super admin
+        return $wpdb->query("DELETE FROM $table_name");
     };
 
     // Delete cases
