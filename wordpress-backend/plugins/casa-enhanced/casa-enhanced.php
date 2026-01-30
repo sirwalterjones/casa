@@ -3017,6 +3017,22 @@ function casa_clear_test_data($request) {
     // Delete tasks
     $deleted['tasks'] = $safe_delete($wpdb->prefix . 'casa_tasks');
 
+    // Delete WordPress posts with CASA custom post types
+    $casa_post_types = array('casa_case', 'casa_child', 'casa_contact_log', 'casa_court_hearing', 'casa_document');
+    $deleted['wp_posts'] = 0;
+    foreach ($casa_post_types as $post_type) {
+        $posts = get_posts(array(
+            'post_type' => $post_type,
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+            'fields' => 'ids'
+        ));
+        foreach ($posts as $post_id) {
+            wp_delete_post($post_id, true); // true = force delete, skip trash
+            $deleted['wp_posts']++;
+        }
+    }
+
     // Log the action
     casa_log_audit('admin', 'clear_test_data', array(
         'organization_id' => $organization_id,
