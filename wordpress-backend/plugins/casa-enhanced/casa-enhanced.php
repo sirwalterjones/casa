@@ -1000,6 +1000,13 @@ function casa_register_enhanced_routes() {
         'permission_callback' => '__return_true'
     ));
 
+    // Admin: Clear all test data for organization
+    register_rest_route('casa/v1', '/admin/clear-test-data', array(
+        'methods' => 'POST',
+        'callback' => 'casa_clear_test_data',
+        'permission_callback' => '__return_true'
+    ));
+
     // Organizations endpoint
     register_rest_route('casa/v1', '/organizations', array(
         'methods' => 'GET',
@@ -2950,6 +2957,84 @@ function casa_delete_case($request) {
         'success' => ($deleted > 0),
         'message' => ($deleted > 0) ? 'Case deleted' : 'Failed to delete',
         'case_id' => $case_id
+    ), 200);
+}
+
+/**
+ * Clear all test data for an organization (admin only)
+ */
+function casa_clear_test_data($request) {
+    $context = casa_ensure_organization_context();
+    if (is_wp_error($context) || isset($context['success'])) {
+        return $context;
+    }
+
+    $organization_id = $context['organization_id'];
+    $current_user = $context['user'];
+
+    // Only allow super admins
+    if (!in_array('administrator', (array)$current_user->roles) &&
+        !in_array('casa_super_admin', (array)$current_user->roles)) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Only administrators can clear test data'
+        ), 403);
+    }
+
+    global $wpdb;
+    $deleted = array();
+
+    // Delete cases
+    $cases_table = $wpdb->prefix . 'casa_cases';
+    $cases_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $cases_table WHERE organization_id = %d",
+        $organization_id
+    ));
+    $deleted['cases'] = $cases_deleted;
+
+    // Delete children
+    $children_table = $wpdb->prefix . 'casa_children';
+    $children_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $children_table WHERE organization_id = %d",
+        $organization_id
+    ));
+    $deleted['children'] = $children_deleted;
+
+    // Delete contact logs
+    $contacts_table = $wpdb->prefix . 'casa_contact_logs';
+    $contacts_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $contacts_table WHERE organization_id = %d",
+        $organization_id
+    ));
+    $deleted['contact_logs'] = $contacts_deleted;
+
+    // Delete court hearings
+    $hearings_table = $wpdb->prefix . 'casa_court_hearings';
+    $hearings_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $hearings_table WHERE organization_id = %d",
+        $organization_id
+    ));
+    $deleted['court_hearings'] = $hearings_deleted;
+
+    // Delete documents
+    $docs_table = $wpdb->prefix . 'casa_documents';
+    $docs_deleted = $wpdb->query($wpdb->prepare(
+        "DELETE FROM $docs_table WHERE organization_id = %d",
+        $organization_id
+    ));
+    $deleted['documents'] = $docs_deleted;
+
+    // Log the action
+    casa_log_audit('admin', 'clear_test_data', array(
+        'organization_id' => $organization_id,
+        'deleted_counts' => $deleted,
+        'severity' => 'critical'
+    ));
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Test data cleared successfully',
+        'deleted' => $deleted
     ), 200);
 }
 
