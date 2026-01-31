@@ -5107,70 +5107,127 @@ function casa_user_action($request) {
 // User invitation handler
 function casa_invite_user($request) {
     $params = $request->get_json_params();
-    
+
     // Ensure organization context is available
     $context = casa_ensure_organization_context();
     if (is_wp_error($context) || isset($context['success'])) {
         return $context;
     }
-    
+
     $current_user = $context['user'];
     $organization_id = $context['organization_id'];
-    
-    // Generate unique username from email
-    $base_username = sanitize_user($params['email']);
-    $username = $base_username;
-    $counter = 1;
-    
-    // Check if username exists and generate unique one
-    while (username_exists($username)) {
-        $username = $base_username . '_' . $counter;
-        $counter++;
-    }
-    
-    // Create WordPress user
-    $userdata = array(
-        'user_login' => $username,
-        'user_email' => $params['email'],
-        'first_name' => $params['first_name'],
-        'last_name' => $params['last_name'],
-        'display_name' => $params['first_name'] . ' ' . $params['last_name'],
-        'user_pass' => wp_generate_password(),
-        'role' => 'casa_' . $params['role'], // Map to CASA roles
-    );
-    
-    $user_id = wp_insert_user($userdata);
-    
-    if (is_wp_error($user_id)) {
-        return new WP_REST_Response(array(
-            'success' => false,
-            'message' => $user_id->get_error_message()
-        ), 400);
-    }
-    
-    // Associate user with organization
+
     global $wpdb;
     $table_name = $wpdb->prefix . 'casa_user_organizations';
-    
-    $result = $wpdb->insert(
-        $table_name,
-        array(
-            'user_id' => $user_id,
-            'organization_id' => $organization_id,
-            'casa_role' => $params['role'],
-            'status' => 'active',
-            'created_at' => current_time('mysql')
-        ),
-        array('%d', '%d', '%s', '%s', '%s')
-    );
-    
-    if ($result === false) {
-        // If organization association failed, delete the WordPress user
-        wp_delete_user($user_id);
-        return new WP_REST_Response(array(
-            'success' => false,
-            'message' => 'Failed to associate user with organization: ' . $wpdb->last_error
-        ), 500);
+
+    // Check if user already exists by email
+    $existing_user = get_user_by('email', $params['email']);
+    $is_new_user = false;
+
+    if ($existing_user) {
+        // User exists - check if already in this organization
+        $user_id = $existing_user->ID;
+        $username = $existing_user->user_login;
+
+        $existing_org_assignment = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name WHERE user_id = %d AND organization_id = %d",
+            $user_id,
+            $organization_id
+        ));
+
+        if ($existing_org_assignment) {
+            // User already in organization - just resend invitation email
+            error_log("CASA Invite: User {$params['email']} already in organization $organization_id - will resend invitation");
+        } else {
+            // User exists but not in this organization - add them
+            $result = $wpdb->insert(
+                $table_name,
+                array(
+                    'user_id' => $user_id,
+                    'organization_id' => $organization_id,
+                    'casa_role' => $params['role'],
+                    'status' => 'active',
+                    'created_at' => current_time('mysql')
+                ),
+                array('%d', '%d', '%s', '%s', '%s')
+            );
+
+            if ($result === false) {
+                return new WP_REST_Response(array(
+                    'success' => false,
+                    'message' => 'Failed to associate user with organization: ' . $wpdb->last_error
+                ), 500);
+            }
+
+            // Update user's CASA role
+            $existing_user->set_role('casa_' . $params['role']);
+        }
+
+        // Update user's name if provided
+        if (!empty($params['first_name']) || !empty($params['last_name'])) {
+            wp_update_user(array(
+                'ID' => $user_id,
+                'first_name' => $params['first_name'],
+                'last_name' => $params['last_name'],
+                'display_name' => $params['first_name'] . ' ' . $params['last_name']
+            ));
+        }
+    } else {
+        // New user - create them
+        $is_new_user = true;
+
+        // Generate unique username from email
+        $base_username = sanitize_user($params['email']);
+        $username = $base_username;
+        $counter = 1;
+
+        // Check if username exists and generate unique one
+        while (username_exists($username)) {
+            $username = $base_username . '_' . $counter;
+            $counter++;
+        }
+
+        // Create WordPress user
+        $userdata = array(
+            'user_login' => $username,
+            'user_email' => $params['email'],
+            'first_name' => $params['first_name'],
+            'last_name' => $params['last_name'],
+            'display_name' => $params['first_name'] . ' ' . $params['last_name'],
+            'user_pass' => wp_generate_password(),
+            'role' => 'casa_' . $params['role'], // Map to CASA roles
+        );
+
+        $user_id = wp_insert_user($userdata);
+
+        if (is_wp_error($user_id)) {
+            return new WP_REST_Response(array(
+                'success' => false,
+                'message' => $user_id->get_error_message()
+            ), 400);
+        }
+
+        // Associate user with organization
+        $result = $wpdb->insert(
+            $table_name,
+            array(
+                'user_id' => $user_id,
+                'organization_id' => $organization_id,
+                'casa_role' => $params['role'],
+                'status' => 'active',
+                'created_at' => current_time('mysql')
+            ),
+            array('%d', '%d', '%s', '%s', '%s')
+        );
+
+        if ($result === false) {
+            // If organization association failed, delete the WordPress user
+            wp_delete_user($user_id);
+            return new WP_REST_Response(array(
+                'success' => false,
+                'message' => 'Failed to associate user with organization: ' . $wpdb->last_error
+            ), 500);
+        }
     }
     
     // Send invitation email if requested
@@ -5234,15 +5291,19 @@ function casa_invite_user($request) {
             'role' => $params['role']
         ),
         'metadata' => array(
-            'send_invitation' => $params['send_invitation'] ?? false
+            'send_invitation' => $params['send_invitation'] ?? false,
+            'is_new_user' => $is_new_user
         )
     ));
+
+    $message = $is_new_user ? 'User created and invitation sent successfully' : 'Invitation sent to existing user';
 
     return new WP_REST_Response(array(
         'success' => true,
         'data' => array(
             'user_id' => $user_id,
-            'message' => 'User invitation sent successfully'
+            'is_new_user' => $is_new_user,
+            'message' => $message
         )
     ), 200);
 }
