@@ -602,6 +602,7 @@ export default function Settings() {
         ...data,
         organization_id: user?.organizationId,
         invited_by: user?.id || '',
+        send_invitation: true,
       });
 
       if (!response.success) {

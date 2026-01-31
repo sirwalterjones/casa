@@ -1123,6 +1123,8 @@ function casa_api_assign_user_to_org($request) {
     $email = sanitize_email($params['email'] ?? '');
     $org_id = intval($params['organization_id'] ?? 0);
     $role = sanitize_text_field($params['casa_role'] ?? 'volunteer');
+    $first_name = sanitize_text_field($params['first_name'] ?? '');
+    $last_name = sanitize_text_field($params['last_name'] ?? '');
 
     // Validate inputs
     if (!$org_id) {
@@ -1132,18 +1134,10 @@ function casa_api_assign_user_to_org($request) {
         ), 400);
     }
 
-    // Get user by ID or email
-    if (!$user_id && $email) {
-        $user = get_user_by('email', $email);
-        if ($user) {
-            $user_id = $user->ID;
-        }
-    }
-
-    if (!$user_id) {
+    if (!$user_id && !$email) {
         return new WP_REST_Response(array(
             'success' => false,
-            'message' => 'Valid user ID or email required'
+            'message' => 'User ID or email required'
         ), 400);
     }
 
@@ -1155,6 +1149,65 @@ function casa_api_assign_user_to_org($request) {
 
     global $wpdb;
     $table = $wpdb->prefix . 'casa_user_organizations';
+    $is_new_user = false;
+    $username = '';
+
+    // Get user by ID or email
+    if (!$user_id && $email) {
+        $user = get_user_by('email', $email);
+        if ($user) {
+            $user_id = $user->ID;
+            $username = $user->user_login;
+        }
+    } else if ($user_id) {
+        $user = get_user_by('ID', $user_id);
+        if ($user) {
+            $username = $user->user_login;
+        }
+    }
+
+    // If user doesn't exist, create them
+    if (!$user_id && $email) {
+        $is_new_user = true;
+
+        // Generate unique username from email
+        $base_username = sanitize_user($email);
+        $username = $base_username;
+        $counter = 1;
+        while (username_exists($username)) {
+            $username = $base_username . '_' . $counter;
+            $counter++;
+        }
+
+        // Create WordPress user
+        $userdata = array(
+            'user_login' => $username,
+            'user_email' => $email,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'display_name' => trim($first_name . ' ' . $last_name) ?: $email,
+            'user_pass' => wp_generate_password(),
+            'role' => 'casa_' . $role,
+        );
+
+        $user_id = wp_insert_user($userdata);
+
+        if (is_wp_error($user_id)) {
+            return new WP_REST_Response(array(
+                'success' => false,
+                'message' => 'Failed to create user: ' . $user_id->get_error_message()
+            ), 400);
+        }
+
+        error_log("CASA Super Admin: Created new user $email with ID $user_id");
+    }
+
+    if (!$user_id) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Failed to find or create user'
+        ), 400);
+    }
 
     // Check if assignment exists
     $existing = $wpdb->get_var($wpdb->prepare(
@@ -1183,22 +1236,81 @@ function casa_api_assign_user_to_org($request) {
     }
 
     if ($result === false) {
+        // If we created a new user but failed to associate, clean up
+        if ($is_new_user) {
+            wp_delete_user($user_id);
+        }
         return new WP_REST_Response(array(
             'success' => false,
             'message' => 'Failed to assign user: ' . $wpdb->last_error
         ), 500);
     }
 
+    // Send invitation email for new users
+    $email_sent = false;
+    if ($is_new_user && function_exists('casa_send_invitation_email')) {
+        // Generate password reset key
+        $reset_key = get_password_reset_key(get_user_by('ID', $user_id));
+
+        if (!is_wp_error($reset_key)) {
+            // Get organization name
+            $org_table = $wpdb->prefix . 'casa_organizations';
+            $org = $wpdb->get_row($wpdb->prepare(
+                "SELECT name FROM $org_table WHERE id = %d",
+                $org_id
+            ));
+            $org_name = $org ? $org->name : 'CASA';
+
+            // Build password set URL
+            $frontend_url = 'https://casa.joneswebdesigns.com';
+            $set_password_url = $frontend_url . '/auth/set-password?key=' . $reset_key . '&login=' . rawurlencode($username);
+
+            // Get current super admin's name
+            $current_user = wp_get_current_user();
+            $inviter_name = $current_user->display_name ?: 'CASA Administrator';
+
+            // Send invitation email
+            $email_sent = casa_send_invitation_email(
+                $email,
+                $first_name,
+                $last_name,
+                $role,
+                $org_name,
+                $set_password_url,
+                $inviter_name
+            );
+
+            if (!$email_sent) {
+                error_log("CASA Super Admin: Failed to send invitation email to $email");
+            } else {
+                error_log("CASA Super Admin: Sent invitation email to $email");
+            }
+        } else {
+            error_log("CASA Super Admin: Failed to generate password reset key for $email");
+        }
+    }
+
     casa_log_super_admin_action('assign_user_to_org', array(
         'user_id' => $user_id,
         'org_id' => $org_id,
         'role' => $role,
-        'was_update' => $existing ? true : false
+        'was_update' => $existing ? true : false,
+        'is_new_user' => $is_new_user,
+        'email_sent' => $email_sent
     ));
+
+    $message = $is_new_user
+        ? ($email_sent ? 'User created and invitation email sent' : 'User created (email sending failed)')
+        : ($existing ? 'User role updated' : 'User assigned to organization');
 
     return new WP_REST_Response(array(
         'success' => true,
-        'message' => $existing ? 'User role updated' : 'User assigned to organization'
+        'message' => $message,
+        'data' => array(
+            'user_id' => $user_id,
+            'is_new_user' => $is_new_user,
+            'email_sent' => $email_sent
+        )
     ), 200);
 }
 
